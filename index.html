@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embroidery Inventory Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <img src="logo.png" alt="Logo" class="logo" id="logo" style="display: none;" onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='inline';">
+                <i class="fas fa-tshirt" id="fallback-icon" style="display: inline;"></i> Embroidery Inventory Manager
+                <span style="font-size: 1.2rem; margin-left: 1rem; opacity: 0.8;">✿ Professional Craft Management ✿</span>
+            </h1>
+            <div class="connection-status">
+                <span id="connectionStatus" class="status-indicator">
+                    <i class="fas fa-circle"></i> Connecting...
+                </span>
+            </div>
+            <nav>
+                <button class="nav-btn active" data-tab="inventory">
+                    <i class="fas fa-boxes"></i> Inventory
+                </button>
+                <button class="nav-btn" data-tab="customers">
+                    <i class="fas fa-users"></i> Customers
+                </button>
+                <button class="nav-btn" data-tab="gallery">
+                    <i class="fas fa-images"></i> Gallery
+                </button>
+                <button class="nav-btn" data-tab="sales">
+                    <i class="fas fa-chart-line"></i> Sales
+                </button>
+                <button class="nav-btn" data-tab="reports">
+                    <i class="fas fa-file-alt"></i> Reports
+                </button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Inventory Tab -->
+            <div id="inventory" class="tab-content active">
+                <div class="section-header">
+                    <h2>Inventory Management</h2>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add New Item
+                    </button>
+                </div>
+                
+                <div class="filters">
+                    <input type="text" id="searchItems" placeholder="Search items..." onkeyup="filterItems()">
+                    <select id="statusFilter" onchange="filterItems()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                    <select id="locationFilter" onchange="filterItems()">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table id="inventoryTable">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Description</th>
+                                <th>Customer</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Price</th>
+                                <th>Date Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Customers Tab -->
+            <div id="customers" class="tab-content">
+                <div class="section-header">
+                    <h2>Customer Management</h2>
+                    <button class="btn btn-primary" onclick="openAddCustomerModal()">
+                        <i class="fas fa-plus"></i> Add New Customer
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="customersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Location</th>
+                                <th>Total Orders</th>
+                                <th>Total Spent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Gallery Tab -->
+            <div id="gallery" class="tab-content">
+                <div class="section-header">
+                    <h2>Work Gallery</h2>
+                    <button class="btn btn-primary" onclick="openAddPhotoModal()">
+                        <i class="fas fa-plus"></i> Add Photo
+                    </button>
+                </div>
+
+                <div class="gallery-filters">
+                    <select id="galleryStatusFilter" onchange="filterGallery()">
+                        <option value="">All Items</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                    </select>
+                    <input type="text" id="gallerySearch" placeholder="Search gallery..." onkeyup="filterGallery()">
+                </div>
+
+                <div id="galleryGrid" class="gallery-grid">
+                    <!-- Gallery items will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Sales Tab -->
+            <div id="sales" class="tab-content">
+                <div class="section-header">
+                    <h2>Sales Management</h2>
+                    <button class="btn btn-primary" onclick="openAddSaleModal()">
+                        <i class="fas fa-plus"></i> Record Sale
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="salesTable">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Customer</th>
+                                <th>Sale Price</th>
+                                <th>Date Sold</th>
+                                <th>Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports" class="tab-content">
+                <div class="section-header">
+                    <h2>Reports & Inventory Lists</h2>
+                    <div class="report-actions">
+                        <button class="btn btn-secondary" onclick="generateInventoryReport()">
+                            <i class="fas fa-file-alt"></i> Generate Inventory Report
+                        </button>
+                        <button class="btn btn-secondary" onclick="printLocationInventory()">
+                            <i class="fas fa-print"></i> Print Location Inventory
+                        </button>
+                        <button class="btn btn-info" onclick="exportData()">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-filters">
+                    <select id="reportLocationFilter">
+                        <option value="">All Locations</option>
+                    </select>
+                    <select id="reportStatusFilter">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+
+                <div id="reportContent" class="report-content">
+                    <p>Select filters and generate a report to view data.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addItemModal')">&times;</span>
+            <h3>Add New Item</h3>
+            <form id="addItemForm">
+                <div class="form-group">
+                    <label for="itemName">Item Name *</label>
+                    <input type="text" id="itemName" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemDescription">Description</label>
+                    <textarea id="itemDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="itemCustomer">Customer *</label>
+                    <select id="itemCustomer" required>
+                        <option value="">Select Customer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="itemLocation">Location *</label>
+                    <input type="text" id="itemLocation" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemPrice">Price</label>
+                    <input type="number" id="itemPrice" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="itemStatus">Status</label>
+                    <select id="itemStatus">
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addItemModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addCustomerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addCustomerModal')">&times;</span>
+            <h3>Add New Customer</h3>
+            <form id="addCustomerForm">
+                <div class="form-group">
+                    <label for="customerName">Customer Name *</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="customerContact">Contact Info</label>
+                    <input type="text" id="customerContact" placeholder="Phone, email, etc.">
+                </div>
+                <div class="form-group">
+                    <label for="customerLocation">Location *</label>
+                    <input type="text" id="customerLocation" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCustomerModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addSaleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addSaleModal')">&times;</span>
+            <h3>Record Sale</h3>
+            <form id="addSaleForm">
+                <div class="form-group">
+                    <label for="saleItem">Item *</label>
+                    <select id="saleItem" required>
+                        <option value="">Select Item</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="salePrice">Sale Price *</label>
+                    <input type="number" id="salePrice" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="saleDate">Sale Date</label>
+                    <input type="date" id="saleDate">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addSaleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Record Sale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addPhotoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addPhotoModal')">&times;</span>
+            <h3>Add Photo to Gallery</h3>
+            <form id="addPhotoForm">
+                <div class="form-group">
+                    <label for="photoFile">Photo *</label>
+                    <input type="file" id="photoFile" accept="image/*" required>
+                    <small>Upload a photo of your completed work</small>
+                </div>
+                <div class="form-group">
+                    <label for="photoItem">Related Item</label>
+                    <select id="photoItem">
+                        <option value="">Select Item (Optional)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="photoTitle">Photo Title *</label>
+                    <input type="text" id="photoTitle" required placeholder="e.g., Custom Embroidered T-Shirt">
+                </div>
+                <div class="form-group">
+                    <label for="photoDescription">Description</label>
+                    <textarea id="photoDescription" rows="3" placeholder="Describe the work, techniques used, etc."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="photoStatus">Status</label>
+                    <select id="photoStatus">
+                        <option value="completed">Completed</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPhotoModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Photo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
