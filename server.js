@@ -1,9 +1,72 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// MongoDB connection
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://cyndypstitchcraft_db_user:4G2vcEQSjAvJoUxY@embroider-inventory.2x57teq.mongodb.net/?retryWrites=true&w=majority&appName=embroider-inventory';
+const DB_NAME = 'embroidery_inventory';
+let db;
+
+// Connect to MongoDB
+async function connectToDatabase() {
+    try {
+        const client = new MongoClient(MONGODB_URI);
+        await client.connect();
+        db = client.db(DB_NAME);
+        console.log('✅ Connected to MongoDB Atlas');
+        
+        // Initialize collections with sample data if empty
+        await initializeCollections();
+    } catch (error) {
+        console.error('❌ MongoDB connection error:', error);
+    }
+}
+
+// Initialize collections with sample data
+async function initializeCollections() {
+    try {
+        // Check if inventory collection is empty
+        const inventoryCount = await db.collection('inventory').countDocuments();
+        if (inventoryCount === 0) {
+            // Load sample data from files
+            const fs = require('fs');
+            const inventoryPath = path.join(__dirname, 'data', 'inventory.json');
+            const customersPath = path.join(__dirname, 'data', 'customers.json');
+            const salesPath = path.join(__dirname, 'data', 'sales.json');
+            const galleryPath = path.join(__dirname, 'data', 'gallery.json');
+            
+            if (fs.existsSync(inventoryPath)) {
+                const inventoryData = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+                await db.collection('inventory').insertMany(inventoryData);
+                console.log('📦 Loaded inventory sample data');
+            }
+            
+            if (fs.existsSync(customersPath)) {
+                const customersData = JSON.parse(fs.readFileSync(customersPath, 'utf8'));
+                await db.collection('customers').insertMany(customersData);
+                console.log('👥 Loaded customers sample data');
+            }
+            
+            if (fs.existsSync(salesPath)) {
+                const salesData = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
+                await db.collection('sales').insertMany(salesData);
+                console.log('💰 Loaded sales sample data');
+            }
+            
+            if (fs.existsSync(galleryPath)) {
+                const galleryData = JSON.parse(fs.readFileSync(galleryPath, 'utf8'));
+                await db.collection('gallery').insertMany(galleryData);
+                console.log('🖼️ Loaded gallery sample data');
+            }
+        }
+    } catch (error) {
+        console.error('Error initializing collections:', error);
+    }
+}
 
 // Middleware
 app.use(cors());
@@ -17,85 +80,134 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        database: db ? 'Connected' : 'Disconnected'
+    });
 });
-
-// In-memory data store (for Vercel serverless)
-let inventoryData = [];
-let customersData = [];
-let salesData = [];
-let galleryData = [];
-
-// Load initial data from files if available
-try {
-    const fs = require('fs');
-    const inventoryPath = path.join(__dirname, 'data', 'inventory.json');
-    const customersPath = path.join(__dirname, 'data', 'customers.json');
-    const salesPath = path.join(__dirname, 'data', 'sales.json');
-    const galleryPath = path.join(__dirname, 'data', 'gallery.json');
-    
-    if (fs.existsSync(inventoryPath)) {
-        inventoryData = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
-    }
-    if (fs.existsSync(customersPath)) {
-        customersData = JSON.parse(fs.readFileSync(customersPath, 'utf8'));
-    }
-    if (fs.existsSync(salesPath)) {
-        salesData = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
-    }
-    if (fs.existsSync(galleryPath)) {
-        galleryData = JSON.parse(fs.readFileSync(galleryPath, 'utf8'));
-    }
-} catch (error) {
-    console.log('Could not load initial data, starting with empty arrays');
-}
 
 // API endpoints for data persistence
-app.get('/api/inventory', (req, res) => {
-    res.json(inventoryData);
+app.get('/api/inventory', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const inventory = await db.collection('inventory').find({}).toArray();
+        res.json(inventory);
+    } catch (error) {
+        console.error('Error fetching inventory:', error);
+        res.status(500).json({ error: 'Failed to fetch inventory data' });
+    }
 });
 
-app.post('/api/inventory', (req, res) => {
-    inventoryData = req.body;
-    res.json({ success: true });
+app.post('/api/inventory', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        await db.collection('inventory').deleteMany({});
+        await db.collection('inventory').insertMany(req.body);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving inventory:', error);
+        res.status(500).json({ error: 'Failed to save inventory data' });
+    }
 });
 
-app.get('/api/customers', (req, res) => {
-    res.json(customersData);
+app.get('/api/customers', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const customers = await db.collection('customers').find({}).toArray();
+        res.json(customers);
+    } catch (error) {
+        console.error('Error fetching customers:', error);
+        res.status(500).json({ error: 'Failed to fetch customers data' });
+    }
 });
 
-app.post('/api/customers', (req, res) => {
-    customersData = req.body;
-    res.json({ success: true });
+app.post('/api/customers', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        await db.collection('customers').deleteMany({});
+        await db.collection('customers').insertMany(req.body);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving customers:', error);
+        res.status(500).json({ error: 'Failed to save customers data' });
+    }
 });
 
-app.get('/api/sales', (req, res) => {
-    res.json(salesData);
+app.get('/api/sales', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const sales = await db.collection('sales').find({}).toArray();
+        res.json(sales);
+    } catch (error) {
+        console.error('Error fetching sales:', error);
+        res.status(500).json({ error: 'Failed to fetch sales data' });
+    }
 });
 
-app.post('/api/sales', (req, res) => {
-    salesData = req.body;
-    res.json({ success: true });
+app.post('/api/sales', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        await db.collection('sales').deleteMany({});
+        await db.collection('sales').insertMany(req.body);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving sales:', error);
+        res.status(500).json({ error: 'Failed to save sales data' });
+    }
 });
 
-app.get('/api/gallery', (req, res) => {
-    res.json(galleryData);
+app.get('/api/gallery', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const gallery = await db.collection('gallery').find({}).toArray();
+        res.json(gallery);
+    } catch (error) {
+        console.error('Error fetching gallery:', error);
+        res.status(500).json({ error: 'Failed to fetch gallery data' });
+    }
 });
 
-app.post('/api/gallery', (req, res) => {
-    galleryData = req.body;
-    res.json({ success: true });
+app.post('/api/gallery', async (req, res) => {
+    try {
+        if (!db) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        await db.collection('gallery').deleteMany({});
+        await db.collection('gallery').insertMany(req.body);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving gallery:', error);
+        res.status(500).json({ error: 'Failed to save gallery data' });
+    }
 });
 
-// Start server only if not in Vercel environment
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
-    app.listen(PORT, () => {
-        console.log(`\n🚀 Embroidery Inventory Manager Server Running!`);
-        console.log(`   Local:   http://localhost:${PORT}`);
-        console.log(`   Network: http://${getLocalIP()}:${PORT}`);
-        console.log(`\n📱 Access from any device on your network using the Network URL`);
-    });
-}
+// Connect to database and start server
+connectToDatabase().then(() => {
+    // Start server only if not in Vercel environment
+    if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+        app.listen(PORT, () => {
+            console.log(`\n🚀 Embroidery Inventory Manager Server Running!`);
+            console.log(`   Local:   http://localhost:${PORT}`);
+            console.log(`   Network: http://${getLocalIP()}:${PORT}`);
+            console.log(`\n📱 Access from any device on your network using the Network URL`);
+        });
+    }
+});
 
 function getLocalIP() {
     const { networkInterfaces } = require('os');
