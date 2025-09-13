@@ -20,147 +20,82 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// In-memory data store (for Vercel serverless)
+let inventoryData = [];
+let customersData = [];
+let salesData = [];
+let galleryData = [];
+
+// Load initial data from files if available
+try {
+    const fs = require('fs');
+    const inventoryPath = path.join(__dirname, 'data', 'inventory.json');
+    const customersPath = path.join(__dirname, 'data', 'customers.json');
+    const salesPath = path.join(__dirname, 'data', 'sales.json');
+    const galleryPath = path.join(__dirname, 'data', 'gallery.json');
+    
+    if (fs.existsSync(inventoryPath)) {
+        inventoryData = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+    }
+    if (fs.existsSync(customersPath)) {
+        customersData = JSON.parse(fs.readFileSync(customersPath, 'utf8'));
+    }
+    if (fs.existsSync(salesPath)) {
+        salesData = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
+    }
+    if (fs.existsSync(galleryPath)) {
+        galleryData = JSON.parse(fs.readFileSync(galleryPath, 'utf8'));
+    }
+} catch (error) {
+    console.log('Could not load initial data, starting with empty arrays');
+}
+
 // API endpoints for data persistence
 app.get('/api/inventory', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataPath = path.join(__dirname, 'data', 'inventory.json');
-        
-        if (fs.existsSync(dataPath)) {
-            const data = fs.readFileSync(dataPath, 'utf8');
-            res.json(JSON.parse(data));
-        } else {
-            res.json([]);
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to load inventory data' });
-    }
+    res.json(inventoryData);
 });
 
 app.post('/api/inventory', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataDir = path.join(__dirname, 'data');
-        const dataPath = path.join(dataDir, 'inventory.json');
-        
-        // Create data directory if it doesn't exist
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir);
-        }
-        
-        fs.writeFileSync(dataPath, JSON.stringify(req.body, null, 2));
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to save inventory data' });
-    }
+    inventoryData = req.body;
+    res.json({ success: true });
 });
 
 app.get('/api/customers', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataPath = path.join(__dirname, 'data', 'customers.json');
-        
-        if (fs.existsSync(dataPath)) {
-            const data = fs.readFileSync(dataPath, 'utf8');
-            res.json(JSON.parse(data));
-        } else {
-            res.json([]);
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to load customers data' });
-    }
+    res.json(customersData);
 });
 
 app.post('/api/customers', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataDir = path.join(__dirname, 'data');
-        const dataPath = path.join(dataDir, 'customers.json');
-        
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir);
-        }
-        
-        fs.writeFileSync(dataPath, JSON.stringify(req.body, null, 2));
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to save customers data' });
-    }
+    customersData = req.body;
+    res.json({ success: true });
 });
 
 app.get('/api/sales', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataPath = path.join(__dirname, 'data', 'sales.json');
-        
-        if (fs.existsSync(dataPath)) {
-            const data = fs.readFileSync(dataPath, 'utf8');
-            res.json(JSON.parse(data));
-        } else {
-            res.json([]);
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to load sales data' });
-    }
+    res.json(salesData);
 });
 
 app.post('/api/sales', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataDir = path.join(__dirname, 'data');
-        const dataPath = path.join(dataDir, 'sales.json');
-        
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir);
-        }
-        
-        fs.writeFileSync(dataPath, JSON.stringify(req.body, null, 2));
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to save sales data' });
-    }
+    salesData = req.body;
+    res.json({ success: true });
 });
 
 app.get('/api/gallery', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataPath = path.join(__dirname, 'data', 'gallery.json');
-        
-        if (fs.existsSync(dataPath)) {
-            const data = fs.readFileSync(dataPath, 'utf8');
-            res.json(JSON.parse(data));
-        } else {
-            res.json([]);
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to load gallery data' });
-    }
+    res.json(galleryData);
 });
 
 app.post('/api/gallery', (req, res) => {
-    try {
-        const fs = require('fs');
-        const dataDir = path.join(__dirname, 'data');
-        const dataPath = path.join(dataDir, 'gallery.json');
-        
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir);
-        }
-        
-        fs.writeFileSync(dataPath, JSON.stringify(req.body, null, 2));
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to save gallery data' });
-    }
+    galleryData = req.body;
+    res.json({ success: true });
 });
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Embroidery Inventory Manager running at:`);
-    console.log(`   Local:   http://localhost:${PORT}`);
-    console.log(`   Network: http://${getLocalIP()}:${PORT}`);
-    console.log(`\n📱 Access from any device on your network using the Network URL`);
-});
+// Start server only if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+        console.log(`\n🚀 Embroidery Inventory Manager Server Running!`);
+        console.log(`   Local:   http://localhost:${PORT}`);
+        console.log(`   Network: http://${getLocalIP()}:${PORT}`);
+        console.log(`\n📱 Access from any device on your network using the Network URL`);
+    });
+}
 
 function getLocalIP() {
     const { networkInterfaces } = require('os');
