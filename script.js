@@ -384,6 +384,34 @@ function togglePassword(inputId) {
     }
 }
 
+// Helper functions to preserve expanded customer groups during edits
+function getExpandedCustomerGroups() {
+    const expandedCustomers = [];
+    const customerHeaders = document.querySelectorAll('.customer-header');
+    
+    customerHeaders.forEach(header => {
+        const customer = header.getAttribute('data-customer');
+        const isExpanded = header.classList.contains('expanded');
+        if (isExpanded) {
+            expandedCustomers.push(customer);
+        }
+    });
+    
+    return expandedCustomers;
+}
+
+function restoreExpandedCustomerGroups(expandedCustomers) {
+    // Use setTimeout to ensure the DOM has been updated
+    setTimeout(() => {
+        expandedCustomers.forEach(customer => {
+            const customerHeader = document.querySelector(`[data-customer="${customer}"]`);
+            if (customerHeader && !customerHeader.classList.contains('expanded')) {
+                toggleCustomerGroup(customer);
+            }
+        });
+    }, 10);
+}
+
 // API base URL
 const API_BASE = '';
 
@@ -647,6 +675,9 @@ function handleEditItem(e) {
     
     console.log('Updating item at index:', index); // Debug log
     
+    // Store expanded customer groups before updating
+    const expandedCustomers = getExpandedCustomerGroups();
+    
     // Update the item
     inventory[index] = {
         ...inventory[index],
@@ -671,6 +702,9 @@ function handleEditItem(e) {
     saveData();
     loadInventoryTable();
     updateCustomerFilters();
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
     
     console.log('About to close edit modal'); // Debug log
     
@@ -898,6 +932,7 @@ function loadInventoryTable() {
         // Create customer header row
         const headerRow = document.createElement('tr');
         headerRow.className = 'customer-header';
+        headerRow.setAttribute('data-customer', customer);
         headerRow.onclick = () => toggleCustomerGroup(customer);
         
         // Calculate customer stats
@@ -1360,15 +1395,25 @@ function markAsSold(index) {
 
 function deleteItem(index) {
     if (confirm('Are you sure you want to delete this item?')) {
+        // Store expanded customer groups before deleting
+        const expandedCustomers = getExpandedCustomerGroups();
+        
         inventory.splice(index, 1);
         saveData();
         loadInventoryTable();
+        
+        // Restore expanded customer groups after reload
+        restoreExpandedCustomerGroups(expandedCustomers);
+        
         showNotification('Item deleted successfully!', 'success');
     }
 }
 
 function copyItem(index) {
     const originalItem = inventory[index];
+    
+    // Store expanded customer groups before copying
+    const expandedCustomers = getExpandedCustomerGroups();
     
     // Create a copy with reset status
     const copiedItem = {
@@ -1388,6 +1433,9 @@ function copyItem(index) {
     
     // Refresh the table
     loadInventoryTable();
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
     
     // Show success message
     showNotification('Item copied successfully!', 'success');
