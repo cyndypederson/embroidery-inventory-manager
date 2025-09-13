@@ -263,11 +263,42 @@ async function loadDataFromAPI() {
 }
 
 function loadDataFromLocalStorage() {
+    // Try to load from localStorage first
     inventory = JSON.parse(localStorage.getItem('embroideryInventory')) || [];
     customers = JSON.parse(localStorage.getItem('embroideryCustomers')) || [];
     sales = JSON.parse(localStorage.getItem('embroiderySales')) || [];
     gallery = JSON.parse(localStorage.getItem('embroideryGallery')) || [];
+    
+    // If localStorage is empty, load sample data
+    if (inventory.length === 0) {
+        loadSampleData();
+    }
+    
     loadData();
+}
+
+async function loadSampleData() {
+    try {
+        // Load sample data from the data folder
+        const [inventoryRes, customersRes, salesRes, galleryRes] = await Promise.all([
+            fetch('./data/inventory.json'),
+            fetch('./data/customers.json'),
+            fetch('./data/sales.json'),
+            fetch('./data/gallery.json')
+        ]);
+        
+        if (inventoryRes.ok) inventory = await inventoryRes.json();
+        if (customersRes.ok) customers = await customersRes.json();
+        if (salesRes.ok) sales = await salesRes.json();
+        if (galleryRes.ok) gallery = await galleryRes.json();
+        
+        // Save to localStorage for future use
+        saveDataToLocalStorage();
+        
+        console.log('Sample data loaded successfully');
+    } catch (error) {
+        console.log('Could not load sample data, starting with empty data');
+    }
 }
 
 function updateConnectionStatus(status) {
