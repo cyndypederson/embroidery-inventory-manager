@@ -21,6 +21,59 @@ function logout() {
     switchTab('inventory');
 }
 
+function showChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'block';
+    document.getElementById('currentPassword').focus();
+}
+
+function hideChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'none';
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('changePasswordError').style.display = 'none';
+    document.getElementById('changePasswordSuccess').style.display = 'none';
+}
+
+function handleChangePassword(event) {
+    event.preventDefault();
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Clear previous messages
+    document.getElementById('changePasswordError').style.display = 'none';
+    document.getElementById('changePasswordSuccess').style.display = 'none';
+    
+    // Validate current password
+    if (currentPassword !== ADMIN_PASSWORD) {
+        document.getElementById('changePasswordErrorText').textContent = 'Current password is incorrect.';
+        document.getElementById('changePasswordError').style.display = 'block';
+        return;
+    }
+    
+    // Validate new password
+    if (newPassword.length < 4) {
+        document.getElementById('changePasswordErrorText').textContent = 'New password must be at least 4 characters long.';
+        document.getElementById('changePasswordError').style.display = 'block';
+        return;
+    }
+    
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+        document.getElementById('changePasswordErrorText').textContent = 'New passwords do not match.';
+        document.getElementById('changePasswordError').style.display = 'block';
+        return;
+    }
+    
+    // Change password
+    ADMIN_PASSWORD = newPassword;
+    document.getElementById('changePasswordSuccess').style.display = 'block';
+    
+    // Hide success message after 2 seconds and close modal
+    setTimeout(() => {
+        hideChangePasswordModal();
+    }, 2000);
+}
+
 // API base URL
 const API_BASE = '';
 
@@ -144,6 +197,19 @@ function initializeApp() {
     document.getElementById('authModal').addEventListener('click', function(event) {
         if (event.target === this) {
             hideAuthModal();
+        }
+    });
+    
+    // Password change event listeners
+    document.getElementById('changePasswordBtn').addEventListener('click', showChangePasswordModal);
+    document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+    document.getElementById('closeChangePasswordModal').addEventListener('click', hideChangePasswordModal);
+    document.getElementById('cancelChangePassword').addEventListener('click', hideChangePasswordModal);
+    
+    // Close change password modal when clicking outside
+    document.getElementById('changePasswordModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+            hideChangePasswordModal();
         }
     });
     

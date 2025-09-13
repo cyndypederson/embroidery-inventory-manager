@@ -1819,6 +1819,43 @@ tr:nth-child(even) {
     gap: 0.5rem;
 }
 
+.auth-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #6B8E5A;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+}
+
+.btn-link:hover {
+    color: #2C3E2D;
+}
+
+/* Change Password Modal Styles */
+#changePasswordModal .modal-content {
+    max-width: 450px;
+}
+
+.success-message {
+    background-color: #efe;
+    color: #363;
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    border: 1px solid #cfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
 @media print {
     .no-print {
         display: none !important;
