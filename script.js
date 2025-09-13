@@ -3,6 +3,7 @@ let inventory = [];
 let customers = [];
 let sales = [];
 let gallery = [];
+let invoices = [];
 
 // Authentication
 let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
@@ -72,6 +73,299 @@ function handleChangePassword(event) {
     setTimeout(() => {
         hideChangePasswordModal();
     }, 2000);
+}
+
+// Invoice Generation Functions
+function generateInvoice() {
+    if (!checkAuthentication()) {
+        sessionStorage.setItem('requestedTab', 'sales');
+        showAuthModal();
+        return;
+    }
+    
+    // Set today's date
+    document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
+    
+    // Load customers
+    loadCustomersForInvoice();
+    
+    // Load sales for selection
+    loadSalesForInvoice();
+    
+    // Show modal
+    document.getElementById('invoiceModal').style.display = 'block';
+}
+
+function loadCustomersForInvoice() {
+    const select = document.getElementById('invoiceCustomer');
+    select.innerHTML = '<option value="">Select Customer</option>';
+    
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.name;
+        option.textContent = customer.name;
+        select.appendChild(option);
+    });
+}
+
+function loadSalesForInvoice() {
+    const container = document.getElementById('salesSelection');
+    container.innerHTML = '';
+    
+    if (sales.length === 0) {
+        container.innerHTML = '<p>No sales found. Please add some sales first.</p>';
+        return;
+    }
+    
+    sales.forEach((sale, index) => {
+        const saleDiv = document.createElement('div');
+        saleDiv.className = 'sale-item';
+        saleDiv.innerHTML = `
+            <label class="sale-checkbox">
+                <input type="checkbox" name="selectedSales" value="${index}" checked>
+                <span class="sale-info">
+                    <strong>${sale.item}</strong> - ${sale.customer} - $${sale.salePrice} - ${sale.dateSold}
+                </span>
+            </label>
+        `;
+        container.appendChild(saleDiv);
+    });
+}
+
+function handleInvoiceGeneration(event) {
+    event.preventDefault();
+    
+    const customer = document.getElementById('invoiceCustomer').value;
+    const date = document.getElementById('invoiceDate').value;
+    const notes = document.getElementById('invoiceNotes').value;
+    
+    // Get selected sales
+    const selectedSales = Array.from(document.querySelectorAll('input[name="selectedSales"]:checked'))
+        .map(checkbox => sales[parseInt(checkbox.value)]);
+    
+    if (selectedSales.length === 0) {
+        alert('Please select at least one sale to include in the invoice.');
+        return;
+    }
+    
+    // Calculate total
+    const total = selectedSales.reduce((sum, sale) => sum + parseFloat(sale.salePrice || 0), 0);
+    
+    // Generate invoice
+    const invoice = {
+        id: generateInvoiceId(),
+        customer: customer,
+        date: date,
+        notes: notes,
+        sales: selectedSales,
+        total: total,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+    };
+    
+    // Add to invoices array
+    invoices.push(invoice);
+    
+    // Save to localStorage
+    saveInvoicesToLocalStorage();
+    
+    // Close modal
+    closeModal('invoiceModal');
+    
+    // Show preview
+    showInvoicePreview(invoice);
+}
+
+function generateInvoiceId() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `INV-${year}${month}${day}-${random}`;
+}
+
+function showInvoicePreview(invoice) {
+    const content = document.getElementById('invoiceContent');
+    content.innerHTML = generateInvoiceHTML(invoice);
+    document.getElementById('invoicePreviewModal').style.display = 'block';
+}
+
+function generateInvoiceHTML(invoice) {
+    const businessName = "Cyndy's Embroidery";
+    const businessAddress = "Your Business Address";
+    const businessPhone = "Your Phone Number";
+    const businessEmail = "your@email.com";
+    
+    return `
+        <div class="invoice-document">
+            <div class="invoice-header-section">
+                <div class="business-info">
+                    <h1>${businessName}</h1>
+                    <p>${businessAddress}</p>
+                    <p>Phone: ${businessPhone} | Email: ${businessEmail}</p>
+                </div>
+                <div class="invoice-info">
+                    <h2>INVOICE</h2>
+                    <p><strong>Invoice #:</strong> ${invoice.id}</p>
+                    <p><strong>Date:</strong> ${invoice.date}</p>
+                    <p><strong>Status:</strong> ${invoice.status.toUpperCase()}</p>
+                </div>
+            </div>
+            
+            <div class="customer-info">
+                <h3>Bill To:</h3>
+                <p><strong>${invoice.customer}</strong></p>
+            </div>
+            
+            <div class="invoice-items">
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Customer</th>
+                            <th>Date Sold</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${invoice.sales.map(sale => `
+                            <tr>
+                                <td>${sale.item}</td>
+                                <td>${sale.customer}</td>
+                                <td>${sale.dateSold}</td>
+                                <td>$${sale.salePrice}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="3"><strong>Total:</strong></td>
+                            <td><strong>$${invoice.total.toFixed(2)}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            ${invoice.notes ? `
+                <div class="invoice-notes">
+                    <h3>Notes:</h3>
+                    <p>${invoice.notes}</p>
+                </div>
+            ` : ''}
+            
+            <div class="invoice-footer">
+                <p>Thank you for your business!</p>
+                <p>Payment due within 30 days.</p>
+            </div>
+        </div>
+    `;
+}
+
+function printInvoice() {
+    const invoiceContent = document.getElementById('invoiceContent').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Invoice</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .invoice-document { max-width: 800px; margin: 0 auto; }
+                    .invoice-header-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
+                    .business-info h1 { color: #2C3E2D; margin-bottom: 10px; }
+                    .invoice-info h2 { color: #6B8E5A; margin-bottom: 10px; }
+                    .invoice-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                    .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    .invoice-table th { background-color: #f5f5f5; }
+                    .total-row { background-color: #f9f9f9; font-weight: bold; }
+                    .invoice-notes { margin: 20px 0; }
+                    .invoice-footer { margin-top: 30px; text-align: center; }
+                    @media print { body { margin: 0; } }
+                </style>
+            </head>
+            <body>
+                ${invoiceContent}
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function viewInvoices() {
+    if (!checkAuthentication()) {
+        sessionStorage.setItem('requestedTab', 'sales');
+        showAuthModal();
+        return;
+    }
+    
+    loadInvoicesTable();
+    document.getElementById('invoicesListModal').style.display = 'block';
+}
+
+function loadInvoicesTable() {
+    const tbody = document.getElementById('invoicesTableBody');
+    tbody.innerHTML = '';
+    
+    if (invoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No invoices found.</td></tr>';
+        return;
+    }
+    
+    invoices.forEach(invoice => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${invoice.id}</td>
+            <td>${invoice.customer}</td>
+            <td>${invoice.date}</td>
+            <td>$${invoice.total.toFixed(2)}</td>
+            <td><span class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</span></td>
+            <td>
+                <button class="btn btn-small" onclick="viewInvoice('${invoice.id}')">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button class="btn btn-small" onclick="printInvoiceById('${invoice.id}')">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function viewInvoice(invoiceId) {
+    const invoice = invoices.find(inv => inv.id === invoiceId);
+    if (invoice) {
+        showInvoicePreview(invoice);
+    }
+}
+
+function printInvoiceById(invoiceId) {
+    const invoice = invoices.find(inv => inv.id === invoiceId);
+    if (invoice) {
+        showInvoicePreview(invoice);
+        setTimeout(() => printInvoice(), 100);
+    }
+}
+
+function toggleAllSales() {
+    const selectAll = document.getElementById('selectAllSales');
+    const checkboxes = document.querySelectorAll('input[name="selectedSales"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+}
+
+function saveInvoicesToLocalStorage() {
+    localStorage.setItem('embroideryInvoices', JSON.stringify(invoices));
+}
+
+function loadInvoicesFromLocalStorage() {
+    const stored = localStorage.getItem('embroideryInvoices');
+    if (stored) {
+        invoices = JSON.parse(stored);
+    }
 }
 
 // API base URL
@@ -212,6 +506,12 @@ function initializeApp() {
             hideChangePasswordModal();
         }
     });
+    
+    // Invoice form event listener
+    document.getElementById('invoiceForm').addEventListener('submit', handleInvoiceGeneration);
+    
+    // Load invoices from localStorage
+    loadInvoicesFromLocalStorage();
     
     // Check for logo
     checkLogo();
