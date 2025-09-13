@@ -21,6 +21,14 @@
     {
       "src": "data/(.*)",
       "use": "@vercel/static"
+    },
+    {
+      "src": "logo.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "logo.svg",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -39,6 +47,14 @@
     {
       "src": "/data/(.*)",
       "dest": "/data/$1"
+    },
+    {
+      "src": "/logo.png",
+      "dest": "/logo.png"
+    },
+    {
+      "src": "/logo.svg",
+      "dest": "/logo.svg"
     },
     {
       "src": "/(.*)",
