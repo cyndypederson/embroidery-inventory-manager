@@ -331,6 +331,32 @@
         </main>
     </div>
 
+    <!-- Authentication Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeAuthModal">&times;</span>
+            <h2><i class="fas fa-lock"></i> Admin Access Required</h2>
+            <p>Please enter the admin password to access Sales and Reports:</p>
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="adminPassword">Password:</label>
+                    <input type="password" id="adminPassword" name="adminPassword" required>
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelAuth">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+            <div id="authError" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> Invalid password. Please try again.
+            </div>
+        </div>
+    </div>
+
     <!-- Modals -->
     <div id="addItemModal" class="modal">
         <div class="modal-content">

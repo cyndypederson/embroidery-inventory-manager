@@ -4,8 +4,66 @@ let customers = [];
 let sales = [];
 let gallery = [];
 
+// Authentication
+const ADMIN_PASSWORD = 'embroidery2025'; // Change this to your desired password
+let isAuthenticated = false;
+
 // API base URL
 const API_BASE = '';
+
+// Authentication functions
+function checkAuthentication() {
+    const authStatus = sessionStorage.getItem('embroideryAuth');
+    isAuthenticated = authStatus === 'true';
+    return isAuthenticated;
+}
+
+function setAuthenticated(status) {
+    isAuthenticated = status;
+    sessionStorage.setItem('embroideryAuth', status.toString());
+}
+
+function showAuthModal() {
+    document.getElementById('authModal').style.display = 'block';
+    document.getElementById('adminPassword').focus();
+}
+
+function hideAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+    document.getElementById('authForm').reset();
+    document.getElementById('authError').style.display = 'none';
+}
+
+function handleAuthSubmit(event) {
+    event.preventDefault();
+    const password = document.getElementById('adminPassword').value;
+    
+    if (password === ADMIN_PASSWORD) {
+        setAuthenticated(true);
+        hideAuthModal();
+        // Switch to the requested tab
+        const requestedTab = sessionStorage.getItem('requestedTab');
+        if (requestedTab) {
+            switchTab(requestedTab);
+            sessionStorage.removeItem('requestedTab');
+        }
+    } else {
+        document.getElementById('authError').style.display = 'block';
+        document.getElementById('adminPassword').value = '';
+        document.getElementById('adminPassword').focus();
+    }
+}
+
+function requireAuth(tabName) {
+    if (tabName === 'sales' || tabName === 'reports') {
+        if (!checkAuthentication()) {
+            sessionStorage.setItem('requestedTab', tabName);
+            showAuthModal();
+            return false;
+        }
+    }
+    return true;
+}
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -63,6 +121,18 @@ function initializeApp() {
     
     // Check connection status
     checkConnectionStatus();
+    
+    // Authentication event listeners
+    document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
+    document.getElementById('closeAuthModal').addEventListener('click', hideAuthModal);
+    document.getElementById('cancelAuth').addEventListener('click', hideAuthModal);
+    
+    // Close auth modal when clicking outside
+    document.getElementById('authModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+            hideAuthModal();
+        }
+    });
     
     // Check for logo
     checkLogo();
@@ -282,6 +352,11 @@ function updateConnectionStatus(status) {
 }
 
 function switchTab(tabName) {
+    // Check authentication for protected tabs
+    if (!requireAuth(tabName)) {
+        return; // Authentication modal will be shown
+    }
+    
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');

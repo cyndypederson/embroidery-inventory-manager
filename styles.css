@@ -1748,6 +1748,77 @@ tr:nth-child(even) {
     100% { transform: rotate(360deg); }
 }
 
+/* Authentication Modal Styles */
+#authModal .modal-content {
+    max-width: 400px;
+    text-align: center;
+}
+
+#authModal h2 {
+    color: #2C3E2D;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#authModal p {
+    margin-bottom: 1.5rem;
+    color: #666;
+}
+
+#authModal .form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+#authModal .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2C3E2D;
+}
+
+#authModal .form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+#authModal .form-group input:focus {
+    outline: none;
+    border-color: #6B8E5A;
+    box-shadow: 0 0 0 3px rgba(107, 142, 90, 0.1);
+}
+
+#authModal .form-row {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+#authModal .form-row .btn {
+    flex: 1;
+    max-width: 120px;
+}
+
+#authModal .error-message {
+    background-color: #fee;
+    color: #c33;
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    border: 1px solid #fcc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
 @media print {
     .no-print {
         display: none !important;
