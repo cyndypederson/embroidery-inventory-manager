@@ -14,7 +14,11 @@ let db;
 // Connect to MongoDB
 async function connectToDatabase() {
     try {
-        const client = new MongoClient(MONGODB_URI);
+        console.log('🔄 Attempting to connect to MongoDB...');
+        const client = new MongoClient(MONGODB_URI, {
+            serverSelectionTimeoutMS: 10000, // 10 second timeout
+            connectTimeoutMS: 10000,
+        });
         await client.connect();
         db = client.db(DB_NAME);
         console.log('✅ Connected to MongoDB Atlas');
@@ -22,7 +26,8 @@ async function connectToDatabase() {
         // Initialize collections with sample data if empty
         await initializeCollections();
     } catch (error) {
-        console.error('❌ MongoDB connection error:', error);
+        console.error('❌ MongoDB connection error:', error.message);
+        console.error('❌ Full error:', error);
     }
 }
 
