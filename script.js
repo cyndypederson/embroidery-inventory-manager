@@ -5,8 +5,21 @@ let sales = [];
 let gallery = [];
 
 // Authentication
-const ADMIN_PASSWORD = 'embroidery2025'; // Change this to your desired password
+let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
 let isAuthenticated = false;
+
+// Function to change password (you can call this from browser console)
+function changePassword(newPassword) {
+    ADMIN_PASSWORD = newPassword;
+    console.log('Password changed successfully!');
+}
+
+function logout() {
+    setAuthenticated(false);
+    console.log('Logged out successfully!');
+    // Switch to inventory tab
+    switchTab('inventory');
+}
 
 // API base URL
 const API_BASE = '';
