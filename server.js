@@ -15,6 +15,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 // API endpoints for data persistence
 app.get('/api/inventory', (req, res) => {
     try {
@@ -169,3 +174,6 @@ function getLocalIP() {
     }
     return 'localhost';
 }
+
+// Export for Vercel
+module.exports = app;
