@@ -11,13 +11,15 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://cyndypstitchcraft_
 const DB_NAME = 'embroidery_inventory';
 let db;
 
-// Connect to MongoDB
+// Connect to MongoDB (lazy connection)
 async function connectToDatabase() {
+    if (db) return db; // Already connected
+    
     try {
         console.log('🔄 Attempting to connect to MongoDB...');
         const client = new MongoClient(MONGODB_URI, {
-            serverSelectionTimeoutMS: 10000, // 10 second timeout
-            connectTimeoutMS: 10000,
+            serverSelectionTimeoutMS: 5000, // 5 second timeout
+            connectTimeoutMS: 5000,
         });
         await client.connect();
         db = client.db(DB_NAME);
@@ -25,9 +27,11 @@ async function connectToDatabase() {
         
         // Initialize collections with sample data if empty
         await initializeCollections();
+        return db;
     } catch (error) {
         console.error('❌ MongoDB connection error:', error.message);
         console.error('❌ Full error:', error);
+        return null;
     }
 }
 
@@ -84,21 +88,23 @@ app.get('/', (req, res) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+    const database = await connectToDatabase();
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        database: db ? 'Connected' : 'Disconnected'
+        database: database ? 'Connected' : 'Disconnected'
     });
 });
 
 // API endpoints for data persistence
 app.get('/api/inventory', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        const inventory = await db.collection('inventory').find({}).toArray();
+        const inventory = await database.collection('inventory').find({}).toArray();
         res.json(inventory);
     } catch (error) {
         console.error('Error fetching inventory:', error);
@@ -108,11 +114,12 @@ app.get('/api/inventory', async (req, res) => {
 
 app.post('/api/inventory', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        await db.collection('inventory').deleteMany({});
-        await db.collection('inventory').insertMany(req.body);
+        await database.collection('inventory').deleteMany({});
+        await database.collection('inventory').insertMany(req.body);
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving inventory:', error);
@@ -122,10 +129,11 @@ app.post('/api/inventory', async (req, res) => {
 
 app.get('/api/customers', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        const customers = await db.collection('customers').find({}).toArray();
+        const customers = await database.collection('customers').find({}).toArray();
         res.json(customers);
     } catch (error) {
         console.error('Error fetching customers:', error);
@@ -135,11 +143,12 @@ app.get('/api/customers', async (req, res) => {
 
 app.post('/api/customers', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        await db.collection('customers').deleteMany({});
-        await db.collection('customers').insertMany(req.body);
+        await database.collection('customers').deleteMany({});
+        await database.collection('customers').insertMany(req.body);
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving customers:', error);
@@ -149,10 +158,11 @@ app.post('/api/customers', async (req, res) => {
 
 app.get('/api/sales', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        const sales = await db.collection('sales').find({}).toArray();
+        const sales = await database.collection('sales').find({}).toArray();
         res.json(sales);
     } catch (error) {
         console.error('Error fetching sales:', error);
@@ -162,11 +172,12 @@ app.get('/api/sales', async (req, res) => {
 
 app.post('/api/sales', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        await db.collection('sales').deleteMany({});
-        await db.collection('sales').insertMany(req.body);
+        await database.collection('sales').deleteMany({});
+        await database.collection('sales').insertMany(req.body);
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving sales:', error);
@@ -176,10 +187,11 @@ app.post('/api/sales', async (req, res) => {
 
 app.get('/api/gallery', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        const gallery = await db.collection('gallery').find({}).toArray();
+        const gallery = await database.collection('gallery').find({}).toArray();
         res.json(gallery);
     } catch (error) {
         console.error('Error fetching gallery:', error);
@@ -189,11 +201,12 @@ app.get('/api/gallery', async (req, res) => {
 
 app.post('/api/gallery', async (req, res) => {
     try {
-        if (!db) {
+        const database = await connectToDatabase();
+        if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        await db.collection('gallery').deleteMany({});
-        await db.collection('gallery').insertMany(req.body);
+        await database.collection('gallery').deleteMany({});
+        await database.collection('gallery').insertMany(req.body);
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving gallery:', error);
