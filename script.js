@@ -391,8 +391,11 @@ function getExpandedCustomerGroups() {
     
     customerHeaders.forEach(header => {
         const customer = header.getAttribute('data-customer');
-        const isExpanded = header.classList.contains('expanded');
-        if (isExpanded) {
+        const groupId = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+        const groupRow = document.getElementById(groupId);
+        
+        // Check if the group is expanded (display is not 'none')
+        if (groupRow && groupRow.style.display !== 'none') {
             expandedCustomers.push(customer);
         }
     });
@@ -404,12 +407,25 @@ function restoreExpandedCustomerGroups(expandedCustomers) {
     // Use setTimeout to ensure the DOM has been updated
     setTimeout(() => {
         expandedCustomers.forEach(customer => {
-            const customerHeader = document.querySelector(`[data-customer="${customer}"]`);
-            if (customerHeader && !customerHeader.classList.contains('expanded')) {
-                toggleCustomerGroup(customer);
+            const groupId = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+            const groupRow = document.getElementById(groupId);
+            
+            // If the group exists and is not expanded, expand it
+            if (groupRow && groupRow.style.display === 'none') {
+                // Find the corresponding header and toggle icon
+                const customerHeader = document.querySelector(`[data-customer="${customer}"]`);
+                if (customerHeader) {
+                    const toggleIcon = customerHeader.querySelector('.customer-toggle');
+                    if (toggleIcon) {
+                        // Expand the group
+                        groupRow.style.display = 'table-row';
+                        toggleIcon.classList.remove('fa-chevron-right');
+                        toggleIcon.classList.add('fa-chevron-down');
+                    }
+                }
             }
         });
-    }, 10);
+    }, 50); // Increased timeout to ensure DOM is fully updated
 }
 
 // API base URL
