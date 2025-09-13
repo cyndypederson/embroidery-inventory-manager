@@ -1795,6 +1795,44 @@ tr:nth-child(even) {
     box-shadow: 0 0 0 3px rgba(107, 142, 90, 0.1);
 }
 
+/* Password input container */
+.password-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-container input {
+    padding-right: 40px; /* Make room for the toggle button */
+    width: 100%;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    font-size: 1rem;
+    padding: 5px;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: #6B8E5A;
+    background-color: #f0f0f0;
+}
+
+.password-toggle:focus {
+    outline: none;
+    color: #6B8E5A;
+    background-color: #f0f0f0;
+}
+
 #authModal .form-row {
     display: flex;
     gap: 1rem;
@@ -1841,6 +1879,43 @@ tr:nth-child(even) {
 /* Change Password Modal Styles */
 #changePasswordModal .modal-content {
     max-width: 450px;
+}
+
+#changePasswordModal .password-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#changePasswordModal .password-input-container input {
+    padding-right: 40px; /* Make room for the toggle button */
+    width: 100%;
+}
+
+#changePasswordModal .password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    font-size: 1rem;
+    padding: 5px;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+}
+
+#changePasswordModal .password-toggle:hover {
+    color: #6B8E5A;
+    background-color: #f0f0f0;
+}
+
+#changePasswordModal .password-toggle:focus {
+    outline: none;
+    color: #6B8E5A;
+    background-color: #f0f0f0;
 }
 
 .success-message {
