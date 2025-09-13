@@ -977,7 +977,7 @@ function loadInventoryTable() {
         groupRow.className = 'customer-group';
         groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
         groupRow.style.display = 'none';
-        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
+        groupRow.innerHTML = '<td colspan="8"><div class="customer-projects"></div></td>';
         tbody.appendChild(groupRow);
         
         // Add individual project rows

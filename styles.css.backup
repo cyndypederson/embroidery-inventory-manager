@@ -429,9 +429,9 @@ th:nth-child(1), td:nth-child(1) { width: 25%; } /* Project */
 th:nth-child(2), td:nth-child(2) { width: 15%; } /* Customer */
 th:nth-child(3), td:nth-child(3) { width: 12%; } /* Type */
 th:nth-child(4), td:nth-child(4) { width: 8%; }  /* Qty */
-th:nth-child(5), td:nth-child(4) { width: 12%; } /* Status */
+th:nth-child(5), td:nth-child(5) { width: 12%; } /* Status */
 th:nth-child(6), td:nth-child(6) { width: 10%; } /* Due Date */
-th:nth-child(7), td:nth-child(6) { width: 12%; } /* Notes */
+th:nth-child(7), td:nth-child(7) { width: 12%; } /* Notes */
 th:nth-child(8), td:nth-child(8) { width: 8%; }  /* Link */
 th:nth-child(9), td:nth-child(9) { width: 12%; } /* Actions */
 
@@ -491,7 +491,7 @@ th::after {
 
 .project-row {
     display: grid;
-    grid-template-columns: 25% 18% 10% 15% 12% 15% 10% 15%;
+    grid-template-columns: 25% 12% 8% 12% 10% 12% 8% 12%;
     gap: 0.5rem;
     padding: 0.75rem;
     margin-bottom: 0.5rem;
@@ -585,7 +585,7 @@ td {
 }
 
 /* Allow wrapping for notes column */
-td:nth-child(6) {
+td:nth-child(7) {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -2263,9 +2263,9 @@ tr:nth-child(even) {
     th:nth-child(2), td:nth-child(2) { width: 20%; } /* Customer */
     th:nth-child(3), td:nth-child(3) { width: 15%; } /* Type */
     th:nth-child(4), td:nth-child(4) { width: 8%; }  /* Qty */
-    th:nth-child(5), td:nth-child(4) { width: 12%; } /* Status */
+    th:nth-child(5), td:nth-child(5) { width: 12%; } /* Status */
     th:nth-child(6), td:nth-child(6) { width: 5%; }  /* Due Date */
-    th:nth-child(7), td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
+    th:nth-child(7), td:nth-child(7) { width: 0%; display: none; } /* Notes - hide on mobile */
     th:nth-child(8), td:nth-child(8) { width: 0%; display: none; } /* Link - hide on mobile */
     th:nth-child(9), td:nth-child(9) { width: 10%; } /* Actions */
 }
@@ -2362,7 +2362,7 @@ tr:nth-child(even) {
 }
 
 /* Status column styling to accommodate quick actions */
-td:nth-child(4) {
+td:nth-child(5) {
     position: relative;
     min-width: 120px;
 }
