@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     loadDataFromAPI();
     updateLocationFilters();
-    updateCustomerFilters();
 });
 
 function initializeApp() {
@@ -24,9 +23,6 @@ function initializeApp() {
             switchTab(tabName);
         });
     });
-    
-    // Ensure sticky positioning works
-    setupStickyElements();
 
     // Form submissions
     document.getElementById('addItemForm').addEventListener('submit', handleAddItem);
@@ -91,28 +87,6 @@ function checkLogo() {
     }
 }
 
-function setupStickyElements() {
-    // Simple setup - CSS handles the sticky positioning
-    console.log('Sticky elements setup complete');
-    
-    // Prevent scroll bubbling from table container
-    const tableContainer = document.querySelector('.table-container');
-    if (tableContainer) {
-        tableContainer.addEventListener('wheel', function(e) {
-            const { scrollTop, scrollHeight, clientHeight } = this;
-            
-            // If we're at the top and trying to scroll up, prevent it
-            if (scrollTop === 0 && e.deltaY < 0) {
-                e.preventDefault();
-            }
-            // If we're at the bottom and trying to scroll down, prevent it
-            else if (scrollTop + clientHeight >= scrollHeight && e.deltaY > 0) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-    }
-}
-
 function calculateTotalValue() {
     const quantity = parseInt(document.getElementById('itemQuantity').value) || 0;
     const price = parseFloat(document.getElementById('itemPrice').value) || 0;
@@ -138,17 +112,14 @@ function editItem(index) {
     // Populate the edit form
     document.getElementById('editItemIndex').value = index;
     document.getElementById('editItemName').value = item.name;
-    document.getElementById('editItemLocation').value = item.location || '';
     document.getElementById('editItemDescription').value = item.description || '';
+    document.getElementById('editItemLocation').value = item.location || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
     document.getElementById('editItemPrice').value = item.price || 0;
     document.getElementById('editItemStatus').value = item.status;
     document.getElementById('editItemPriority').value = item.priority || 'medium';
     document.getElementById('editItemDueDate').value = item.dueDate || '';
     document.getElementById('editItemNotes').value = item.notes || '';
-    document.getElementById('editItemCategory').value = item.category || '';
-    document.getElementById('editItemTags').value = item.tags || '';
-    document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
     // Calculate and set total value
     calculateEditTotalValue();
@@ -169,9 +140,10 @@ function handleEditItem(e) {
     
     // Basic validation
     const name = document.getElementById('editItemName').value.trim();
+    const customer = document.getElementById('editItemCustomer').value.trim();
     
-    if (!name) {
-        showNotification('Please fill in the item name', 'error');
+    if (!name || !customer) {
+        showNotification('Please fill in all required fields', 'error');
         return;
     }
     
@@ -186,26 +158,23 @@ function handleEditItem(e) {
     inventory[index] = {
         ...inventory[index],
         name: name,
-        customer: document.getElementById('editItemCustomer').value,
+        description: document.getElementById('editItemDescription').value.trim(),
+        customer: customer,
         location: document.getElementById('editItemLocation').value.trim() || 'Not specified',
-        description: document.getElementById('editItemDescription').value.trim() || '',
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
         status: document.getElementById('editItemStatus').value,
         priority: document.getElementById('editItemPriority').value,
         dueDate: document.getElementById('editItemDueDate').value || null,
-        notes: document.getElementById('editItemNotes').value.trim() || '',
-        category: document.getElementById('editItemCategory').value || '',
-        tags: document.getElementById('editItemTags').value.trim() || '',
-        patternLink: document.getElementById('editItemPatternLink').value.trim() || ''
+        notes: document.getElementById('editItemNotes').value.trim() || ''
     };
     
     console.log('Item updated:', inventory[index]); // Debug log
     
     saveData();
     loadInventoryTable();
-    updateCustomerFilters();
+    loadWIPTab();
     
     console.log('About to close edit modal'); // Debug log
     
@@ -301,59 +270,24 @@ function switchTab(tabName) {
     // Load data for the tab
     if (tabName === 'inventory') {
         loadInventoryTable();
-    } else if (tabName === 'customers') {
-        loadCustomersTable();
     } else if (tabName === 'wip') {
         loadWIPTab();
+    } else if (tabName === 'customers') {
+        loadCustomersTable();
     } else if (tabName === 'gallery') {
         loadGallery();
     } else if (tabName === 'sales') {
         loadSalesTable();
-    } else if (tabName === 'reports') {
-        loadReportsDashboard();
     }
 }
 
 function loadData() {
-    cleanCopyText();
     loadInventoryTable();
-    loadCustomersTable();
     loadWIPTab();
+    loadCustomersTable();
     loadGallery();
     loadSalesTable();
-    loadReportsDashboard();
     updateLocationFilters();
-    updateCustomerFilters();
-}
-
-function cleanCopyText() {
-    let hasChanges = false;
-    
-    inventory.forEach(item => {
-        // Remove "(Copy)" from item names
-        if (item.name && item.name.includes(' (Copy)')) {
-            item.name = item.name.replace(' (Copy)', '');
-            hasChanges = true;
-        }
-        
-        // Remove copy notation from notes
-        if (item.notes && item.notes.includes('(Copied from:')) {
-            item.notes = item.notes.replace(/\s*\(Copied from:.*?\)/, '');
-            hasChanges = true;
-        }
-        
-        // Remove standalone copy notes
-        if (item.notes && item.notes.startsWith('Copied from:')) {
-            item.notes = '';
-            hasChanges = true;
-        }
-    });
-    
-    // Save changes if any were made
-    if (hasChanges) {
-        saveData();
-        console.log('Cleaned up copy text from existing items');
-    }
 }
 
 // API Functions
@@ -405,183 +339,44 @@ function loadInventoryTable() {
     const tbody = document.getElementById('inventoryTableBody');
     tbody.innerHTML = '';
     
-    // Group items by customer
-    const groupedItems = {};
     inventory.forEach((item, index) => {
-        const customer = item.customer || 'No Customer';
-        if (!groupedItems[customer]) {
-            groupedItems[customer] = [];
-        }
-        groupedItems[customer].push({ item, index });
-    });
-    
-    // Sort customers alphabetically, with "No Customer" at the end
-    const sortedCustomers = Object.keys(groupedItems).sort((a, b) => {
-        if (a === 'No Customer') return 1;
-        if (b === 'No Customer') return -1;
-        return a.localeCompare(b);
-    });
-    
-    sortedCustomers.forEach(customer => {
-        const customerItems = groupedItems[customer];
+        const row = document.createElement('tr');
+        // Format due date with urgency styling
+        const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-';
+        const today = new Date();
+        const dueDateObj = item.dueDate ? new Date(item.dueDate) : null;
+        const isOverdue = dueDateObj && dueDateObj < today && item.status !== 'completed' && item.status !== 'sold';
+        const isDueSoon = dueDateObj && dueDateObj <= new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000) && item.status !== 'completed' && item.status !== 'sold';
         
-        // Create customer header row
-        const headerRow = document.createElement('tr');
-        headerRow.className = 'customer-header';
-        headerRow.onclick = () => toggleCustomerGroup(customer);
+        const dueDateClass = isOverdue ? 'due-date-overdue' : isDueSoon ? 'due-date-soon' : '';
         
-        // Calculate customer stats
-        const totalProjects = customerItems.length;
-        const pendingCount = customerItems.filter(({ item }) => item.status === 'pending').length;
-        const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress' || item.status === 'work-in-progress').length;
-        const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
-        const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
-        
-        headerRow.innerHTML = `
-            <td colspan="9">
-                <div class="customer-header-content">
-                    <i class="fas fa-chevron-right customer-toggle"></i>
-                    <strong>${customer}</strong>
-                    <span class="customer-stats">
-                        ${totalProjects} project${totalProjects !== 1 ? 's' : ''} 
-                        (${pendingCount} pending, ${inProgressCount} in progress, ${completedCount} completed, ${soldCount} sold)
-                    </span>
+        row.innerHTML = `
+            <td><strong>${item.name}</strong></td>
+            <td>${item.description || '-'}</td>
+            <td>${item.customer}</td>
+            <td>${item.location || '-'}</td>
+            <td><span class="quantity-badge">${item.quantity || 1}</span></td>
+            <td><span class="status-badge status-${item.status}">${item.status}</span></td>
+            <td>$${item.price ? parseFloat(item.price).toFixed(2) : '0.00'}</td>
+            <td><strong>$${item.totalValue ? parseFloat(item.totalValue).toFixed(2) : '0.00'}</strong></td>
+            <td><span class="due-date ${dueDateClass}">${dueDate}</span></td>
+            <td>${new Date(item.dateAdded).toLocaleDateString()}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="editItem(${index})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''}>
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteItem(${index})">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </td>
         `;
-        tbody.appendChild(headerRow);
-        
-        // Create customer group container
-        const groupRow = document.createElement('tr');
-        groupRow.className = 'customer-group';
-        groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
-        groupRow.style.display = 'none';
-        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
-        tbody.appendChild(groupRow);
-        
-        // Add individual project rows
-        const projectsContainer = groupRow.querySelector('.customer-projects');
-        customerItems.forEach(({ item, index }) => {
-            const projectRow = document.createElement('div');
-            projectRow.className = 'project-row';
-            
-            // Format due date with urgency styling
-            const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '';
-            const today = new Date();
-            const dueDateObj = item.dueDate ? new Date(item.dueDate) : null;
-            const isOverdue = dueDateObj && dueDateObj < today && item.status !== 'completed' && item.status !== 'sold';
-            const isDueSoon = dueDateObj && dueDateObj <= new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000) && item.status !== 'completed' && item.status !== 'sold';
-            
-            const dueDateClass = isOverdue ? 'due-date-overdue' : isDueSoon ? 'due-date-soon' : '';
-            
-            // Create pattern link button if link exists
-            const patternLinkButton = item.patternLink ? 
-                `<button class="btn btn-link" onclick="window.open('${item.patternLink}', '_blank')" title="Open Pattern">
-                    <i class="fas fa-external-link-alt"></i> Pattern
-                </button>` : 
-                '<span class="text-muted"></span>';
-            
-            // Create quick action buttons based on current status
-            let quickActions = '';
-            if (item.status === 'pending') {
-                quickActions = `
-                    <button class="btn btn-sm btn-primary" onclick="quickStatusChange(${index}, 'in-progress')" title="Start Work">
-                        <i class="fas fa-play"></i>
-                    </button>
-                `;
-            } else if (item.status === 'in-progress' || item.status === 'work-in-progress') {
-                quickActions = `
-                    <button class="btn btn-sm btn-success" onclick="quickStatusChange(${index}, 'completed')" title="Mark Complete">
-                        <i class="fas fa-check"></i>
-                    </button>
-                `;
-            } else if (item.status === 'completed') {
-                quickActions = `
-                    <button class="btn btn-sm btn-info" onclick="quickStatusChange(${index}, 'sold')" title="Mark as Sold">
-                        <i class="fas fa-dollar-sign"></i>
-                    </button>
-                `;
-            }
-
-            // Truncate notes for display
-            const notes = item.notes || '';
-            const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
-            const notesDisplay = notes ? `<span title="${notes}">${truncatedNotes}</span>` : '<span class="text-muted"></span>';
-
-            // Create category and tags display
-            const categoryDisplay = item.category ? `<span class="category-badge category-${item.category}">${item.category}</span>` : '<span class="text-muted"></span>';
-            const tags = item.tags ? item.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
-            const tagsDisplay = tags.length > 0 ? 
-                `<div class="tags-container">${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : 
-                '<span class="text-muted"></span>';
-
-            projectRow.innerHTML = `
-                <div class="project-cell project-name"><strong>${item.name}</strong></div>
-                <div class="project-cell project-category">${categoryDisplay}</div>
-                <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
-                <div class="project-cell project-status">
-                    <span class="status-badge status-${item.status}">${item.status}</span>
-                    <div class="quick-actions">${quickActions}</div>
-                </div>
-                <div class="project-cell project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></div>
-                <div class="project-cell project-notes">${notesDisplay}</div>
-                <div class="project-cell project-pattern">${patternLinkButton}</div>
-                <div class="project-cell project-actions">
-                    <div class="action-buttons">
-                        <button class="btn btn-secondary" onclick="editItem(${index})" title="Edit Item">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            projectsContainer.appendChild(projectRow);
-        });
+        tbody.appendChild(row);
     });
-}
-
-function toggleCustomerGroup(customer) {
-    const groupId = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
-    const groupRow = document.getElementById(groupId);
-    const toggleIcon = event.target.closest('.customer-header').querySelector('.customer-toggle');
-    
-    // If we're expanding this group, collapse all others first
-    if (groupRow.style.display === 'none') {
-        // Collapse all other customer groups
-        const allCustomerGroups = document.querySelectorAll('.customer-group');
-        const allToggleIcons = document.querySelectorAll('.customer-toggle');
-        
-        allCustomerGroups.forEach(group => {
-            if (group.id !== groupId) {
-                group.style.display = 'none';
-            }
-        });
-        
-        allToggleIcons.forEach(icon => {
-            if (icon !== toggleIcon) {
-                icon.classList.remove('fa-chevron-down');
-                icon.classList.add('fa-chevron-right');
-            }
-        });
-        
-        // Now expand the selected group
-        groupRow.style.display = 'table-row';
-        toggleIcon.classList.remove('fa-chevron-right');
-        toggleIcon.classList.add('fa-chevron-down');
-    } else {
-        // Just collapse the current group
-        groupRow.style.display = 'none';
-        toggleIcon.classList.remove('fa-chevron-down');
-        toggleIcon.classList.add('fa-chevron-right');
-    }
 }
 
 function openAddItemModal() {
@@ -599,9 +394,9 @@ function handleAddItem(e) {
     
     const newItem = {
         name: document.getElementById('itemName').value,
+        description: document.getElementById('itemDescription').value,
         customer: document.getElementById('itemCustomer').value,
         location: document.getElementById('itemLocation').value || 'Not specified',
-        description: document.getElementById('itemDescription').value || '',
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
@@ -609,9 +404,6 @@ function handleAddItem(e) {
         priority: document.getElementById('itemPriority').value,
         dueDate: document.getElementById('itemDueDate').value || null,
         notes: document.getElementById('itemNotes').value || '',
-        category: document.getElementById('itemCategory').value || '',
-        tags: document.getElementById('itemTags').value || '',
-        patternLink: document.getElementById('itemPatternLink').value || '',
         dateAdded: new Date().toISOString()
     };
     
@@ -619,7 +411,6 @@ function handleAddItem(e) {
     saveData();
     loadInventoryTable();
     updateLocationFilters();
-    updateCustomerFilters();
     closeModal('addItemModal');
     
     showNotification('Item added successfully!', 'success');
@@ -638,7 +429,7 @@ function loadCustomersTable() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${customer.name}</strong></td>
-            <td>${customer.contact || ''}</td>
+            <td>${customer.contact || '-'}</td>
             <td>${customer.location}</td>
             <td>${customerItems.length}</td>
             <td>$${totalSpent.toFixed(2)}</td>
@@ -676,7 +467,6 @@ function handleAddCustomer(e) {
     saveData();
     loadCustomersTable();
     updateLocationFilters();
-    updateCustomerFilters();
     closeModal('addCustomerModal');
     
     showNotification('Customer added successfully!', 'success');
@@ -727,7 +517,7 @@ function handleAddSale(e) {
     
     const newSale = {
         itemName: item.name,
-        customer: document.getElementById('saleCustomer').value || item.customer || 'No Customer',
+        customer: document.getElementById('saleCustomer').value || item.customer,
         location: item.location,
         price: parseFloat(document.getElementById('salePrice').value),
         dateSold: document.getElementById('saleDate').value,
@@ -766,8 +556,7 @@ function populateItemSelect(selectId) {
         if (item.status !== 'sold') {
             const option = document.createElement('option');
             option.value = index;
-            const customerDisplay = item.customer || 'No Customer';
-            option.textContent = `${item.name} - ${customerDisplay} (${item.status})`;
+            option.textContent = `${item.name} - ${item.customer} (${item.status})`;
             select.appendChild(option);
         }
     });
@@ -790,95 +579,54 @@ function updateLocationFilters() {
     });
 }
 
-function updateCustomerFilters() {
-    const customerNames = [...new Set(inventory.map(item => item.customer).filter(customer => customer))];
-    
-    const customerFilter = document.getElementById('customerFilter');
-    if (customerFilter) {
-        const currentValue = customerFilter.value;
-        customerFilter.innerHTML = '<option value="">All Customers</option>';
-        customerNames.forEach(customer => {
-            const option = document.createElement('option');
-            option.value = customer;
-            option.textContent = customer;
-            customerFilter.appendChild(option);
-        });
-        customerFilter.value = currentValue;
-    }
-}
-
 function filterItems() {
-    // For now, just reload the table with current filters
-    // The grouping will handle the filtering logic
-    loadInventoryTable();
-    
-    // Apply filters by hiding/showing customer groups
     const searchTerm = document.getElementById('searchItems').value.toLowerCase();
     const statusFilter = document.getElementById('statusFilter').value;
-    const customerFilter = document.getElementById('customerFilter').value;
     const locationFilter = document.getElementById('locationFilter').value;
     
-    // Get all customer headers and groups
-    const customerHeaders = document.querySelectorAll('.customer-header');
-    const customerGroups = document.querySelectorAll('.customer-group');
+    const filteredItems = inventory.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
+                            item.description.toLowerCase().includes(searchTerm) ||
+                            item.customer.toLowerCase().includes(searchTerm);
+        const matchesStatus = !statusFilter || item.status === statusFilter;
+        const matchesLocation = !locationFilter || item.location === locationFilter;
+        
+        return matchesSearch && matchesStatus && matchesLocation;
+    });
     
-    customerHeaders.forEach((header, index) => {
-        const group = customerGroups[index];
-        const customerName = header.querySelector('strong').textContent;
-        const projectRows = group.querySelectorAll('.project-row');
-        
-        let hasVisibleProjects = false;
-        
-        projectRows.forEach(projectRow => {
-            const projectName = projectRow.querySelector('.project-name strong').textContent.toLowerCase();
-            const status = projectRow.querySelector('.status-badge').textContent;
-            const category = projectRow.querySelector('.project-category').textContent.toLowerCase();
-            const notes = projectRow.querySelector('.project-notes').textContent.toLowerCase();
-            
-            // Apply filters
-            const matchesSearch = projectName.includes(searchTerm) || 
-                                customerName.toLowerCase().includes(searchTerm) ||
-                                notes.includes(searchTerm);
-            const matchesStatus = !statusFilter || status === statusFilter;
-            const matchesCustomer = !customerFilter || customerName === customerFilter;
-            const matchesLocation = !locationFilter || true; // Location filtering would need to be added to project data
-            
-            if (matchesSearch && matchesStatus && matchesCustomer && matchesLocation) {
-                projectRow.style.display = 'flex';
-                hasVisibleProjects = true;
-            } else {
-                projectRow.style.display = 'none';
-            }
-        });
-        
-        // Show/hide customer group based on whether it has visible projects
-        if (hasVisibleProjects) {
-            header.style.display = 'table-row';
-            group.style.display = 'table-row';
-        } else {
-            header.style.display = 'none';
-            group.style.display = 'none';
-        }
+    const tbody = document.getElementById('inventoryTableBody');
+    tbody.innerHTML = '';
+    
+    filteredItems.forEach((item, index) => {
+        const originalIndex = inventory.indexOf(item);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${item.name}</strong></td>
+            <td>${item.description || '-'}</td>
+            <td>${item.customer}</td>
+            <td>${item.location}</td>
+            <td><span class="status-badge status-${item.status}">${item.status}</span></td>
+            <td>$${item.price ? parseFloat(item.price).toFixed(2) : '0.00'}</td>
+            <td>${new Date(item.dateAdded).toLocaleDateString()}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="editItem(${originalIndex})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-success" onclick="markAsSold(${originalIndex})" ${item.status === 'sold' ? 'disabled' : ''}>
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteItem(${originalIndex})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
     });
 }
 
 // Action Functions
-function quickStatusChange(index, newStatus) {
-    const item = inventory[index];
-    const statusNames = {
-        'pending': 'Pending',
-        'in-progress': 'In Progress',
-        'work-in-progress': 'Work in Progress',
-        'completed': 'Completed',
-        'sold': 'Sold'
-    };
-    
-    inventory[index].status = newStatus;
-    saveData();
-    loadInventoryTable();
-    showNotification(`Item status changed to ${statusNames[newStatus]}!`, 'success');
-}
-
 function markAsSold(index) {
     if (confirm('Mark this item as sold?')) {
         inventory[index].status = 'sold';
@@ -895,34 +643,6 @@ function deleteItem(index) {
         loadInventoryTable();
         showNotification('Item deleted successfully!', 'success');
     }
-}
-
-function copyItem(index) {
-    const originalItem = inventory[index];
-    
-    // Create a copy with reset status
-    const copiedItem = {
-        ...originalItem,
-        name: originalItem.name, // Keep original name
-        status: 'pending', // Reset to pending for new copy
-        dateAdded: new Date().toISOString(),
-        dueDate: null, // Clear due date for copy
-        notes: originalItem.notes || '' // Keep original notes without copy notation
-    };
-    
-    // Add to inventory
-    inventory.push(copiedItem);
-    
-    // Save data
-    saveData();
-    
-    // Refresh the table
-    loadInventoryTable();
-    
-    // Show success message
-    showNotification('Item copied successfully!', 'success');
-    
-    console.log('Item copied:', copiedItem);
 }
 
 function deleteCustomer(index) {
@@ -1040,7 +760,7 @@ function printCustomerList() {
         printContent += `
             <tr>
                 <td><strong>${customer.name}</strong></td>
-                <td>${customer.contact || ''}</td>
+                <td>${customer.contact || '-'}</td>
                 <td>${customer.location}</td>
                 <td>${customerItems.length}</td>
                 <td>$${totalSpent.toFixed(2)}</td>
@@ -1105,500 +825,54 @@ function deleteSale(index) {
     }
 }
 
-// Enhanced Reports System
-function loadReportsDashboard() {
-    updateDashboardStats();
-    updateReportFilters();
-}
-
-function updateDashboardStats() {
-    const totalProjects = inventory.length;
-    const completedProjects = inventory.filter(item => item.status === 'completed' || item.status === 'sold').length;
-    const activeCustomers = new Set(inventory.map(item => item.customer).filter(customer => customer)).size;
-    
-    // Calculate total revenue from sales
-    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.price || 0), 0);
-    
-    // Calculate average project value
-    const projectsWithValue = inventory.filter(item => item.price && item.price > 0);
-    const avgProjectValue = projectsWithValue.length > 0 ? 
-        projectsWithValue.reduce((sum, item) => sum + parseFloat(item.price), 0) / projectsWithValue.length : 0;
-    
-    // Calculate completion rate
-    const completionRate = totalProjects > 0 ? (completedProjects / totalProjects * 100) : 0;
-    
-    // Update the dashboard
-    document.getElementById('totalProjects').textContent = totalProjects;
-    document.getElementById('totalRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
-    document.getElementById('completedProjects').textContent = completedProjects;
-    document.getElementById('activeCustomers').textContent = activeCustomers;
-    document.getElementById('avgProjectValue').textContent = `$${avgProjectValue.toFixed(2)}`;
-    document.getElementById('completionRate').textContent = `${completionRate.toFixed(1)}%`;
-}
-
-function updateReportFilters() {
-    // Update location filter
-    const locations = [...new Set(inventory.map(item => item.location).filter(location => location))];
-    const locationFilter = document.getElementById('reportLocationFilter');
-    const currentLocation = locationFilter.value;
-    
-    locationFilter.innerHTML = '<option value="">All Locations</option>';
-    locations.forEach(location => {
-        const option = document.createElement('option');
-        option.value = location;
-        option.textContent = location;
-        locationFilter.appendChild(option);
-    });
-    locationFilter.value = currentLocation;
-}
-
-function generateComprehensiveReport() {
-    const reportContent = document.getElementById('reportContent');
-    const filters = getReportFilters();
-    const filteredData = getFilteredData(filters);
-    
-    reportContent.innerHTML = `
-        <div class="comprehensive-report">
-            <div class="report-header">
-                <h2>📊 Comprehensive Business Report</h2>
-                <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-                <p><strong>Period:</strong> ${filters.dateRange}</p>
-            </div>
-            
-            <div class="report-sections">
-                ${generateFinancialSummary(filteredData)}
-                ${generateProjectSummary(filteredData)}
-                ${generateCustomerSummary(filteredData)}
-                ${generateProductivitySummary(filteredData)}
-            </div>
-        </div>
-    `;
-}
-
-function generateFinancialReport() {
-    const reportContent = document.getElementById('reportContent');
-    const filters = getReportFilters();
-    const filteredData = getFilteredData(filters);
-    
-    reportContent.innerHTML = `
-        <div class="financial-report">
-            <h2>💰 Financial Summary</h2>
-            <div class="financial-stats">
-                <div class="stat-card">
-                    <div class="stat-number">$${filteredData.totalRevenue.toFixed(2)}</div>
-                    <div class="stat-label">Total Revenue</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">$${filteredData.avgProjectValue.toFixed(2)}</div>
-                    <div class="stat-label">Average Project Value</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${filteredData.completedProjects}</div>
-                    <div class="stat-label">Completed Projects</div>
-                </div>
-            </div>
-            
-            <h3>Revenue by Status</h3>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Status</th>
-                        <th>Count</th>
-                        <th>Total Value</th>
-                        <th>Average Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${generateRevenueByStatus(filteredData.items)}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
-function generateCustomerReport() {
-    const reportContent = document.getElementById('reportContent');
-    const filters = getReportFilters();
-    const filteredData = getFilteredData(filters);
-    
-    reportContent.innerHTML = `
-        <div class="customer-report">
-            <h2>👥 Customer Analytics</h2>
-            <div class="customer-stats">
-                <div class="stat-card">
-                    <div class="stat-number">${filteredData.uniqueCustomers}</div>
-                    <div class="stat-label">Total Customers</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${filteredData.avgProjectsPerCustomer.toFixed(1)}</div>
-                    <div class="stat-label">Avg Projects per Customer</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">$${filteredData.avgCustomerValue.toFixed(2)}</div>
-                    <div class="stat-label">Avg Customer Value</div>
-                </div>
-            </div>
-            
-            <h3>Top Customers by Project Count</h3>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Customer</th>
-                        <th>Projects</th>
-                        <th>Total Spent</th>
-                        <th>Last Project</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${generateTopCustomers(filteredData.items)}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
-function generateProductivityReport() {
-    const reportContent = document.getElementById('reportContent');
-    const filters = getReportFilters();
-    const filteredData = getFilteredData(filters);
-    
-    reportContent.innerHTML = `
-        <div class="productivity-report">
-            <h2>⚡ Productivity Report</h2>
-            <div class="productivity-stats">
-                <div class="stat-card">
-                    <div class="stat-number">${filteredData.completionRate.toFixed(1)}%</div>
-                    <div class="stat-label">Completion Rate</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${filteredData.avgDaysToComplete.toFixed(1)}</div>
-                    <div class="stat-label">Avg Days to Complete</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${filteredData.projectsThisMonth}</div>
-                    <div class="stat-label">Projects This Month</div>
-                </div>
-            </div>
-            
-            <h3>Status Distribution</h3>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Status</th>
-                        <th>Count</th>
-                        <th>Percentage</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${generateStatusDistribution(filteredData.items)}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
+// Reports
 function generateInventoryReport() {
-    const reportContent = document.getElementById('reportContent');
-    const filters = getReportFilters();
-    const filteredData = getFilteredData(filters);
+    const locationFilter = document.getElementById('reportLocationFilter').value;
+    const statusFilter = document.getElementById('reportStatusFilter').value;
     
+    let filteredItems = inventory;
+    
+    if (locationFilter) {
+        filteredItems = filteredItems.filter(item => item.location === locationFilter);
+    }
+    
+    if (statusFilter) {
+        filteredItems = filteredItems.filter(item => item.status === statusFilter);
+    }
+    
+    const reportContent = document.getElementById('reportContent');
     reportContent.innerHTML = `
-        <div class="inventory-report">
-            <h2>📦 Inventory Status Report</h2>
-            <div class="inventory-summary">
-                <p><strong>Total Items:</strong> ${filteredData.items.length}</p>
-                <p><strong>Location:</strong> ${filters.location || 'All Locations'}</p>
-                <p><strong>Status:</strong> ${filters.status || 'All Status'}</p>
-                <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
+        <div class="printable-report">
+            <h3>Embroidery Inventory Report</h3>
+            <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>Location:</strong> ${locationFilter || 'All Locations'}</p>
+            <p><strong>Status:</strong> ${statusFilter || 'All Status'}</p>
+            <p><strong>Total Items:</strong> ${filteredItems.length}</p>
             
-            <table class="report-table">
+            <table>
                 <thead>
                     <tr>
-                        <th>Project</th>
+                        <th>Item</th>
                         <th>Customer</th>
                         <th>Location</th>
                         <th>Status</th>
-                        <th>Priority</th>
                         <th>Price</th>
-                        <th>Due Date</th>
+                        <th>Date Added</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${filteredData.items.map(item => `
+                    ${filteredItems.map(item => `
                         <tr>
                             <td>${item.name}</td>
-                            <td>${item.customer || 'No Customer'}</td>
-                            <td>${item.location || 'Not specified'}</td>
-                            <td><span class="status-badge status-${item.status}">${item.status}</span></td>
-                            <td>${item.priority || 'medium'}</td>
+                            <td>${item.customer}</td>
+                            <td>${item.location}</td>
+                            <td>${item.status}</td>
                             <td>$${item.price ? parseFloat(item.price).toFixed(2) : '0.00'}</td>
-                            <td>${item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'Not set'}</td>
+                            <td>${new Date(item.dateAdded).toLocaleDateString()}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-        </div>
-    `;
-}
-
-// Helper functions for reports
-function getReportFilters() {
-    const location = document.getElementById('reportLocationFilter').value;
-    const status = document.getElementById('reportStatusFilter').value;
-    const dateFilter = document.getElementById('reportDateFilter').value;
-    const startDate = document.getElementById('reportStartDate').value;
-    const endDate = document.getElementById('reportEndDate').value;
-    
-    let dateRange = 'All Time';
-    if (dateFilter) {
-        dateRange = dateFilter;
-    } else if (startDate && endDate) {
-        dateRange = `${startDate} to ${endDate}`;
-    }
-    
-    return { location, status, dateFilter, startDate, endDate, dateRange };
-}
-
-function getFilteredData(filters) {
-    let filteredItems = [...inventory];
-    
-    // Apply location filter
-    if (filters.location) {
-        filteredItems = filteredItems.filter(item => item.location === filters.location);
-    }
-    
-    // Apply status filter
-    if (filters.status) {
-        filteredItems = filteredItems.filter(item => item.status === filters.status);
-    }
-    
-    // Apply date filter
-    if (filters.dateFilter || (filters.startDate && filters.endDate)) {
-        const now = new Date();
-        let startDate, endDate;
-        
-        if (filters.dateFilter) {
-            switch (filters.dateFilter) {
-                case 'today':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                    break;
-                case 'week':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    endDate = now;
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = now;
-                    break;
-                case 'quarter':
-                    const quarter = Math.floor(now.getMonth() / 3);
-                    startDate = new Date(now.getFullYear(), quarter * 3, 1);
-                    endDate = now;
-                    break;
-                case 'year':
-                    startDate = new Date(now.getFullYear(), 0, 1);
-                    endDate = now;
-                    break;
-            }
-        } else {
-            startDate = new Date(filters.startDate);
-            endDate = new Date(filters.endDate);
-        }
-        
-        filteredItems = filteredItems.filter(item => {
-            const itemDate = new Date(item.dateAdded);
-            return itemDate >= startDate && itemDate <= endDate;
-        });
-    }
-    
-    // Calculate statistics
-    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.price || 0), 0);
-    const completedProjects = filteredItems.filter(item => item.status === 'completed' || item.status === 'sold').length;
-    const uniqueCustomers = new Set(filteredItems.map(item => item.customer).filter(customer => customer)).size;
-    const projectsWithValue = filteredItems.filter(item => item.price && item.price > 0);
-    const avgProjectValue = projectsWithValue.length > 0 ? 
-        projectsWithValue.reduce((sum, item) => sum + parseFloat(item.price), 0) / projectsWithValue.length : 0;
-    const completionRate = filteredItems.length > 0 ? (completedProjects / filteredItems.length * 100) : 0;
-    const avgProjectsPerCustomer = uniqueCustomers > 0 ? filteredItems.length / uniqueCustomers : 0;
-    const avgCustomerValue = uniqueCustomers > 0 ? totalRevenue / uniqueCustomers : 0;
-    
-    // Calculate average days to complete
-    const completedItems = filteredItems.filter(item => item.status === 'completed' && item.dateAdded);
-    const avgDaysToComplete = completedItems.length > 0 ? 
-        completedItems.reduce((sum, item) => {
-            const startDate = new Date(item.dateAdded);
-            const endDate = new Date(); // Assuming completed today for simplicity
-            return sum + Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
-        }, 0) / completedItems.length : 0;
-    
-    // Projects this month
-    const thisMonth = new Date();
-    thisMonth.setDate(1);
-    const projectsThisMonth = filteredItems.filter(item => new Date(item.dateAdded) >= thisMonth).length;
-    
-    return {
-        items: filteredItems,
-        totalRevenue,
-        completedProjects,
-        uniqueCustomers,
-        avgProjectValue,
-        completionRate,
-        avgProjectsPerCustomer,
-        avgCustomerValue,
-        avgDaysToComplete,
-        projectsThisMonth
-    };
-}
-
-function generateRevenueByStatus(items) {
-    const statusGroups = {};
-    items.forEach(item => {
-        if (!statusGroups[item.status]) {
-            statusGroups[item.status] = { count: 0, totalValue: 0 };
-        }
-        statusGroups[item.status].count++;
-        statusGroups[item.status].totalValue += parseFloat(item.price || 0);
-    });
-    
-    return Object.entries(statusGroups).map(([status, data]) => `
-        <tr>
-            <td>${status}</td>
-            <td>${data.count}</td>
-            <td>$${data.totalValue.toFixed(2)}</td>
-            <td>$${data.count > 0 ? (data.totalValue / data.count).toFixed(2) : '0.00'}</td>
-        </tr>
-    `).join('');
-}
-
-function generateTopCustomers(items) {
-    const customerData = {};
-    items.forEach(item => {
-        if (item.customer) {
-            if (!customerData[item.customer]) {
-                customerData[item.customer] = { projects: 0, totalSpent: 0, lastProject: null };
-            }
-            customerData[item.customer].projects++;
-            customerData[item.customer].totalSpent += parseFloat(item.price || 0);
-            if (!customerData[item.customer].lastProject || new Date(item.dateAdded) > new Date(customerData[item.customer].lastProject)) {
-                customerData[item.customer].lastProject = item.dateAdded;
-            }
-        }
-    });
-    
-    return Object.entries(customerData)
-        .sort((a, b) => b[1].projects - a[1].projects)
-        .slice(0, 10)
-        .map(([customer, data]) => `
-            <tr>
-                <td>${customer}</td>
-                <td>${data.projects}</td>
-                <td>$${data.totalSpent.toFixed(2)}</td>
-                <td>${data.lastProject ? new Date(data.lastProject).toLocaleDateString() : 'N/A'}</td>
-            </tr>
-        `).join('');
-}
-
-function generateStatusDistribution(items) {
-    const statusCounts = {};
-    items.forEach(item => {
-        statusCounts[item.status] = (statusCounts[item.status] || 0) + 1;
-    });
-    
-    return Object.entries(statusCounts).map(([status, count]) => `
-        <tr>
-            <td>${status}</td>
-            <td>${count}</td>
-            <td>${items.length > 0 ? (count / items.length * 100).toFixed(1) : 0}%</td>
-        </tr>
-    `).join('');
-}
-
-function generateFinancialSummary(data) {
-    return `
-        <div class="report-section">
-            <h3>💰 Financial Overview</h3>
-            <div class="financial-grid">
-                <div class="financial-item">
-                    <span class="label">Total Revenue:</span>
-                    <span class="value">$${data.totalRevenue.toFixed(2)}</span>
-                </div>
-                <div class="financial-item">
-                    <span class="label">Average Project Value:</span>
-                    <span class="value">$${data.avgProjectValue.toFixed(2)}</span>
-                </div>
-                <div class="financial-item">
-                    <span class="label">Completed Projects:</span>
-                    <span class="value">${data.completedProjects}</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function generateProjectSummary(data) {
-    return `
-        <div class="report-section">
-            <h3>📋 Project Overview</h3>
-            <div class="project-grid">
-                <div class="project-item">
-                    <span class="label">Total Projects:</span>
-                    <span class="value">${data.items.length}</span>
-                </div>
-                <div class="project-item">
-                    <span class="label">Completion Rate:</span>
-                    <span class="value">${data.completionRate.toFixed(1)}%</span>
-                </div>
-                <div class="project-item">
-                    <span class="label">Active Customers:</span>
-                    <span class="value">${data.uniqueCustomers}</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function generateCustomerSummary(data) {
-    return `
-        <div class="report-section">
-            <h3>👥 Customer Overview</h3>
-            <div class="customer-grid">
-                <div class="customer-item">
-                    <span class="label">Total Customers:</span>
-                    <span class="value">${data.uniqueCustomers}</span>
-                </div>
-                <div class="customer-item">
-                    <span class="label">Avg Projects per Customer:</span>
-                    <span class="value">${data.avgProjectsPerCustomer.toFixed(1)}</span>
-                </div>
-                <div class="customer-item">
-                    <span class="label">Avg Customer Value:</span>
-                    <span class="value">$${data.avgCustomerValue.toFixed(2)}</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function generateProductivitySummary(data) {
-    return `
-        <div class="report-section">
-            <h3>⚡ Productivity Overview</h3>
-            <div class="productivity-grid">
-                <div class="productivity-item">
-                    <span class="label">Avg Days to Complete:</span>
-                    <span class="value">${data.avgDaysToComplete.toFixed(1)} days</span>
-                </div>
-                <div class="productivity-item">
-                    <span class="label">Projects This Month:</span>
-                    <span class="value">${data.projectsThisMonth}</span>
-                </div>
-                <div class="productivity-item">
-                    <span class="label">Completion Rate:</span>
-                    <span class="value">${data.completionRate.toFixed(1)}%</span>
-                </div>
-            </div>
         </div>
     `;
 }
@@ -1651,7 +925,7 @@ window.onclick = function(event) {
     });
 }
 
-// Work In Progress Management
+// Work in Progress Management
 function loadWIPTab() {
     // Check if we're on the WIP tab before updating
     const wipTab = document.getElementById('wip');
@@ -1674,15 +948,17 @@ function updateWIPStats(wipItems) {
     const wipCount = wipItems.filter(item => 
         item.status === 'in-progress' || item.status === 'work-in-progress'
     ).length;
-    const pendingCount = wipItems.filter(item => item.status === 'pending').length;
-    const completedToday = inventory.filter(item => {
-        if (item.status !== 'completed' && item.status !== 'sold') return false;
-        const today = new Date().toDateString();
-        const itemDate = new Date(item.dateAdded).toDateString();
-        return itemDate === today;
-    }).length;
     
-    // Update the stats display
+    const pendingCount = wipItems.filter(item => item.status === 'pending').length;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const completedToday = inventory.filter(item => 
+        item.status === 'completed' && 
+        item.dateCompleted && 
+        item.dateCompleted.split('T')[0] === today
+    ).length;
+    
+    // Safely update stats elements
     const wipCountEl = document.getElementById('wipCount');
     const wipPendingCountEl = document.getElementById('wipPendingCount');
     const wipCompletedTodayEl = document.getElementById('wipCompletedToday');
@@ -1706,9 +982,9 @@ function loadWIPGrid(wipItems) {
     if (wipItems.length === 0) {
         wipGrid.innerHTML = `
             <div class="empty-wip">
-                <i class="fas fa-tools"></i>
-                <h3>No Work In Progress</h3>
-                <p>All caught up! Add new projects to see them here.</p>
+                <i class="fas fa-hammer"></i>
+                <h3>No Work in Progress</h3>
+                <p>All caught up! Add new items or check your inventory for pending work.</p>
             </div>
         `;
         return;
@@ -1717,8 +993,8 @@ function loadWIPGrid(wipItems) {
     wipItems.forEach((item, index) => {
         const originalIndex = inventory.indexOf(item);
         const priority = item.priority || 'medium';
-        const daysInProgress = item.dateAdded ? 
-            Math.floor((new Date() - new Date(item.dateAdded)) / (1000 * 60 * 60 * 24)) : 0;
+        const daysInProgress = item.dateStarted ? 
+            Math.ceil((new Date() - new Date(item.dateStarted)) / (1000 * 60 * 60 * 24)) : 0;
         
         const wipItem = document.createElement('div');
         wipItem.className = `wip-item wip-priority-${priority}`;
@@ -1732,11 +1008,11 @@ function loadWIPGrid(wipItems) {
                 <div class="wip-item-meta">
                     <div class="wip-meta-item">
                         <div class="wip-meta-label">Customer</div>
-                        <div class="wip-meta-value">${item.customer || 'No Customer'}</div>
+                        <div class="wip-meta-value">${item.customer}</div>
                     </div>
                     <div class="wip-meta-item">
                         <div class="wip-meta-label">Location</div>
-                        <div class="wip-meta-value">${item.location || 'Not specified'}</div>
+                        <div class="wip-meta-value">${item.location}</div>
                     </div>
                     <div class="wip-meta-item">
                         <div class="wip-meta-label">Price</div>
@@ -1748,11 +1024,14 @@ function loadWIPGrid(wipItems) {
                     </div>
                 </div>
                 <div class="wip-item-actions">
-                    <button class="btn btn-primary" onclick="editItem(${originalIndex})">
+                    <button class="btn btn-success" onclick="markAsCompleted(${originalIndex})">
+                        <i class="fas fa-check"></i> Complete
+                    </button>
+                    <button class="btn btn-secondary" onclick="editItem(${originalIndex})">
                         <i class="fas fa-edit"></i> Edit
                     </button>
                     <button class="btn btn-info" onclick="updateWIPStatus(${originalIndex})">
-                        <i class="fas fa-arrow-right"></i> Update Status
+                        <i class="fas fa-sync"></i> Update Status
                     </button>
                 </div>
             </div>
@@ -1772,29 +1051,36 @@ function filterWIP() {
         item.status === 'work-in-progress'
     );
     
-    if (searchTerm) {
-        filteredItems = filteredItems.filter(item => 
-            item.name.toLowerCase().includes(searchTerm) ||
-            (item.customer && item.customer.toLowerCase().includes(searchTerm)) ||
-            (item.description && item.description.toLowerCase().includes(searchTerm))
-        );
-    }
-    
-    if (statusFilter) {
-        filteredItems = filteredItems.filter(item => item.status === statusFilter);
-    }
-    
-    if (priorityFilter) {
-        filteredItems = filteredItems.filter(item => (item.priority || 'medium') === priorityFilter);
-    }
+    filteredItems = filteredItems.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
+                            item.description.toLowerCase().includes(searchTerm) ||
+                            item.customer.toLowerCase().includes(searchTerm);
+        const matchesStatus = !statusFilter || item.status === statusFilter;
+        const matchesPriority = !priorityFilter || (item.priority || 'medium') === priorityFilter;
+        
+        return matchesSearch && matchesStatus && matchesPriority;
+    });
     
     updateWIPStats(filteredItems);
     loadWIPGrid(filteredItems);
 }
 
-function markAllWIPComplete() {
+function markAsCompleted(index) {
+    if (confirm('Mark this item as completed?')) {
+        inventory[index].status = 'completed';
+        inventory[index].dateCompleted = new Date().toISOString();
+        saveData();
+        loadWIPTab();
+        loadInventoryTable();
+        showNotification('Item marked as completed!', 'success');
+    }
+}
+
+function markAllAsCompleted() {
     const wipItems = inventory.filter(item => 
-        item.status === 'in-progress' || item.status === 'work-in-progress'
+        item.status === 'pending' || 
+        item.status === 'in-progress' || 
+        item.status === 'work-in-progress'
     );
     
     if (wipItems.length === 0) {
@@ -1805,6 +1091,7 @@ function markAllWIPComplete() {
     if (confirm(`Mark all ${wipItems.length} work in progress items as completed?`)) {
         wipItems.forEach(item => {
             item.status = 'completed';
+            item.dateCompleted = new Date().toISOString();
         });
         saveData();
         loadWIPTab();
@@ -1818,22 +1105,33 @@ function updateWIPStatus(index) {
     const currentStatus = item.status;
     
     let newStatus;
-    if (currentStatus === 'pending') {
-        newStatus = 'in-progress';
-    } else if (currentStatus === 'in-progress' || currentStatus === 'work-in-progress') {
-        newStatus = 'completed';
-    } else {
-        showNotification('Item is not in a work in progress status', 'info');
-        return;
+    switch(currentStatus) {
+        case 'pending':
+            newStatus = 'in-progress';
+            break;
+        case 'in-progress':
+            newStatus = 'work-in-progress';
+            break;
+        case 'work-in-progress':
+            newStatus = 'completed';
+            break;
+        default:
+            newStatus = 'in-progress';
     }
     
-    if (confirm(`Mark "${item.name}" as ${newStatus.replace('-', ' ')}?`)) {
-        item.status = newStatus;
-        saveData();
-        loadWIPTab();
-        loadInventoryTable();
-        showNotification(`Item marked as ${newStatus.replace('-', ' ')}!`, 'success');
+    if (newStatus === 'in-progress' && !item.dateStarted) {
+        item.dateStarted = new Date().toISOString();
     }
+    
+    if (newStatus === 'completed') {
+        item.dateCompleted = new Date().toISOString();
+    }
+    
+    item.status = newStatus;
+    saveData();
+    loadWIPTab();
+    loadInventoryTable();
+    showNotification(`Status updated to ${newStatus.replace('-', ' ')}!`, 'success');
 }
 
 // Gallery Management
