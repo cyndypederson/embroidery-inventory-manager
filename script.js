@@ -1667,7 +1667,9 @@ function deleteItem(index) {
 }
 
 function copyItem(index) {
+    console.log('copyItem called with index:', index); // Debug log
     const originalItem = inventory[index];
+    console.log('Original item to copy:', originalItem); // Debug log
     
     // Store expanded customer groups before copying
     const expandedCustomers = getExpandedCustomerGroups();
@@ -1688,8 +1690,9 @@ function copyItem(index) {
     // Save data
     saveData();
     
-    // Refresh the table
-    loadInventoryTable();
+    // Refresh both tables
+    loadInventoryTable(); // Projects table
+    loadInventoryItemsTable(); // Inventory items table
     
     // Restore expanded customer groups after reload
     restoreExpandedCustomerGroups(expandedCustomers);
