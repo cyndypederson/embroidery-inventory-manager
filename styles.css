@@ -425,14 +425,13 @@ table {
 }
 
 /* Column widths for better alignment */
-th:nth-child(1), td:nth-child(1) { width: 20%; } /* Project */
-th:nth-child(2), td:nth-child(2) { width: 15%; } /* Type */
-th:nth-child(3), td:nth-child(3) { width: 8%; } /* Qty */
-th:nth-child(4), td:nth-child(4) { width: 12%; } /* Status */
-th:nth-child(5), td:nth-child(5) { width: 10%; } /* Due Date */
-th:nth-child(6), td:nth-child(6) { width: 12%; } /* Notes */
-th:nth-child(7), td:nth-child(7) { width: 8%; } /* Link */
-th:nth-child(8), td:nth-child(8) { width: 15%; } /* Actions */
+th:nth-child(1), td:nth-child(1) { width: 25%; } /* Project */
+th:nth-child(2), td:nth-child(2) { width: 10%; } /* Qty */
+th:nth-child(3), td:nth-child(3) { width: 15%; } /* Status */
+th:nth-child(4), td:nth-child(4) { width: 12%; } /* Due Date */
+th:nth-child(5), td:nth-child(5) { width: 18%; } /* Notes */
+th:nth-child(6), td:nth-child(6) { width: 10%; } /* Link */
+th:nth-child(7), td:nth-child(7) { width: 20%; } /* Actions */
 
 /* Table header styles are now handled by the sticky positioning above */
 
@@ -513,14 +512,13 @@ th::after {
 }
 
 /* Project cell widths to match table columns */
-.project-name { width: 20%; }
-.project-category { width: 15%; }
-.project-quantity { width: 8%; }
-.project-status { width: 12%; }
-.project-due-date { width: 10%; }
-.project-notes { width: 12%; }
-.project-pattern { width: 8%; }
-.project-actions { width: 15%; }
+.project-name { width: 25%; }
+.project-quantity { width: 10%; }
+.project-status { width: 15%; }
+.project-due-date { width: 12%; }
+.project-notes { width: 18%; }
+.project-pattern { width: 10%; }
+.project-actions { width: 20%; }
 
 .project-name {
     font-weight: 600;
@@ -582,10 +580,10 @@ td {
 }
 
 /* Specific column alignments */
-td:nth-child(4), th:nth-child(4) { text-align: center; } /* Qty */
-td:nth-child(5), th:nth-child(5) { text-align: center; } /* Status */
-td:nth-child(6), th:nth-child(6) { text-align: center; } /* Due Date */
-td:nth-child(8), th:nth-child(8) { text-align: center; } /* Actions */
+td:nth-child(2), th:nth-child(2) { text-align: center; } /* Qty */
+td:nth-child(3), th:nth-child(3) { text-align: center; } /* Status */
+td:nth-child(4), th:nth-child(4) { text-align: center; } /* Due Date */
+td:nth-child(7), th:nth-child(7) { text-align: center; } /* Actions */
 
 /* Ensure proper cell content alignment */
 td {
@@ -2267,14 +2265,13 @@ tr:nth-child(even) {
     }
     
     /* Adjust column widths for mobile */
-    th:nth-child(1), td:nth-child(1) { width: 40%; } /* Project */
-    th:nth-child(2), td:nth-child(2) { width: 20%; } /* Type */
-    th:nth-child(3), td:nth-child(3) { width: 10%; } /* Qty */
-    th:nth-child(4), td:nth-child(4) { width: 15%; } /* Status */
-    th:nth-child(5), td:nth-child(5) { width: 15%; } /* Due Date */
-    th:nth-child(6), td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
-    th:nth-child(7), td:nth-child(7) { width: 0%; display: none; } /* Link - hide on mobile */
-    th:nth-child(8), td:nth-child(8) { width: 15%; } /* Actions */
+    th:nth-child(1), td:nth-child(1) { width: 45%; } /* Project */
+    th:nth-child(2), td:nth-child(2) { width: 12%; } /* Qty */
+    th:nth-child(3), td:nth-child(3) { width: 18%; } /* Status */
+    th:nth-child(4), td:nth-child(4) { width: 15%; } /* Due Date */
+    th:nth-child(5), td:nth-child(5) { width: 0%; display: none; } /* Notes - hide on mobile */
+    th:nth-child(6), td:nth-child(6) { width: 0%; display: none; } /* Link - hide on mobile */
+    th:nth-child(7), td:nth-child(7) { width: 10%; } /* Actions */
 }
 
 /* Color-coded rows based on status and priority */

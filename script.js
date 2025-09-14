@@ -959,7 +959,7 @@ function loadInventoryTable() {
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
         headerRow.innerHTML = `
-            <td colspan="8">
+            <td colspan="7">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -977,7 +977,7 @@ function loadInventoryTable() {
         groupRow.className = 'customer-group';
         groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
         groupRow.style.display = 'none';
-        groupRow.innerHTML = '<td colspan="8"><div class="customer-projects"></div></td>';
+        groupRow.innerHTML = '<td colspan="7"><div class="customer-projects"></div></td>';
         tbody.appendChild(groupRow);
         
         // Add individual project rows
@@ -1038,7 +1038,6 @@ function loadInventoryTable() {
 
             projectRow.innerHTML = `
                 <div class="project-cell project-name"><strong>${item.name}</strong></div>
-                <div class="project-cell project-category">${categoryDisplay}</div>
                 <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
                 <div class="project-cell project-status">
                     <span class="status-badge status-${item.status}">${item.status}</span>
