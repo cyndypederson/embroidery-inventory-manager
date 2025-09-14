@@ -426,14 +426,13 @@ table {
 
 /* Column widths for better alignment */
 th:nth-child(1), td:nth-child(1) { width: 25%; } /* Project */
-th:nth-child(2), td:nth-child(2) { width: 15%; } /* Customer */
-th:nth-child(3), td:nth-child(3) { width: 12%; } /* Type */
-th:nth-child(4), td:nth-child(4) { width: 8%; }  /* Qty */
-th:nth-child(5), td:nth-child(4) { width: 12%; } /* Status */
-th:nth-child(6), td:nth-child(6) { width: 10%; } /* Due Date */
-th:nth-child(7), td:nth-child(6) { width: 12%; } /* Notes */
-th:nth-child(8), td:nth-child(8) { width: 8%; }  /* Link */
-th:nth-child(9), td:nth-child(9) { width: 12%; } /* Actions */
+th:nth-child(2), td:nth-child(2) { width: 18%; } /* Type */
+th:nth-child(3), td:nth-child(3) { width: 10%; } /* Qty */
+th:nth-child(4), td:nth-child(4) { width: 15%; } /* Status */
+th:nth-child(5), td:nth-child(5) { width: 12%; } /* Due Date */
+th:nth-child(6), td:nth-child(6) { width: 15%; } /* Notes */
+th:nth-child(7), td:nth-child(7) { width: 10%; } /* Link */
+th:nth-child(8), td:nth-child(8) { width: 15%; } /* Actions */
 
 /* Table header styles are now handled by the sticky positioning above */
 
@@ -577,7 +576,7 @@ td {
 td:nth-child(4), th:nth-child(4) { text-align: center; } /* Qty */
 td:nth-child(5), th:nth-child(5) { text-align: center; } /* Status */
 td:nth-child(6), th:nth-child(6) { text-align: center; } /* Due Date */
-td:nth-child(9), th:nth-child(9) { text-align: center; } /* Actions */
+td:nth-child(8), th:nth-child(8) { text-align: center; } /* Actions */
 
 /* Ensure proper cell content alignment */
 td {
@@ -2259,15 +2258,14 @@ tr:nth-child(even) {
     }
     
     /* Adjust column widths for mobile */
-    th:nth-child(1), td:nth-child(1) { width: 30%; } /* Project */
-    th:nth-child(2), td:nth-child(2) { width: 20%; } /* Customer */
-    th:nth-child(3), td:nth-child(3) { width: 15%; } /* Type */
-    th:nth-child(4), td:nth-child(4) { width: 8%; }  /* Qty */
-    th:nth-child(5), td:nth-child(4) { width: 12%; } /* Status */
-    th:nth-child(6), td:nth-child(6) { width: 5%; }  /* Due Date */
-    th:nth-child(7), td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
-    th:nth-child(8), td:nth-child(8) { width: 0%; display: none; } /* Link - hide on mobile */
-    th:nth-child(9), td:nth-child(9) { width: 10%; } /* Actions */
+    th:nth-child(1), td:nth-child(1) { width: 35%; } /* Project */
+    th:nth-child(2), td:nth-child(2) { width: 20%; } /* Type */
+    th:nth-child(3), td:nth-child(3) { width: 10%; } /* Qty */
+    th:nth-child(4), td:nth-child(4) { width: 15%; } /* Status */
+    th:nth-child(5), td:nth-child(5) { width: 10%; } /* Due Date */
+    th:nth-child(6), td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
+    th:nth-child(7), td:nth-child(7) { width: 0%; display: none; } /* Link - hide on mobile */
+    th:nth-child(8), td:nth-child(8) { width: 10%; } /* Actions */
 }
 
 /* Color-coded rows based on status and priority */
