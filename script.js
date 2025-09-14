@@ -646,21 +646,25 @@ function editItem(index) {
     
     // Populate the edit form
     document.getElementById('editItemIndex').value = index;
-    document.getElementById('editItemName').value = item.name;
+    document.getElementById('editItemDescription').value = item.description || item.name || '';
     document.getElementById('editItemLocation').value = item.location || '';
-    document.getElementById('editItemDescription').value = item.description || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
     document.getElementById('editItemPrice').value = item.price || 0;
     document.getElementById('editItemType').value = item.type || 'inventory';
-    document.getElementById('editItemStatus').value = item.status;
-    document.getElementById('editItemPriority').value = item.priority || 'medium';
-    document.getElementById('editItemDueDate').value = item.dueDate || '';
-    document.getElementById('editItemNotes').value = item.notes || '';
+    document.getElementById('editItemStatus').value = item.status || 'available';
     document.getElementById('editItemCategory').value = item.category || '';
+    document.getElementById('editItemNotes').value = item.notes || '';
+    document.getElementById('editItemSupplier').value = item.supplier || '';
+    document.getElementById('editItemReorderPoint').value = item.reorderPoint || 0;
+    
+    // Set project-specific fields
+    document.getElementById('editItemCustomer').value = item.customer || '';
+    document.getElementById('editItemDueDate').value = item.dueDate || '';
+    document.getElementById('editItemPriority').value = item.priority || 'medium';
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
-    // Update status options based on type
+    // Update status options and modal title based on type
     updateEditStatusOptions();
     
     // Calculate and set total value
@@ -668,7 +672,6 @@ function editItem(index) {
     
     // Populate customer dropdown
     populateCustomerSelect('editItemCustomer');
-    document.getElementById('editItemCustomer').value = item.customer;
     
     // Show the edit modal
     document.getElementById('editItemModal').style.display = 'block';
@@ -982,6 +985,9 @@ function updateEditStatusOptions() {
     const typeSelect = document.getElementById('editItemType');
     const statusSelect = document.getElementById('editItemStatus');
     const categorySelect = document.getElementById('editItemCategory');
+    const projectFields = document.getElementById('editProjectFields');
+    const modalTitle = document.getElementById('editItemModalTitle');
+    const submitButton = document.getElementById('editItemSubmitButton');
     
     if (typeSelect.value === 'inventory') {
         // Inventory status options
@@ -999,6 +1005,10 @@ function updateEditStatusOptions() {
             <option value="thread">Thread</option>
             <option value="supplies">Other Supplies</option>
         `;
+        // Hide project fields
+        projectFields.style.display = 'none';
+        modalTitle.textContent = 'Edit Inventory Item';
+        submitButton.textContent = 'Update Inventory Item';
     } else if (typeSelect.value === 'project') {
         // Project status options
         statusSelect.innerHTML = `
@@ -1015,6 +1025,10 @@ function updateEditStatusOptions() {
             <option value="repair">Repair Work</option>
             <option value="alteration">Alteration</option>
         `;
+        // Show project fields
+        projectFields.style.display = 'block';
+        modalTitle.textContent = 'Edit Project';
+        submitButton.textContent = 'Update Project';
     }
 }
 
