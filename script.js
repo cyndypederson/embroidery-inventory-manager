@@ -1242,24 +1242,30 @@ function handleAddItem(e) {
     const pricePerItem = parseFloat(document.getElementById('itemPrice').value) || 0;
     const totalValue = quantity * pricePerItem;
     
+    // Get form elements safely
+    const getElementValue = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+    
     const newItem = {
         name: document.getElementById('itemDescription').value, // Use description as name
-        customer: document.getElementById('itemCustomer').value || '',
-        location: document.getElementById('itemLocation').value || '',
+        customer: getElementValue('itemCustomer'),
+        location: getElementValue('itemLocation'),
         description: document.getElementById('itemDescription').value,
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
         type: document.getElementById('itemType').value,
         status: document.getElementById('itemStatus').value,
-        priority: document.getElementById('itemPriority').value || 'medium',
-        dueDate: document.getElementById('itemDueDate').value || null,
-        notes: document.getElementById('itemNotes').value || '',
-        category: document.getElementById('itemCategory').value || '',
-        supplier: document.getElementById('itemSupplier').value || '',
-        reorderPoint: parseInt(document.getElementById('itemReorderPoint').value) || 0,
-        tags: document.getElementById('itemTags').value || '',
-        patternLink: document.getElementById('itemPatternLink').value || '',
+        priority: 'medium', // Default priority
+        dueDate: getElementValue('itemDueDate') || null,
+        notes: getElementValue('itemNotes'),
+        category: getElementValue('itemCategory'),
+        supplier: getElementValue('itemSupplier'),
+        reorderPoint: parseInt(getElementValue('itemReorderPoint')) || 0,
+        tags: '', // Default empty
+        patternLink: getElementValue('itemPatternLink'),
         dateAdded: new Date().toISOString()
     };
     
