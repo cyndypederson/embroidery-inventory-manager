@@ -23,7 +23,10 @@
                 </div>
             </div>
             <nav>
-                <button class="nav-btn active" data-tab="inventory">
+                <button class="nav-btn active" data-tab="projects">
+                    <i class="fas fa-project-diagram"></i> Projects
+                </button>
+                <button class="nav-btn" data-tab="inventory">
                     <i class="fas fa-boxes"></i> Inventory
                 </button>
                 <button class="nav-btn" data-tab="customers">
@@ -45,13 +48,12 @@
         </header>
 
         <main>
-            <!-- Inventory Tab -->
-            <div id="inventory" class="tab-content active">
+            <!-- Projects Tab -->
+            <div id="projects" class="tab-content active">
                 <div class="filters">
                     <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="filterItems()">
                     <select id="statusFilter" onchange="filterItems()">
                         <option value="">All Status</option>
-                        <option value="inventory">Inventory</option>
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
                         <option value="work-in-progress">Work in Progress</option>
@@ -74,7 +76,6 @@
                         <thead>
                             <tr>
                                 <th>Project</th>
-                                <th>Type</th>
                                 <th>Category</th>
                                 <th>Qty</th>
                                 <th>Status</th>
@@ -90,6 +91,50 @@
                 </div>
             </div>
 
+            <!-- Inventory Tab -->
+            <div id="inventory" class="tab-content">
+                <div class="filters">
+                    <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
+                    <select id="inventoryStatusFilter" onchange="filterInventory()">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="low-stock">Low Stock</option>
+                        <option value="out-of-stock">Out of Stock</option>
+                    </select>
+                    <select id="inventoryCategoryFilter" onchange="filterInventory()">
+                        <option value="">All Categories</option>
+                        <option value="kits">Kits</option>
+                        <option value="hoops">Hoops</option>
+                        <option value="fabric">Fabric</option>
+                        <option value="thread">Thread</option>
+                        <option value="supplies">Other Supplies</option>
+                    </select>
+                    <select id="inventoryLocationFilter" onchange="filterInventory()">
+                        <option value="">All Locations</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add Inventory Item
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="inventoryItemsTable">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th>Qty</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryItemsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <!-- Customers Tab -->
             <div id="customers" class="tab-content">

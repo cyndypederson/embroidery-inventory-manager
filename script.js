@@ -824,8 +824,10 @@ function switchTab(tabName) {
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
     
     // Load data for the tab
-    if (tabName === 'inventory') {
-        loadInventoryTable();
+    if (tabName === 'projects') {
+        loadInventoryTable(); // Projects table
+    } else if (tabName === 'inventory') {
+        loadInventoryItemsTable(); // Inventory items table
     } else if (tabName === 'customers') {
         loadCustomersTable();
     } else if (tabName === 'wip') {
@@ -841,7 +843,8 @@ function switchTab(tabName) {
 
 function loadData() {
     cleanCopyText();
-    loadInventoryTable();
+    loadInventoryTable(); // Projects table
+    loadInventoryItemsTable(); // Inventory items table
     loadCustomersTable();
     loadWIPTab();
     loadGallery();
@@ -1007,14 +1010,17 @@ function updateEditStatusOptions() {
     }
 }
 
-// Inventory Management
+// Projects Management (Customer Work)
 function loadInventoryTable() {
     const tbody = document.getElementById('inventoryTableBody');
     tbody.innerHTML = '';
     
+    // Filter for projects only (not inventory items)
+    const projectItems = inventory.filter(item => item.type === 'project' || !item.type);
+    
     // Group items by customer
     const groupedItems = {};
-    inventory.forEach((item, index) => {
+    projectItems.forEach((item, index) => {
         const customer = item.customer || 'No Customer';
         if (!groupedItems[customer]) {
             groupedItems[customer] = [];
@@ -1047,13 +1053,13 @@ function loadInventoryTable() {
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
         headerRow.innerHTML = `
-            <td colspan="9">
+            <td colspan="8">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
                     <span class="customer-stats">
                         ${totalProjects} project${totalProjects !== 1 ? 's' : ''} 
-                        (${inventoryCount} inventory, ${pendingCount} pending, ${inProgressCount} in progress, ${completedCount} completed, ${soldCount} sold)
+                        (${pendingCount} pending, ${inProgressCount} in progress, ${completedCount} completed, ${soldCount} sold)
                     </span>
                 </div>
             </td>
@@ -1065,7 +1071,7 @@ function loadInventoryTable() {
         groupRow.className = 'customer-group';
         groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
         groupRow.style.display = 'none';
-        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
+        groupRow.innerHTML = '<td colspan="8"><div class="customer-projects"></div></td>';
         tbody.appendChild(groupRow);
         
         // Add individual project rows
@@ -1136,7 +1142,6 @@ function loadInventoryTable() {
             
             projectRow.innerHTML = `
                 <div class="project-cell project-name"><strong>${item.name}</strong></div>
-                <div class="project-cell project-type"><span class="type-badge ${typeClass}">${typeDisplay}</span></div>
                 <div class="project-cell project-category">${categoryDisplay}</div>
                 <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
                 <div class="project-cell project-status">
@@ -1244,6 +1249,103 @@ function handleAddItem(e) {
     closeModal('addItemModal');
     
     showNotification('Item added successfully!', 'success');
+}
+
+// Inventory Items Management (Supplies/Materials)
+function loadInventoryItemsTable() {
+    const tbody = document.getElementById('inventoryItemsTableBody');
+    tbody.innerHTML = '';
+    
+    // Filter for inventory items only
+    const inventoryItems = inventory.filter(item => item.type === 'inventory');
+    
+    if (inventoryItems.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-boxes"></i><br>
+                    No inventory items found. <a href="#" onclick="openAddItemModal()">Add your first inventory item</a>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Sort by name
+    inventoryItems.sort((a, b) => a.name.localeCompare(b.name));
+    
+    inventoryItems.forEach((item, index) => {
+        const originalIndex = inventory.findIndex(originalItem => originalItem === item);
+        const row = document.createElement('tr');
+        
+        // Format category display
+        const categoryDisplay = item.category ? `<span class="category-badge category-${item.category}">${item.category}</span>` : '<span class="text-muted">-</span>';
+        
+        // Format status display
+        const statusDisplay = item.status ? `<span class="status-badge status-${item.status}">${item.status.replace('-', ' ')}</span>` : '<span class="text-muted">-</span>';
+        
+        // Format notes
+        const notes = item.notes || '';
+        const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
+        const notesDisplay = notes ? `<span title="${notes}">${truncatedNotes}</span>` : '<span class="text-muted">-</span>';
+        
+        row.innerHTML = `
+            <td><strong>${item.name}</strong></td>
+            <td>${categoryDisplay}</td>
+            <td><span class="quantity-badge">${item.quantity || 1}</span></td>
+            <td>${statusDisplay}</td>
+            <td>${item.location || '-'}</td>
+            <td>${notesDisplay}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="editItem(${originalIndex})" title="Edit Item">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-info" onclick="copyItem(${originalIndex})" title="Copy Item">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteItem(${originalIndex})" title="Delete Item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Filter inventory items
+function filterInventory() {
+    const searchTerm = document.getElementById('inventorySearch').value.toLowerCase();
+    const statusFilter = document.getElementById('inventoryStatusFilter').value;
+    const categoryFilter = document.getElementById('inventoryCategoryFilter').value;
+    const locationFilter = document.getElementById('inventoryLocationFilter').value;
+    
+    const tbody = document.getElementById('inventoryItemsTableBody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        if (row.querySelector('.text-center.text-muted')) {
+            return; // Skip empty state row
+        }
+        
+        const name = row.querySelector('td:first-child').textContent.toLowerCase();
+        const category = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const status = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+        const location = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+        
+        const matchesSearch = !searchTerm || name.includes(searchTerm);
+        const matchesStatus = !statusFilter || status.includes(statusFilter);
+        const matchesCategory = !categoryFilter || category.includes(categoryFilter);
+        const matchesLocation = !locationFilter || location.includes(locationFilter);
+        
+        if (matchesSearch && matchesStatus && matchesCategory && matchesLocation) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
 // Customer Management

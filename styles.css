@@ -541,23 +541,18 @@ th::after {
 }
 
 /* Project cell widths to match table columns */
-.project-name { width: 20%; }
-.project-type { width: 12%; }
-.project-category { width: 12%; }
-.project-quantity { width: 8%; }
-.project-status { width: 12%; }
-.project-due-date { width: 10%; }
-.project-notes { width: 14%; }
-.project-pattern { width: 8%; }
-.project-actions { width: 16%; }
+.project-name { width: 25%; }
+.project-category { width: 15%; }
+.project-quantity { width: 10%; }
+.project-status { width: 15%; }
+.project-due-date { width: 12%; }
+.project-notes { width: 18%; }
+.project-pattern { width: 10%; }
+.project-actions { width: 20%; }
 
 .project-name {
     font-weight: 600;
     color: #2C3E2D;
-}
-
-.project-type {
-    justify-content: center;
 }
 
 .project-category {
