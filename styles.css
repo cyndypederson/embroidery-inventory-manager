@@ -489,9 +489,8 @@ th::after {
 }
 
 .project-row {
-    display: grid;
-    grid-template-columns: 20% 15% 8% 12% 10% 12% 8% 15%;
-    gap: 0.5rem;
+    display: flex;
+    width: 100%;
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     background: white;
@@ -510,7 +509,18 @@ th::after {
     display: flex;
     align-items: center;
     min-height: 2rem;
+    padding: 0 0.5rem;
 }
+
+/* Project cell widths to match table columns */
+.project-name { width: 20%; }
+.project-category { width: 15%; }
+.project-quantity { width: 8%; }
+.project-status { width: 12%; }
+.project-due-date { width: 10%; }
+.project-notes { width: 12%; }
+.project-pattern { width: 8%; }
+.project-actions { width: 15%; }
 
 .project-name {
     font-weight: 600;
