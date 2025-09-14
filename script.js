@@ -1304,7 +1304,12 @@ function loadInventoryItemsTable() {
     inventoryItems.sort((a, b) => a.name.localeCompare(b.name));
     
     inventoryItems.forEach((item, index) => {
-        const originalIndex = inventory.findIndex(originalItem => originalItem === item);
+        // Find the original index by matching the item's unique properties
+        const originalIndex = inventory.findIndex(originalItem => 
+            originalItem.name === item.name && 
+            originalItem.type === item.type && 
+            originalItem.dateAdded === item.dateAdded
+        );
         const row = document.createElement('tr');
         
         // Format category display
@@ -1340,7 +1345,7 @@ function loadInventoryItemsTable() {
                     <button class="btn btn-secondary" onclick="editItem(${originalIndex})" title="Edit Item">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-info" onclick="copyItem(${originalIndex})" title="Copy Item">
+                    <button class="btn btn-info" onclick="console.log('Copy button clicked for index:', ${originalIndex}); copyItem(${originalIndex})" title="Copy Item">
                         <i class="fas fa-copy"></i>
                     </button>
                     <button class="btn btn-danger" onclick="deleteItem(${originalIndex})" title="Delete Item">
@@ -1667,40 +1672,59 @@ function deleteItem(index) {
 }
 
 function copyItem(index) {
-    console.log('copyItem called with index:', index); // Debug log
-    const originalItem = inventory[index];
-    console.log('Original item to copy:', originalItem); // Debug log
-    
-    // Store expanded customer groups before copying
-    const expandedCustomers = getExpandedCustomerGroups();
-    
-    // Create a copy with reset status
-    const copiedItem = {
-        ...originalItem,
-        name: originalItem.name, // Keep original name
-        status: 'pending', // Reset to pending for new copy
-        dateAdded: new Date().toISOString(),
-        dueDate: null, // Clear due date for copy
-        notes: originalItem.notes || '' // Keep original notes without copy notation
-    };
-    
-    // Add to inventory
-    inventory.push(copiedItem);
-    
-    // Save data
-    saveData();
-    
-    // Refresh both tables
-    loadInventoryTable(); // Projects table
-    loadInventoryItemsTable(); // Inventory items table
-    
-    // Restore expanded customer groups after reload
-    restoreExpandedCustomerGroups(expandedCustomers);
-    
-    // Show success message
-    showNotification('Item copied successfully!', 'success');
-    
-    console.log('Item copied:', copiedItem);
+    try {
+        console.log('copyItem called with index:', index); // Debug log
+        
+        if (!inventory || index < 0 || index >= inventory.length) {
+            console.error('Invalid index or inventory array:', index, inventory);
+            showNotification('Error: Invalid item to copy', 'error');
+            return;
+        }
+        
+        const originalItem = inventory[index];
+        console.log('Original item to copy:', originalItem); // Debug log
+        
+        if (!originalItem) {
+            console.error('No item found at index:', index);
+            showNotification('Error: Item not found', 'error');
+            return;
+        }
+        
+        // Store expanded customer groups before copying
+        const expandedCustomers = getExpandedCustomerGroups();
+        
+        // Create a copy with reset status
+        const copiedItem = {
+            ...originalItem,
+            name: originalItem.name, // Keep original name
+            status: 'pending', // Reset to pending for new copy
+            dateAdded: new Date().toISOString(),
+            dueDate: null, // Clear due date for copy
+            notes: originalItem.notes || '' // Keep original notes without copy notation
+        };
+        
+        // Add to inventory
+        inventory.push(copiedItem);
+        
+        // Save data
+        saveData();
+        
+        // Refresh both tables
+        loadInventoryTable(); // Projects table
+        loadInventoryItemsTable(); // Inventory items table
+        
+        // Restore expanded customer groups after reload
+        restoreExpandedCustomerGroups(expandedCustomers);
+        
+        // Show success message
+        showNotification('Item copied successfully!', 'success');
+        
+        console.log('Item copied successfully:', copiedItem);
+        
+    } catch (error) {
+        console.error('Error in copyItem function:', error);
+        showNotification('Error copying item: ' + error.message, 'error');
+    }
 }
 
 function deleteCustomer(index) {
