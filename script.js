@@ -1750,6 +1750,87 @@ function copyItem(index) {
     }
 }
 
+// Copy from last added item (for add modal)
+function copyFromLastItem() {
+    if (inventory.length === 0) {
+        showNotification('No items to copy from', 'error');
+        return;
+    }
+    
+    const lastItem = inventory[inventory.length - 1];
+    
+    // Populate the add form with last item's data
+    document.getElementById('itemDescription').value = lastItem.description || lastItem.name || '';
+    document.getElementById('itemLocation').value = lastItem.location || '';
+    document.getElementById('itemQuantity').value = lastItem.quantity || 1;
+    document.getElementById('itemPrice').value = lastItem.price || 0;
+    document.getElementById('itemType').value = lastItem.type || 'inventory';
+    document.getElementById('itemStatus').value = lastItem.status || 'available';
+    document.getElementById('itemCategory').value = lastItem.category || '';
+    document.getElementById('itemNotes').value = lastItem.notes || '';
+    document.getElementById('itemSupplier').value = lastItem.supplier || '';
+    document.getElementById('itemReorderPoint').value = lastItem.reorderPoint || 0;
+    
+    // Set project-specific fields
+    document.getElementById('itemCustomer').value = lastItem.customer || '';
+    document.getElementById('itemDueDate').value = lastItem.dueDate || '';
+    document.getElementById('itemPriority').value = lastItem.priority || 'medium';
+    document.getElementById('itemTags').value = lastItem.tags || '';
+    document.getElementById('itemPatternLink').value = lastItem.patternLink || '';
+    
+    // Update status options and modal title
+    updateStatusOptions();
+    
+    // Calculate total value
+    calculateTotalValue();
+    
+    showNotification('Form populated with last item data', 'success');
+}
+
+// Copy current item being edited (for edit modal)
+function copyCurrentItem() {
+    const index = parseInt(document.getElementById('editItemIndex').value);
+    
+    if (isNaN(index) || index < 0 || index >= inventory.length) {
+        showNotification('Error: Invalid item to copy', 'error');
+        return;
+    }
+    
+    const currentItem = inventory[index];
+    
+    // Store expanded customer groups before copying
+    const expandedCustomers = getExpandedCustomerGroups();
+    
+    // Create a copy with reset status
+    const copiedItem = {
+        ...currentItem,
+        name: currentItem.name, // Keep original name
+        status: 'pending', // Reset to pending for new copy
+        dateAdded: new Date().toISOString(),
+        dueDate: null, // Clear due date for copy
+        notes: currentItem.notes || '' // Keep original notes without copy notation
+    };
+    
+    // Add to inventory
+    inventory.push(copiedItem);
+    
+    // Save data
+    saveData();
+    
+    // Refresh both tables
+    loadInventoryTable(); // Projects table
+    loadInventoryItemsTable(); // Inventory items table
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
+    
+    // Close the edit modal
+    closeModal('editItemModal');
+    
+    // Show success message
+    showNotification('Item copied successfully!', 'success');
+}
+
 function deleteCustomer(index) {
     if (confirm('Are you sure you want to delete this customer? This will also delete all associated items.')) {
         const customerName = customers[index].name;

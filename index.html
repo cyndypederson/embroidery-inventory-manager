@@ -564,6 +564,9 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addItemModal')">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="copyFromLastItem()" title="Copy from last added item">
+                        <i class="fas fa-copy"></i> Copy Last
+                    </button>
                     <button type="submit" class="btn btn-primary">Add Item</button>
                 </div>
             </form>
@@ -786,6 +789,9 @@
                 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editItemModal')">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="copyCurrentItem()" title="Create a copy of this item">
+                        <i class="fas fa-copy"></i> Copy Item
+                    </button>
                     <button type="submit" class="btn btn-primary" id="editItemSubmitButton">Update Item</button>
                 </div>
             </form>
