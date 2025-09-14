@@ -377,6 +377,12 @@ th {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* Ensure table body rows stay below sticky headers */
+tbody tr {
+    position: relative;
+    z-index: 1;
+}
+
 /* Duplicate btn-info style removed */
 
 .filters {
@@ -456,6 +462,8 @@ th::after {
     cursor: pointer;
     transition: all 0.3s ease;
     border: none;
+    position: relative;
+    z-index: 1;
 }
 
 .customer-header:hover {
@@ -485,6 +493,14 @@ th::after {
 .customer-group {
     background-color: #f8f9fa;
     border-left: 4px solid #6B8E5A;
+    position: relative;
+    z-index: 1;
+}
+
+/* Customer group rows should stay below sticky headers */
+.customer-group tr {
+    position: relative;
+    z-index: 1;
 }
 
 .customer-projects {
