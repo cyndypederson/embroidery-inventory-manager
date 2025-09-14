@@ -119,7 +119,9 @@ app.post('/api/inventory', async (req, res) => {
             return res.status(500).json({ error: 'Database not connected' });
         }
         await database.collection('inventory').deleteMany({});
-        await database.collection('inventory').insertMany(req.body);
+        if (req.body && req.body.length > 0) {
+            await database.collection('inventory').insertMany(req.body);
+        }
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving inventory:', error);
@@ -148,7 +150,9 @@ app.post('/api/customers', async (req, res) => {
             return res.status(500).json({ error: 'Database not connected' });
         }
         await database.collection('customers').deleteMany({});
-        await database.collection('customers').insertMany(req.body);
+        if (req.body && req.body.length > 0) {
+            await database.collection('customers').insertMany(req.body);
+        }
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving customers:', error);
@@ -177,7 +181,9 @@ app.post('/api/sales', async (req, res) => {
             return res.status(500).json({ error: 'Database not connected' });
         }
         await database.collection('sales').deleteMany({});
-        await database.collection('sales').insertMany(req.body);
+        if (req.body && req.body.length > 0) {
+            await database.collection('sales').insertMany(req.body);
+        }
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving sales:', error);
@@ -206,7 +212,9 @@ app.post('/api/gallery', async (req, res) => {
             return res.status(500).json({ error: 'Database not connected' });
         }
         await database.collection('gallery').deleteMany({});
-        await database.collection('gallery').insertMany(req.body);
+        if (req.body && req.body.length > 0) {
+            await database.collection('gallery').insertMany(req.body);
+        }
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving gallery:', error);
