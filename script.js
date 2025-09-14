@@ -1321,7 +1321,7 @@ function loadInventoryItemsTable() {
     if (inventoryItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="5" class="text-center text-muted">
                     <i class="fas fa-boxes"></i><br>
                     No inventory items found. <a href="#" onclick="openAddItemModal()">Add your first inventory item</a>
                 </td>
@@ -1365,10 +1365,8 @@ function loadInventoryItemsTable() {
         
         row.innerHTML = `
             <td><strong>${item.name}</strong></td>
-            <td>${categoryDisplay}</td>
             <td><span class="quantity-badge">${item.quantity || 1}</span></td>
             <td>${statusDisplay}</td>
-            <td>${item.location || '-'}</td>
             <td>${supplierDisplay}<br><small>Reorder: ${reorderDisplay}</small></td>
             <td>
                 <div class="action-buttons">
@@ -1405,14 +1403,12 @@ function filterInventory() {
         }
         
         const name = row.querySelector('td:first-child').textContent.toLowerCase();
-        const category = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        const status = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
-        const location = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+        const status = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
         
         const matchesSearch = !searchTerm || name.includes(searchTerm);
         const matchesStatus = !statusFilter || status.includes(statusFilter);
-        const matchesCategory = !categoryFilter || category.includes(categoryFilter);
-        const matchesLocation = !locationFilter || location.includes(locationFilter);
+        const matchesCategory = !categoryFilter || true; // Category filter disabled
+        const matchesLocation = !locationFilter || true; // Location filter disabled
         
         if (matchesSearch && matchesStatus && matchesCategory && matchesLocation) {
             row.style.display = '';

@@ -447,14 +447,12 @@ th:nth-child(6), td:nth-child(6) { width: 15%; } /* Notes */
 th:nth-child(7), td:nth-child(7) { width: 8%; } /* Link */
 th:nth-child(8), td:nth-child(8) { width: 15%; } /* Actions */
 
-/* Column widths for inventory table (7 columns) */
-#inventoryItemsTable th:nth-child(1), #inventoryItemsTable td:nth-child(1) { width: 20%; } /* Item */
-#inventoryItemsTable th:nth-child(2), #inventoryItemsTable td:nth-child(2) { width: 15%; } /* Category */
-#inventoryItemsTable th:nth-child(3), #inventoryItemsTable td:nth-child(3) { width: 10%; } /* Qty */
-#inventoryItemsTable th:nth-child(4), #inventoryItemsTable td:nth-child(4) { width: 15%; } /* Status */
-#inventoryItemsTable th:nth-child(5), #inventoryItemsTable td:nth-child(5) { width: 15%; } /* Location */
-#inventoryItemsTable th:nth-child(6), #inventoryItemsTable td:nth-child(6) { width: 15%; } /* Notes */
-#inventoryItemsTable th:nth-child(7), #inventoryItemsTable td:nth-child(7) { width: 10%; } /* Actions */
+/* Column widths for inventory table (5 columns) */
+#inventoryItemsTable th:nth-child(1), #inventoryItemsTable td:nth-child(1) { width: 25%; } /* Item */
+#inventoryItemsTable th:nth-child(2), #inventoryItemsTable td:nth-child(2) { width: 10%; } /* Qty */
+#inventoryItemsTable th:nth-child(3), #inventoryItemsTable td:nth-child(3) { width: 15%; } /* Status */
+#inventoryItemsTable th:nth-child(4), #inventoryItemsTable td:nth-child(4) { width: 35%; } /* Notes */
+#inventoryItemsTable th:nth-child(5), #inventoryItemsTable td:nth-child(5) { width: 15%; } /* Actions */
 
 /* Table header styles are now handled by the sticky positioning above */
 
@@ -2412,13 +2410,11 @@ tr:nth-child(even) {
     th:nth-child(8), td:nth-child(8) { width: 25%; } /* Actions */
     
     /* Adjust column widths for mobile - Inventory table */
-    #inventoryItemsTable th:nth-child(1), #inventoryItemsTable td:nth-child(1) { width: 30%; } /* Item */
-    #inventoryItemsTable th:nth-child(2), #inventoryItemsTable td:nth-child(2) { width: 15%; } /* Category */
-    #inventoryItemsTable th:nth-child(3), #inventoryItemsTable td:nth-child(3) { width: 10%; } /* Qty */
-    #inventoryItemsTable th:nth-child(4), #inventoryItemsTable td:nth-child(4) { width: 15%; } /* Status */
-    #inventoryItemsTable th:nth-child(5), #inventoryItemsTable td:nth-child(5) { width: 0%; display: none; } /* Location - hide on mobile */
-    #inventoryItemsTable th:nth-child(6), #inventoryItemsTable td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
-    #inventoryItemsTable th:nth-child(7), #inventoryItemsTable td:nth-child(7) { width: 30%; } /* Actions */
+    #inventoryItemsTable th:nth-child(1), #inventoryItemsTable td:nth-child(1) { width: 35%; } /* Item */
+    #inventoryItemsTable th:nth-child(2), #inventoryItemsTable td:nth-child(2) { width: 15%; } /* Qty */
+    #inventoryItemsTable th:nth-child(3), #inventoryItemsTable td:nth-child(3) { width: 20%; } /* Status */
+    #inventoryItemsTable th:nth-child(4), #inventoryItemsTable td:nth-child(4) { width: 0%; display: none; } /* Notes - hide on mobile */
+    #inventoryItemsTable th:nth-child(5), #inventoryItemsTable td:nth-child(5) { width: 30%; } /* Actions */
 }
 
 /* Color-coded rows based on status and priority */
