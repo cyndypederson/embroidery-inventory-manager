@@ -10,15 +10,17 @@
 <body>
     <div class="container">
         <header>
-            <h1>
-                <img src="logo.png" alt="Logo" class="logo" id="logo" style="display: none;" onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='inline';">
-                <i class="fas fa-tshirt" id="fallback-icon" style="display: inline;"></i> Embroidery Inventory Manager
-                <span style="font-size: 1.2rem; margin-left: 1rem; opacity: 0.8;">✿ Professional Craft Management ✿</span>
-            </h1>
-            <div class="connection-status">
-                <span id="connectionStatus" class="status-indicator">
-                    <i class="fas fa-circle"></i> Connecting...
-                </span>
+            <div class="top-bar">
+                <div class="branding">
+                    <img src="logo.png" alt="Logo" class="logo" id="logo" style="display: none;" onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='inline';">
+                    <i class="fas fa-tshirt" id="fallback-icon" style="display: inline;"></i>
+                    <h1>Embroidery Inventory Manager</h1>
+                </div>
+                <div class="connection-status">
+                    <span id="connectionStatus" class="status-indicator">
+                        <i class="fas fa-circle"></i> Connecting...
+                    </span>
+                </div>
             </div>
             <nav>
                 <button class="nav-btn active" data-tab="inventory">
