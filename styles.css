@@ -178,9 +178,11 @@ nav {
 main {
     padding: 2rem;
     background: linear-gradient(180deg, #FAFAFA 0%, #F8F8FF 100%);
-    min-height: calc(100vh - 120px);
+    min-height: 100vh;
     position: relative;
     z-index: 1;
+    overflow-x: hidden;
+    margin-top: 140px; /* Account for fixed header */
 }
 
 .tab-content {
@@ -320,17 +322,20 @@ main {
     margin-bottom: 0.25rem;
 }
 
-/* Simple sticky positioning for laptop monitors */
+/* Fixed header positioning */
 header {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 100;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    width: 100%;
 }
 
 .section-header {
     position: sticky;
     top: 0;
-    z-index: 99;
+    z-index: 999;
     background: white;
     padding: 1.5rem 2rem;
     margin-bottom: 1rem;
@@ -340,7 +345,7 @@ header {
 .filters {
     position: sticky;
     top: 0;
-    z-index: 98;
+    z-index: 998;
     background: white;
     padding: 1rem 2rem;
     margin-bottom: 1rem;
@@ -355,7 +360,7 @@ header {
     border: 1px solid #E6E6FA;
     position: relative;
     z-index: 1;
-    max-height: 60vh;
+    max-height: 70vh;
     overflow-y: auto;
     /* Improve scrolling behavior */
     scroll-behavior: smooth;
@@ -368,7 +373,7 @@ header {
 th {
     position: sticky;
     top: 0;
-    z-index: 97;
+    z-index: 997;
     background: linear-gradient(135deg, #6B8E5A 0%, #8B7355 100%);
     color: white;
     padding: 1.5rem 1rem;
@@ -414,17 +419,7 @@ tbody tr {
     flex-shrink: 0;
 }
 
-.table-container {
-    background: white;
-    border-radius: 15px;
-    overflow: visible;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    border: 1px solid #E6E6FA;
-    position: relative;
-    z-index: 1;
-    max-height: 70vh;
-    overflow-y: auto;
-}
+/* Removed duplicate table-container definition */
 
 .table-container::before {
     content: '';
@@ -442,14 +437,24 @@ table {
     table-layout: fixed;
 }
 
-/* Column widths for better alignment */
-th:nth-child(1), td:nth-child(1) { width: 25%; } /* Project */
-th:nth-child(2), td:nth-child(2) { width: 10%; } /* Qty */
-th:nth-child(3), td:nth-child(3) { width: 15%; } /* Status */
-th:nth-child(4), td:nth-child(4) { width: 12%; } /* Due Date */
-th:nth-child(5), td:nth-child(5) { width: 18%; } /* Notes */
-th:nth-child(6), td:nth-child(6) { width: 10%; } /* Link */
-th:nth-child(7), td:nth-child(7) { width: 20%; } /* Actions */
+/* Column widths for better alignment - Projects table (8 columns) */
+th:nth-child(1), td:nth-child(1) { width: 20%; } /* Project */
+th:nth-child(2), td:nth-child(2) { width: 12%; } /* Category */
+th:nth-child(3), td:nth-child(3) { width: 8%; } /* Qty */
+th:nth-child(4), td:nth-child(4) { width: 12%; } /* Status */
+th:nth-child(5), td:nth-child(5) { width: 10%; } /* Due Date */
+th:nth-child(6), td:nth-child(6) { width: 15%; } /* Notes */
+th:nth-child(7), td:nth-child(7) { width: 8%; } /* Link */
+th:nth-child(8), td:nth-child(8) { width: 15%; } /* Actions */
+
+/* Column widths for inventory table (7 columns) */
+#inventoryItemsTable th:nth-child(1), #inventoryItemsTable td:nth-child(1) { width: 20%; } /* Item */
+#inventoryItemsTable th:nth-child(2), #inventoryItemsTable td:nth-child(2) { width: 15%; } /* Category */
+#inventoryItemsTable th:nth-child(3), #inventoryItemsTable td:nth-child(3) { width: 10%; } /* Qty */
+#inventoryItemsTable th:nth-child(4), #inventoryItemsTable td:nth-child(4) { width: 15%; } /* Status */
+#inventoryItemsTable th:nth-child(5), #inventoryItemsTable td:nth-child(5) { width: 15%; } /* Location */
+#inventoryItemsTable th:nth-child(6), #inventoryItemsTable td:nth-child(6) { width: 15%; } /* Notes */
+#inventoryItemsTable th:nth-child(7), #inventoryItemsTable td:nth-child(7) { width: 10%; } /* Actions */
 
 /* Table header styles are now handled by the sticky positioning above */
 
@@ -541,14 +546,14 @@ th::after {
 }
 
 /* Project cell widths to match table columns */
-.project-name { width: 25%; }
-.project-category { width: 15%; }
-.project-quantity { width: 10%; }
-.project-status { width: 15%; }
-.project-due-date { width: 12%; }
-.project-notes { width: 18%; }
-.project-pattern { width: 10%; }
-.project-actions { width: 20%; }
+.project-name { width: 20%; }
+.project-category { width: 12%; }
+.project-quantity { width: 8%; }
+.project-status { width: 12%; }
+.project-due-date { width: 10%; }
+.project-notes { width: 15%; }
+.project-pattern { width: 8%; }
+.project-actions { width: 15%; }
 
 .project-name {
     font-weight: 600;
@@ -2396,14 +2401,24 @@ tr:nth-child(even) {
         font-size: 0.7rem;
     }
     
-    /* Adjust column widths for mobile */
-    th:nth-child(1), td:nth-child(1) { width: 45%; } /* Project */
-    th:nth-child(2), td:nth-child(2) { width: 12%; } /* Qty */
-    th:nth-child(3), td:nth-child(3) { width: 18%; } /* Status */
-    th:nth-child(4), td:nth-child(4) { width: 15%; } /* Due Date */
-    th:nth-child(5), td:nth-child(5) { width: 0%; display: none; } /* Notes - hide on mobile */
-    th:nth-child(6), td:nth-child(6) { width: 0%; display: none; } /* Link - hide on mobile */
-    th:nth-child(7), td:nth-child(7) { width: 10%; } /* Actions */
+    /* Adjust column widths for mobile - Projects table */
+    th:nth-child(1), td:nth-child(1) { width: 35%; } /* Project */
+    th:nth-child(2), td:nth-child(2) { width: 15%; } /* Category */
+    th:nth-child(3), td:nth-child(3) { width: 10%; } /* Qty */
+    th:nth-child(4), td:nth-child(4) { width: 15%; } /* Status */
+    th:nth-child(5), td:nth-child(5) { width: 0%; display: none; } /* Due Date - hide on mobile */
+    th:nth-child(6), td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
+    th:nth-child(7), td:nth-child(7) { width: 0%; display: none; } /* Link - hide on mobile */
+    th:nth-child(8), td:nth-child(8) { width: 25%; } /* Actions */
+    
+    /* Adjust column widths for mobile - Inventory table */
+    #inventoryItemsTable th:nth-child(1), #inventoryItemsTable td:nth-child(1) { width: 30%; } /* Item */
+    #inventoryItemsTable th:nth-child(2), #inventoryItemsTable td:nth-child(2) { width: 15%; } /* Category */
+    #inventoryItemsTable th:nth-child(3), #inventoryItemsTable td:nth-child(3) { width: 10%; } /* Qty */
+    #inventoryItemsTable th:nth-child(4), #inventoryItemsTable td:nth-child(4) { width: 15%; } /* Status */
+    #inventoryItemsTable th:nth-child(5), #inventoryItemsTable td:nth-child(5) { width: 0%; display: none; } /* Location - hide on mobile */
+    #inventoryItemsTable th:nth-child(6), #inventoryItemsTable td:nth-child(6) { width: 0%; display: none; } /* Notes - hide on mobile */
+    #inventoryItemsTable th:nth-child(7), #inventoryItemsTable td:nth-child(7) { width: 30%; } /* Actions */
 }
 
 /* Color-coded rows based on status and priority */
