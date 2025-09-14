@@ -1723,7 +1723,8 @@ function copyItem(index) {
         const copiedItem = {
             ...originalItem,
             name: originalItem.name, // Keep original name
-            status: 'pending', // Reset to pending for new copy
+            type: originalItem.type || 'inventory', // Ensure type is preserved
+            status: originalItem.type === 'inventory' ? 'available' : 'pending', // Use appropriate status based on type
             dateAdded: new Date().toISOString(),
             dueDate: null, // Clear due date for copy
             notes: originalItem.notes || '' // Keep original notes without copy notation
@@ -1808,7 +1809,8 @@ function copyCurrentItem() {
     const copiedItem = {
         ...currentItem,
         name: currentItem.name, // Keep original name
-        status: 'pending', // Reset to pending for new copy
+        type: currentItem.type || 'inventory', // Ensure type is preserved
+        status: currentItem.type === 'inventory' ? 'available' : 'pending', // Use appropriate status based on type
         dateAdded: new Date().toISOString(),
         dueDate: null, // Clear due date for copy
         notes: currentItem.notes || '' // Keep original notes without copy notation
