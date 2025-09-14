@@ -401,6 +401,7 @@ tbody tr {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .filters input,
@@ -416,6 +417,11 @@ tbody tr {
 .filters select:focus {
     outline: none;
     border-color: #6B8E5A;
+}
+
+.filters .btn {
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .table-container {
@@ -2235,6 +2241,12 @@ tr:nth-child(even) {
     .filters input,
     .filters select {
         width: 100%;
+    }
+    
+    .filters .btn {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 0.5rem;
     }
     
     .table-container {

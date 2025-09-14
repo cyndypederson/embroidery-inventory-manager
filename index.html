@@ -47,13 +47,6 @@
         <main>
             <!-- Inventory Tab -->
             <div id="inventory" class="tab-content active">
-                <div class="section-header">
-                    <h2>Inventory Management</h2>
-                    <button class="btn btn-primary" onclick="openAddItemModal()">
-                        <i class="fas fa-plus"></i> Add New Project
-                    </button>
-                </div>
-                
                 <div class="filters">
                     <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="filterItems()">
                     <select id="statusFilter" onchange="filterItems()">
@@ -71,6 +64,9 @@
                     <select id="locationFilter" onchange="filterItems()">
                         <option value="">All Locations</option>
                     </select>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add New Project
+                    </button>
                 </div>
 
                 <div class="table-container">
