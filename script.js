@@ -651,6 +651,7 @@ function editItem(index) {
     document.getElementById('editItemDescription').value = item.description || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
     document.getElementById('editItemPrice').value = item.price || 0;
+    document.getElementById('editItemType').value = item.type || 'inventory';
     document.getElementById('editItemStatus').value = item.status;
     document.getElementById('editItemPriority').value = item.priority || 'medium';
     document.getElementById('editItemDueDate').value = item.dueDate || '';
@@ -658,6 +659,9 @@ function editItem(index) {
     document.getElementById('editItemCategory').value = item.category || '';
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
+    
+    // Update status options based on type
+    updateEditStatusOptions();
     
     // Calculate and set total value
     calculateEditTotalValue();
@@ -704,6 +708,7 @@ function handleEditItem(e) {
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
+        type: document.getElementById('editItemType').value,
         status: document.getElementById('editItemStatus').value,
         priority: document.getElementById('editItemPriority').value,
         dueDate: document.getElementById('editItemDueDate').value || null,
@@ -920,6 +925,88 @@ function saveData() {
     saveDataToLocalStorage();
 }
 
+// Update status options based on item type
+function updateStatusOptions() {
+    const typeSelect = document.getElementById('itemType');
+    const statusSelect = document.getElementById('itemStatus');
+    const categorySelect = document.getElementById('itemCategory');
+    
+    if (typeSelect.value === 'inventory') {
+        // Inventory status options
+        statusSelect.innerHTML = `
+            <option value="available">Available</option>
+            <option value="low-stock">Low Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+        `;
+        // Inventory categories
+        categorySelect.innerHTML = `
+            <option value="">Select Category</option>
+            <option value="kits">Kits</option>
+            <option value="hoops">Hoops</option>
+            <option value="fabric">Fabric</option>
+            <option value="thread">Thread</option>
+            <option value="supplies">Other Supplies</option>
+        `;
+    } else if (typeSelect.value === 'project') {
+        // Project status options
+        statusSelect.innerHTML = `
+            <option value="pending">Pending</option>
+            <option value="in-progress">In Progress</option>
+            <option value="work-in-progress">Work in Progress</option>
+            <option value="completed">Completed</option>
+            <option value="sold">Sold</option>
+        `;
+        // Project categories
+        categorySelect.innerHTML = `
+            <option value="">Select Category</option>
+            <option value="custom">Custom Project</option>
+            <option value="repair">Repair Work</option>
+            <option value="alteration">Alteration</option>
+        `;
+    }
+}
+
+// Update edit status options based on item type
+function updateEditStatusOptions() {
+    const typeSelect = document.getElementById('editItemType');
+    const statusSelect = document.getElementById('editItemStatus');
+    const categorySelect = document.getElementById('editItemCategory');
+    
+    if (typeSelect.value === 'inventory') {
+        // Inventory status options
+        statusSelect.innerHTML = `
+            <option value="available">Available</option>
+            <option value="low-stock">Low Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+        `;
+        // Inventory categories
+        categorySelect.innerHTML = `
+            <option value="">Select Category</option>
+            <option value="kits">Kits</option>
+            <option value="hoops">Hoops</option>
+            <option value="fabric">Fabric</option>
+            <option value="thread">Thread</option>
+            <option value="supplies">Other Supplies</option>
+        `;
+    } else if (typeSelect.value === 'project') {
+        // Project status options
+        statusSelect.innerHTML = `
+            <option value="pending">Pending</option>
+            <option value="in-progress">In Progress</option>
+            <option value="work-in-progress">Work in Progress</option>
+            <option value="completed">Completed</option>
+            <option value="sold">Sold</option>
+        `;
+        // Project categories
+        categorySelect.innerHTML = `
+            <option value="">Select Category</option>
+            <option value="custom">Custom Project</option>
+            <option value="repair">Repair Work</option>
+            <option value="alteration">Alteration</option>
+        `;
+    }
+}
+
 // Inventory Management
 function loadInventoryTable() {
     const tbody = document.getElementById('inventoryTableBody');
@@ -960,7 +1047,7 @@ function loadInventoryTable() {
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
         headerRow.innerHTML = `
-            <td colspan="7">
+            <td colspan="9">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -978,7 +1065,7 @@ function loadInventoryTable() {
         groupRow.className = 'customer-group';
         groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
         groupRow.style.display = 'none';
-        groupRow.innerHTML = '<td colspan="7"><div class="customer-projects"></div></td>';
+        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
         tbody.appendChild(groupRow);
         
         // Add individual project rows
@@ -1043,8 +1130,14 @@ function loadInventoryTable() {
                 `<div class="tags-container">${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : 
                 '<span class="text-muted"></span>';
 
+            // Format type display
+            const typeDisplay = item.type === 'inventory' ? 'Inventory' : 'Project';
+            const typeClass = item.type === 'inventory' ? 'type-inventory' : 'type-project';
+            
             projectRow.innerHTML = `
                 <div class="project-cell project-name"><strong>${item.name}</strong></div>
+                <div class="project-cell project-type"><span class="type-badge ${typeClass}">${typeDisplay}</span></div>
+                <div class="project-cell project-category">${categoryDisplay}</div>
                 <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
                 <div class="project-cell project-status">
                     <span class="status-badge status-${item.status}">${item.status}</span>
@@ -1132,6 +1225,7 @@ function handleAddItem(e) {
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
+        type: document.getElementById('itemType').value,
         status: document.getElementById('itemStatus').value,
         priority: document.getElementById('itemPriority').value,
         dueDate: document.getElementById('itemDueDate').value || null,

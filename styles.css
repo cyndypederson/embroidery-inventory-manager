@@ -541,17 +541,23 @@ th::after {
 }
 
 /* Project cell widths to match table columns */
-.project-name { width: 25%; }
-.project-quantity { width: 10%; }
-.project-status { width: 15%; }
-.project-due-date { width: 12%; }
-.project-notes { width: 18%; }
-.project-pattern { width: 10%; }
-.project-actions { width: 20%; }
+.project-name { width: 20%; }
+.project-type { width: 12%; }
+.project-category { width: 12%; }
+.project-quantity { width: 8%; }
+.project-status { width: 12%; }
+.project-due-date { width: 10%; }
+.project-notes { width: 14%; }
+.project-pattern { width: 8%; }
+.project-actions { width: 16%; }
 
 .project-name {
     font-weight: 600;
     color: #2C3E2D;
+}
+
+.project-type {
+    justify-content: center;
 }
 
 .project-category {
@@ -2146,6 +2152,46 @@ tr:nth-child(even) {
     background-color: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
+}
+
+/* New status options for inventory */
+.status-available {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-low-stock {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-out-of-stock {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Type badges */
+.type-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.type-inventory {
+    background-color: #E0F2FE;
+    color: #0369A1;
+    border: 1px solid #BAE6FD;
+}
+
+.type-project {
+    background-color: #F3E8FF;
+    color: #7C3AED;
+    border: 1px solid #DDD6FE;
 }
 
 /* Print styles for invoices */

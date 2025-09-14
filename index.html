@@ -74,6 +74,8 @@
                         <thead>
                             <tr>
                                 <th>Project</th>
+                                <th>Type</th>
+                                <th>Category</th>
                                 <th>Qty</th>
                                 <th>Status</th>
                                 <th>Due Date</th>
@@ -455,13 +457,30 @@
                     <input type="number" id="itemQuantity" min="1" value="1">
                 </div>
                 <div class="form-group half-width">
+                    <label for="itemType">Type</label>
+                    <select id="itemType" onchange="updateStatusOptions()">
+                        <option value="inventory">Inventory (Supplies/Materials)</option>
+                        <option value="project">Project (Customer Work)</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemCategory">Category</label>
+                    <select id="itemCategory">
+                        <option value="">Select Category</option>
+                        <option value="kits">Kits</option>
+                        <option value="hoops">Hoops</option>
+                        <option value="fabric">Fabric</option>
+                        <option value="thread">Thread</option>
+                        <option value="supplies">Other Supplies</option>
+                        <option value="custom">Custom Project</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
                     <label for="itemStatus">Status</label>
                     <select id="itemStatus">
-                        <option value="inventory">Inventory</option>
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="completed">Completed</option>
+                        <option value="available">Available</option>
+                        <option value="low-stock">Low Stock</option>
+                        <option value="out-of-stock">Out of Stock</option>
                     </select>
                 </div>
                 <div class="form-group half-width">
@@ -648,13 +667,30 @@
                     <input type="number" id="editItemQuantity" min="1" value="1">
                 </div>
                 <div class="form-group half-width">
+                    <label for="editItemType">Type</label>
+                    <select id="editItemType" onchange="updateEditStatusOptions()">
+                        <option value="inventory">Inventory (Supplies/Materials)</option>
+                        <option value="project">Project (Customer Work)</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editItemCategory">Category</label>
+                    <select id="editItemCategory">
+                        <option value="">Select Category</option>
+                        <option value="kits">Kits</option>
+                        <option value="hoops">Hoops</option>
+                        <option value="fabric">Fabric</option>
+                        <option value="thread">Thread</option>
+                        <option value="supplies">Other Supplies</option>
+                        <option value="custom">Custom Project</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
                     <label for="editItemStatus">Status</label>
                     <select id="editItemStatus">
-                        <option value="inventory">Inventory</option>
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="completed">Completed</option>
+                        <option value="available">Available</option>
+                        <option value="low-stock">Low Stock</option>
+                        <option value="out-of-stock">Out of Stock</option>
                     </select>
                 </div>
                 <div class="form-group half-width">
