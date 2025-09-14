@@ -1231,6 +1231,13 @@ function openAddItemModal() {
 function handleAddItem(e) {
     e.preventDefault();
     
+    // Basic validation
+    const description = document.getElementById('itemDescription').value.trim();
+    if (!description) {
+        showNotification('Please enter a description', 'error');
+        return;
+    }
+    
     const quantity = parseInt(document.getElementById('itemQuantity').value) || 1;
     const pricePerItem = parseFloat(document.getElementById('itemPrice').value) || 0;
     const totalValue = quantity * pricePerItem;
@@ -1258,7 +1265,8 @@ function handleAddItem(e) {
     
     inventory.push(newItem);
     saveData();
-    loadInventoryTable();
+    loadInventoryTable(); // Projects table
+    loadInventoryItemsTable(); // Inventory items table
     updateLocationFilters();
     updateCustomerFilters();
     closeModal('addItemModal');
