@@ -2189,6 +2189,26 @@ tr:nth-child(even) {
     border: 1px solid #DDD6FE;
 }
 
+/* Inventory-specific styles */
+.supplier-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.reorder-point {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+.low-stock-warning {
+    background-color: #FEF3C7;
+    color: #92400E;
+    font-weight: bold;
+}
+
 /* Print styles for invoices */
 @media print {
     .invoice-header {

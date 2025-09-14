@@ -477,25 +477,11 @@
     <div id="addItemModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('addItemModal')">&times;</span>
-            <h3>Add New Project</h3>
+            <h3 id="addItemModalTitle">Add New Item</h3>
             <form id="addItemForm" class="modal-form">
-                <div class="form-group half-width">
-                    <label for="itemName">Project Name *</label>
-                    <input type="text" id="itemName" required>
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemCustomer">Customer</label>
-                    <select id="itemCustomer">
-                        <option value="">Select Customer (Optional)</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemLocation">Location</label>
-                    <input type="text" id="itemLocation" placeholder="Optional location">
-                </div>
                 <div class="form-group full-width">
-                    <label for="itemDescription">Description</label>
-                    <textarea id="itemDescription" rows="3" placeholder="Optional description"></textarea>
+                    <label for="itemDescription">Description *</label>
+                    <input type="text" id="itemDescription" required placeholder="e.g., Embroidery Thread - Red, 4-inch Hoop, Cotton Fabric">
                 </div>
                 <div class="form-group half-width">
                     <label for="itemQuantity">Quantity</label>
@@ -529,54 +515,56 @@
                     </select>
                 </div>
                 <div class="form-group half-width">
-                    <label for="itemPriority">Priority</label>
-                    <select id="itemPriority">
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="low">Low</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemPrice">Price (per item)</label>
-                    <input type="number" id="itemPrice" step="0.01" min="0">
+                    <label for="itemPrice">Cost (per unit)</label>
+                    <input type="number" id="itemPrice" step="0.01" min="0" placeholder="0.00">
                 </div>
                 <div class="form-group half-width">
                     <label for="itemTotalPrice">Total Value</label>
                     <input type="number" id="itemTotalPrice" step="0.01" min="0" readonly>
                 </div>
                 <div class="form-group half-width">
-                    <label for="itemDueDate">Due Date</label>
-                    <input type="date" id="itemDueDate">
+                    <label for="itemLocation">Location</label>
+                    <input type="text" id="itemLocation" placeholder="e.g., Craft Room, Garage">
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemSupplier">Supplier</label>
+                    <input type="text" id="itemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemReorderPoint">Reorder Point</label>
+                    <input type="number" id="itemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
                 </div>
                 <div class="form-group half-width">
                     <label for="itemNotes">Notes</label>
-                    <input type="text" id="itemNotes" placeholder="Special instructions, materials needed, etc.">
+                    <input type="text" id="itemNotes" placeholder="Color, size, special instructions, etc.">
                 </div>
-                <div class="form-group half-width">
-                    <label for="itemCategory">Project Type</label>
-                    <select id="itemCategory">
-                        <option value="">Select Type</option>
-                        <option value="hoop">Hoop Art</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom Design</option>
-                        <option value="gift">Gift Item</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemTags">Tags (comma-separated)</label>
-                    <input type="text" id="itemTags" placeholder="e.g., wedding, baby, holiday">
-                </div>
-                <div class="form-group full-width">
-                    <label for="itemPatternLink">Pattern Link (Google Drive)</label>
-                    <input type="url" id="itemPatternLink" placeholder="https://drive.google.com/file/d/...">
-                    <small class="form-help">Paste your Google Drive shareable link here</small>
+                <div class="form-group full-width" id="projectFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="itemCustomer">Customer</label>
+                        <select id="itemCustomer">
+                            <option value="">Select Customer (Optional)</option>
+                        </select>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemDueDate">Due Date</label>
+                        <input type="date" id="itemDueDate">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemPriority">Priority</label>
+                        <select id="itemPriority">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemPatternLink">Pattern Link</label>
+                        <input type="url" id="itemPatternLink" placeholder="https://...">
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addItemModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Project</button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
                 </div>
             </form>
         </div>

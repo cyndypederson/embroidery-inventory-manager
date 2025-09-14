@@ -933,6 +933,8 @@ function updateStatusOptions() {
     const typeSelect = document.getElementById('itemType');
     const statusSelect = document.getElementById('itemStatus');
     const categorySelect = document.getElementById('itemCategory');
+    const projectFields = document.getElementById('projectFields');
+    const modalTitle = document.getElementById('addItemModalTitle');
     
     if (typeSelect.value === 'inventory') {
         // Inventory status options
@@ -950,6 +952,9 @@ function updateStatusOptions() {
             <option value="thread">Thread</option>
             <option value="supplies">Other Supplies</option>
         `;
+        // Hide project fields
+        projectFields.style.display = 'none';
+        modalTitle.textContent = 'Add New Inventory Item';
     } else if (typeSelect.value === 'project') {
         // Project status options
         statusSelect.innerHTML = `
@@ -966,6 +971,9 @@ function updateStatusOptions() {
             <option value="repair">Repair Work</option>
             <option value="alteration">Alteration</option>
         `;
+        // Show project fields
+        projectFields.style.display = 'block';
+        modalTitle.textContent = 'Add New Project';
     }
 }
 
@@ -1212,6 +1220,11 @@ function toggleCustomerGroup(customer) {
 function openAddItemModal() {
     populateCustomerSelect('itemCustomer');
     document.getElementById('addItemForm').reset();
+    
+    // Set default type to inventory and update options
+    document.getElementById('itemType').value = 'inventory';
+    updateStatusOptions();
+    
     document.getElementById('addItemModal').style.display = 'block';
 }
 
@@ -1223,19 +1236,21 @@ function handleAddItem(e) {
     const totalValue = quantity * pricePerItem;
     
     const newItem = {
-        name: document.getElementById('itemName').value,
-        customer: document.getElementById('itemCustomer').value,
-        location: document.getElementById('itemLocation').value || 'Not specified',
-        description: document.getElementById('itemDescription').value || '',
+        name: document.getElementById('itemDescription').value, // Use description as name
+        customer: document.getElementById('itemCustomer').value || '',
+        location: document.getElementById('itemLocation').value || '',
+        description: document.getElementById('itemDescription').value,
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
         type: document.getElementById('itemType').value,
         status: document.getElementById('itemStatus').value,
-        priority: document.getElementById('itemPriority').value,
+        priority: document.getElementById('itemPriority').value || 'medium',
         dueDate: document.getElementById('itemDueDate').value || null,
         notes: document.getElementById('itemNotes').value || '',
         category: document.getElementById('itemCategory').value || '',
+        supplier: document.getElementById('itemSupplier').value || '',
+        reorderPoint: parseInt(document.getElementById('itemReorderPoint').value) || 0,
         tags: document.getElementById('itemTags').value || '',
         patternLink: document.getElementById('itemPatternLink').value || '',
         dateAdded: new Date().toISOString()
@@ -1289,13 +1304,23 @@ function loadInventoryItemsTable() {
         const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
         const notesDisplay = notes ? `<span title="${notes}">${truncatedNotes}</span>` : '<span class="text-muted">-</span>';
         
+        // Format supplier display
+        const supplierDisplay = item.supplier ? `<span class="supplier-info">${item.supplier}</span>` : '<span class="text-muted">-</span>';
+        
+        // Format reorder point with warning if low stock
+        const reorderPoint = item.reorderPoint || 0;
+        const isLowStock = item.quantity <= reorderPoint && reorderPoint > 0;
+        const reorderDisplay = reorderPoint > 0 ? 
+            `<span class="reorder-point ${isLowStock ? 'low-stock-warning' : ''}">${reorderPoint}</span>` : 
+            '<span class="text-muted">-</span>';
+        
         row.innerHTML = `
             <td><strong>${item.name}</strong></td>
             <td>${categoryDisplay}</td>
             <td><span class="quantity-badge">${item.quantity || 1}</span></td>
             <td>${statusDisplay}</td>
             <td>${item.location || '-'}</td>
-            <td>${notesDisplay}</td>
+            <td>${supplierDisplay}<br><small>Reorder: ${reorderDisplay}</small></td>
             <td>
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="editItem(${originalIndex})" title="Edit Item">
