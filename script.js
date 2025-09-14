@@ -953,6 +953,7 @@ function loadInventoryTable() {
         
         // Calculate customer stats
         const totalProjects = customerItems.length;
+        const inventoryCount = customerItems.filter(({ item }) => item.status === 'inventory').length;
         const pendingCount = customerItems.filter(({ item }) => item.status === 'pending').length;
         const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress' || item.status === 'work-in-progress').length;
         const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
@@ -965,7 +966,7 @@ function loadInventoryTable() {
                     <strong>${customer}</strong>
                     <span class="customer-stats">
                         ${totalProjects} project${totalProjects !== 1 ? 's' : ''} 
-                        (${pendingCount} pending, ${inProgressCount} in progress, ${completedCount} completed, ${soldCount} sold)
+                        (${inventoryCount} inventory, ${pendingCount} pending, ${inProgressCount} in progress, ${completedCount} completed, ${soldCount} sold)
                     </span>
                 </div>
             </td>
@@ -1004,7 +1005,13 @@ function loadInventoryTable() {
             
             // Create quick action buttons based on current status
             let quickActions = '';
-            if (item.status === 'pending') {
+            if (item.status === 'inventory') {
+                quickActions = `
+                    <button class="btn btn-sm btn-primary" onclick="quickStatusChange(${index}, 'pending')" title="Start Project">
+                        <i class="fas fa-play"></i>
+                    </button>
+                `;
+            } else if (item.status === 'pending') {
                 quickActions = `
                     <button class="btn btn-sm btn-primary" onclick="quickStatusChange(${index}, 'in-progress')" title="Start Work">
                         <i class="fas fa-play"></i>

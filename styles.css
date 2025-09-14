@@ -696,6 +696,12 @@ tr:nth-child(even) {
     border: 2px solid #CD853F;
 }
 
+.status-inventory {
+    background: linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%);
+    color: #495057;
+    border: 2px solid #6C757D;
+}
+
 /* Status icon removed */
 
 .status-work-in-progress {
@@ -2095,6 +2101,12 @@ tr:nth-child(even) {
     border: 1px solid #ffeaa7;
 }
 
+.status-inventory {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #6c757d;
+}
+
 .status-paid {
     background-color: #d4edda;
     color: #155724;
@@ -2302,6 +2314,11 @@ tr:nth-child(even) {
 
 .inventory-row.status-sold {
     background-color: #e2e3e5;
+    border-left: 4px solid #6c757d;
+}
+
+.inventory-row.status-inventory {
+    background-color: #f8f9fa;
     border-left: 4px solid #6c757d;
 }
 
