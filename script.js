@@ -665,6 +665,7 @@ function editItem(index) {
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
     // Update status options and modal title based on type
+    console.log('Item type for edit:', item.type); // Debug log
     updateEditStatusOptions();
     
     // Calculate and set total value
@@ -998,6 +999,8 @@ function updateEditStatusOptions() {
     const modalTitle = document.getElementById('editItemModalTitle');
     const submitButton = document.getElementById('editItemSubmitButton');
     
+    console.log('updateEditStatusOptions called, typeSelect.value:', typeSelect.value); // Debug log
+    
     if (typeSelect.value === 'inventory') {
         // Inventory status options
         statusSelect.innerHTML = `
@@ -1030,9 +1033,13 @@ function updateEditStatusOptions() {
         // Project categories
         categorySelect.innerHTML = `
             <option value="">Select Category</option>
-            <option value="custom">Custom Project</option>
-            <option value="repair">Repair Work</option>
-            <option value="alteration">Alteration</option>
+            <option value="hoop">Hoop Art</option>
+            <option value="clothing">Clothing</option>
+            <option value="custom">Custom Design</option>
+            <option value="gift">Gift Item</option>
+            <option value="home-decor">Home Decor</option>
+            <option value="accessories">Accessories</option>
+            <option value="other">Other</option>
         `;
         // Show project fields
         projectFields.style.display = 'block';
