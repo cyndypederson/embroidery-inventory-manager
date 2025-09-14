@@ -380,7 +380,7 @@ th {
 /* Ensure table body rows stay below sticky headers */
 tbody tr {
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 /* Duplicate btn-info style removed */
@@ -460,10 +460,9 @@ th::after {
     background: linear-gradient(135deg, #6B8E5A 0%, #8B7355 100%);
     color: white;
     cursor: pointer;
-    transition: all 0.3s ease;
     border: none;
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 .customer-header:hover {
@@ -488,19 +487,21 @@ th::after {
     margin-left: auto;
     font-size: 0.9rem;
     opacity: 0.9;
+    position: relative;
+    z-index: 1;
 }
 
 .customer-group {
     background-color: #f8f9fa;
     border-left: 4px solid #6B8E5A;
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 /* Customer group rows should stay below sticky headers */
 .customer-group tr {
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 .customer-projects {
