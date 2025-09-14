@@ -1553,7 +1553,7 @@ function printCustomerList() {
         </head>
         <body>
             <div class="header">
-                <h1>✿ Customer List ✿</h1>
+                <h1>Customer List</h1>
                 <p>Professional Craft Management</p>
                 <p>Generated on ${today}</p>
             </div>

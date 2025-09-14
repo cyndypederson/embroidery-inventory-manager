@@ -203,17 +203,7 @@ main {
     position: relative;
 }
 
-.section-header::after {
-    content: '✿';
-    position: absolute;
-    bottom: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #F8F8FF;
-    padding: 0 1rem;
-    color: #6B8E5A;
-    font-size: 1.5rem;
-}
+/* Decorative flower removed */
 
 .section-header h2 {
     color: #2C3E2D;
