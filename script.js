@@ -684,10 +684,10 @@ function handleEditItem(e) {
     console.log('Edit form submitted'); // Debug log
     
     // Basic validation
-    const name = document.getElementById('editItemName').value.trim();
+    const description = document.getElementById('editItemDescription').value.trim();
     
-    if (!name) {
-        showNotification('Please fill in the item name', 'error');
+    if (!description) {
+        showNotification('Please fill in the description', 'error');
         return;
     }
     
@@ -701,30 +701,39 @@ function handleEditItem(e) {
     // Store expanded customer groups before updating
     const expandedCustomers = getExpandedCustomerGroups();
     
+    // Get form elements safely
+    const getElementValue = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+    
     // Update the item
     inventory[index] = {
         ...inventory[index],
-        name: name,
-        customer: document.getElementById('editItemCustomer').value,
-        location: document.getElementById('editItemLocation').value.trim() || 'Not specified',
-        description: document.getElementById('editItemDescription').value.trim() || '',
+        name: description, // Use description as name
+        customer: getElementValue('editItemCustomer'),
+        location: getElementValue('editItemLocation') || 'Not specified',
+        description: description,
         quantity: quantity,
         price: pricePerItem,
         totalValue: totalValue,
-        type: document.getElementById('editItemType').value,
-        status: document.getElementById('editItemStatus').value,
-        priority: document.getElementById('editItemPriority').value,
-        dueDate: document.getElementById('editItemDueDate').value || null,
-        notes: document.getElementById('editItemNotes').value.trim() || '',
-        category: document.getElementById('editItemCategory').value || '',
-        tags: document.getElementById('editItemTags').value.trim() || '',
-        patternLink: document.getElementById('editItemPatternLink').value.trim() || ''
+        type: getElementValue('editItemType'),
+        status: getElementValue('editItemStatus'),
+        priority: getElementValue('editItemPriority') || 'medium',
+        dueDate: getElementValue('editItemDueDate') || null,
+        notes: getElementValue('editItemNotes'),
+        category: getElementValue('editItemCategory'),
+        supplier: getElementValue('editItemSupplier'),
+        reorderPoint: parseInt(getElementValue('editItemReorderPoint')) || 0,
+        tags: getElementValue('editItemTags'),
+        patternLink: getElementValue('editItemPatternLink')
     };
     
     console.log('Item updated:', inventory[index]); // Debug log
     
     saveData();
-    loadInventoryTable();
+    loadInventoryTable(); // Projects table
+    loadInventoryItemsTable(); // Inventory items table
     updateCustomerFilters();
     
     // Restore expanded customer groups after reload
