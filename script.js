@@ -4,6 +4,7 @@ let customers = [];
 let sales = [];
 let gallery = [];
 let invoices = [];
+let ideas = [];
 
 // Authentication
 let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
@@ -511,6 +512,7 @@ function initializeApp() {
     document.getElementById('addCustomerForm').addEventListener('submit', handleAddCustomer);
     document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
     document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
+    document.getElementById('addIdeaForm').addEventListener('submit', handleAddIdea);
     
     // Edit form event listener with error handling
     const editForm = document.getElementById('editItemForm');
@@ -774,17 +776,19 @@ async function checkConnectionStatus() {
 
 async function loadDataFromAPI() {
     try {
-        const [inventoryRes, customersRes, salesRes, galleryRes] = await Promise.all([
+        const [inventoryRes, customersRes, salesRes, galleryRes, ideasRes] = await Promise.all([
             fetch('/api/inventory'),
             fetch('/api/customers'),
             fetch('/api/sales'),
-            fetch('/api/gallery')
+            fetch('/api/gallery'),
+            fetch('/api/ideas')
         ]);
 
         inventory = await inventoryRes.json();
         customers = await customersRes.json();
         sales = await salesRes.json();
         gallery = await galleryRes.json();
+        ideas = await ideasRes.json();
 
         loadData();
         updateConnectionStatus('connected');
@@ -800,6 +804,7 @@ function loadDataFromLocalStorage() {
     customers = JSON.parse(localStorage.getItem('embroideryCustomers')) || [];
     sales = JSON.parse(localStorage.getItem('embroiderySales')) || [];
     gallery = JSON.parse(localStorage.getItem('embroideryGallery')) || [];
+    ideas = JSON.parse(localStorage.getItem('embroideryIdeas')) || [];
     loadData();
 }
 
@@ -851,6 +856,8 @@ function switchTab(tabName) {
         loadSalesTable();
     } else if (tabName === 'reports') {
         loadReportsDashboard();
+    } else if (tabName === 'ideas') {
+        loadIdeasGrid();
     }
 }
 
@@ -862,6 +869,7 @@ function loadData() {
     loadWIPTab();
     loadGallery();
     loadSalesTable();
+    loadIdeasGrid();
     loadReportsDashboard();
     updateLocationFilters();
     updateCustomerFilters();
@@ -920,6 +928,11 @@ async function saveDataToAPI() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(gallery)
+            }),
+            fetch('/api/ideas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ideas)
             })
         ]);
     } catch (error) {
@@ -933,6 +946,7 @@ function saveDataToLocalStorage() {
     localStorage.setItem('embroideryCustomers', JSON.stringify(customers));
     localStorage.setItem('embroiderySales', JSON.stringify(sales));
     localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
+    localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
 }
 
 function saveData() {
@@ -948,6 +962,7 @@ function updateStatusOptions() {
     const categorySelect = document.getElementById('itemCategory');
     const projectFields = document.getElementById('projectFields');
     const modalTitle = document.getElementById('addItemModalTitle');
+    const submitButton = document.querySelector('#addItemForm button[type="submit"]');
     
     if (typeSelect.value === 'inventory') {
         // Inventory status options
@@ -968,6 +983,7 @@ function updateStatusOptions() {
         // Hide project fields
         projectFields.style.display = 'none';
         modalTitle.textContent = 'Add New Inventory Item';
+        if (submitButton) submitButton.textContent = 'Add Item';
     } else if (typeSelect.value === 'project') {
         // Project status options
         statusSelect.innerHTML = `
@@ -987,6 +1003,7 @@ function updateStatusOptions() {
         // Show project fields
         projectFields.style.display = 'block';
         modalTitle.textContent = 'Add New Project';
+        if (submitButton) submitButton.textContent = 'Add Project';
     }
 }
 
@@ -1251,8 +1268,17 @@ function openAddItemModal() {
     populateCustomerSelect('itemCustomer');
     document.getElementById('addItemForm').reset();
     
-    // Set default type to inventory and update options
-    document.getElementById('itemType').value = 'inventory';
+    // Determine which tab is calling this function
+    const activeTab = document.querySelector('.tab-content.active');
+    const isProjectsTab = activeTab && activeTab.id === 'projects';
+    
+    // Set default type based on active tab
+    if (isProjectsTab) {
+        document.getElementById('itemType').value = 'project';
+    } else {
+        document.getElementById('itemType').value = 'inventory';
+    }
+    
     updateStatusOptions();
     
     document.getElementById('addItemModal').style.display = 'block';
@@ -2965,3 +2991,211 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Ideas Management Functions
+function openAddIdeaModal() {
+    document.getElementById('addIdeaModal').style.display = 'block';
+    document.getElementById('ideaTitle').focus();
+}
+
+function handleAddIdea(event) {
+    event.preventDefault();
+    
+    const title = document.getElementById('ideaTitle').value.trim();
+    const description = document.getElementById('ideaDescription').value.trim();
+    const category = document.getElementById('ideaCategory').value;
+    const status = document.getElementById('ideaStatus').value;
+    const webLink = document.getElementById('ideaWebLink').value.trim();
+    const source = document.getElementById('ideaSource').value.trim();
+    const priority = document.getElementById('ideaPriority').value;
+    const notes = document.getElementById('ideaNotes').value.trim();
+    const imageFile = document.getElementById('ideaImage').files[0];
+    const form = document.getElementById('addIdeaForm');
+    const isEditing = form.dataset.editingId;
+    
+    if (!title || !category) {
+        showNotification('Please fill in required fields', 'error');
+        return;
+    }
+    
+    const ideaData = {
+        title: title,
+        description: description,
+        category: category,
+        status: status,
+        webLink: webLink,
+        source: source,
+        priority: priority,
+        notes: notes,
+        imageUrl: null
+    };
+    
+    if (isEditing) {
+        // Update existing idea
+        const ideaIndex = ideas.findIndex(i => i.id === isEditing);
+        if (ideaIndex !== -1) {
+            ideas[ideaIndex] = { ...ideas[ideaIndex], ...ideaData };
+        }
+    } else {
+        // Add new idea
+        ideaData.id = generateIdeaId();
+        ideaData.dateAdded = new Date().toISOString();
+        ideas.push(ideaData);
+    }
+    
+    // Handle image upload
+    if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (isEditing) {
+                ideas[ideas.findIndex(i => i.id === isEditing)].imageUrl = e.target.result;
+            } else {
+                ideas[ideas.length - 1].imageUrl = e.target.result;
+            }
+            saveData();
+            loadIdeasGrid();
+            closeModal('addIdeaModal');
+            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+        };
+        reader.readAsDataURL(imageFile);
+    } else {
+        saveData();
+        loadIdeasGrid();
+        closeModal('addIdeaModal');
+        showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+    }
+    
+    // Reset form
+    form.reset();
+    delete form.dataset.editingId;
+}
+
+function generateIdeaId() {
+    return 'IDEA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+}
+
+function loadIdeasGrid() {
+    const grid = document.getElementById('ideasGrid');
+    if (!grid) return;
+    
+    if (ideas.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-lightbulb"></i>
+                <h3>No Ideas Yet</h3>
+                <p>Start collecting inspiration and ideas for your embroidery projects!</p>
+                <button class="btn btn-primary" onclick="openAddIdeaModal()">
+                    <i class="fas fa-plus"></i> Add Your First Idea
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = ideas.map(idea => `
+        <div class="idea-card" data-category="${idea.category}" data-status="${idea.status}">
+            <div class="idea-image">
+                ${idea.imageUrl ? 
+                    `<img src="${idea.imageUrl}" alt="${idea.title}" onclick="viewIdeaImage('${idea.id}')">` : 
+                    `<div class="no-image"><i class="fas fa-image"></i></div>`
+                }
+                <div class="idea-status status-${idea.status}">${idea.status.replace('-', ' ')}</div>
+            </div>
+            <div class="idea-content">
+                <h3 class="idea-title">${idea.title}</h3>
+                <p class="idea-description">${idea.description || 'No description'}</p>
+                <div class="idea-meta">
+                    <span class="idea-category">${idea.category}</span>
+                    <span class="idea-priority priority-${idea.priority}">${idea.priority}</span>
+                </div>
+                <div class="idea-actions">
+                    ${idea.webLink ? `<a href="${idea.webLink}" target="_blank" class="btn btn-small btn-outline"><i class="fas fa-external-link-alt"></i> View Source</a>` : ''}
+                    <button class="btn btn-small" onclick="editIdea('${idea.id}')"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteIdea('${idea.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterIdeas() {
+    const searchTerm = document.getElementById('ideasSearch').value.toLowerCase();
+    const categoryFilter = document.getElementById('ideasCategoryFilter').value;
+    const statusFilter = document.getElementById('ideasStatusFilter').value;
+    
+    const cards = document.querySelectorAll('.idea-card');
+    
+    cards.forEach(card => {
+        const title = card.querySelector('.idea-title').textContent.toLowerCase();
+        const description = card.querySelector('.idea-description').textContent.toLowerCase();
+        const category = card.dataset.category;
+        const status = card.dataset.status;
+        
+        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
+        const matchesCategory = !categoryFilter || category === categoryFilter;
+        const matchesStatus = !statusFilter || status === statusFilter;
+        
+        if (matchesSearch && matchesCategory && matchesStatus) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function editIdea(ideaId) {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+    
+    // Populate form with existing data
+    document.getElementById('ideaTitle').value = idea.title;
+    document.getElementById('ideaDescription').value = idea.description || '';
+    document.getElementById('ideaCategory').value = idea.category;
+    document.getElementById('ideaStatus').value = idea.status;
+    document.getElementById('ideaWebLink').value = idea.webLink || '';
+    document.getElementById('ideaSource').value = idea.source || '';
+    document.getElementById('ideaPriority').value = idea.priority;
+    document.getElementById('ideaNotes').value = idea.notes || '';
+    
+    // Store the idea ID for updating
+    document.getElementById('addIdeaForm').dataset.editingId = ideaId;
+    document.getElementById('addIdeaModal').style.display = 'block';
+}
+
+function deleteIdea(ideaId) {
+    if (confirm('Are you sure you want to delete this idea?')) {
+        ideas = ideas.filter(i => i.id !== ideaId);
+        saveData();
+        loadIdeasGrid();
+        showNotification('Idea deleted', 'success');
+    }
+}
+
+function viewIdeaImage(ideaId) {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (idea && idea.imageUrl) {
+        // Create a modal to view the image
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'block';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 80%; max-height: 80%;">
+                <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <img src="${idea.imageUrl}" alt="${idea.title}" style="width: 100%; height: auto; border-radius: 8px;">
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+}
+
+function exportIdeas() {
+    const dataStr = JSON.stringify(ideas, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `embroidery-ideas-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showNotification('Ideas exported successfully!', 'success');
+}

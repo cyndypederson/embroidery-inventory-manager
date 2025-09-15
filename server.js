@@ -71,6 +71,12 @@ async function initializeCollections() {
                 await db.collection('gallery').insertMany(galleryData);
                 console.log('🖼️ Loaded gallery sample data');
             }
+            
+            // Initialize ideas collection (empty by default)
+            const ideasCount = await db.collection('ideas').countDocuments();
+            if (ideasCount === 0) {
+                console.log('💡 Ideas collection initialized');
+            }
         }
     } catch (error) {
         console.error('Error initializing collections:', error);
@@ -219,6 +225,37 @@ app.post('/api/gallery', async (req, res) => {
     } catch (error) {
         console.error('Error saving gallery:', error);
         res.status(500).json({ error: 'Failed to save gallery data' });
+    }
+});
+
+app.get('/api/ideas', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const ideas = await database.collection('ideas').find({}).toArray();
+        res.json(ideas);
+    } catch (error) {
+        console.error('Error fetching ideas:', error);
+        res.status(500).json({ error: 'Failed to fetch ideas data' });
+    }
+});
+
+app.post('/api/ideas', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        await database.collection('ideas').deleteMany({});
+        if (req.body && req.body.length > 0) {
+            await database.collection('ideas').insertMany(req.body);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving ideas:', error);
+        res.status(500).json({ error: 'Failed to save ideas data' });
     }
 });
 

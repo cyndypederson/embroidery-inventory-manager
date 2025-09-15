@@ -35,6 +35,9 @@
                 <button class="nav-btn" data-tab="wip">
                     <i class="fas fa-tools"></i> Work In Progress
                 </button>
+                <button class="nav-btn" data-tab="ideas">
+                    <i class="fas fa-lightbulb"></i> Ideas
+                </button>
                 <button class="nav-btn" data-tab="gallery">
                     <i class="fas fa-images"></i> Gallery
                 </button>
@@ -274,6 +277,46 @@
                         <tbody id="salesTableBody">
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Ideas Tab -->
+            <div id="ideas" class="tab-content">
+                <div class="section-header">
+                    <h2>Inspiration & Ideas</h2>
+                    <div class="ideas-actions">
+                        <button class="btn btn-primary" onclick="openAddIdeaModal()">
+                            <i class="fas fa-plus"></i> Add New Idea
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportIdeas()">
+                            <i class="fas fa-download"></i> Export Ideas
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ideas-filters">
+                    <input type="text" id="ideasSearch" placeholder="Search ideas..." onkeyup="filterIdeas()">
+                    <select id="ideasCategoryFilter" onchange="filterIdeas()">
+                        <option value="">All Categories</option>
+                        <option value="web">Web Inspiration</option>
+                        <option value="book">Book/Pattern</option>
+                        <option value="custom">Custom Design</option>
+                        <option value="technique">Technique</option>
+                        <option value="color">Color Scheme</option>
+                        <option value="style">Style</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <select id="ideasStatusFilter" onchange="filterIdeas()">
+                        <option value="">All Status</option>
+                        <option value="new">New Idea</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+
+                <div id="ideasGrid" class="ideas-grid">
+                    <!-- Ideas will be loaded here -->
                 </div>
             </div>
 
@@ -666,6 +709,75 @@
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addPhotoModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Photo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addIdeaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addIdeaModal')">&times;</span>
+            <h3>Add New Idea</h3>
+            <form id="addIdeaForm" class="modal-form">
+                <div class="form-group full-width">
+                    <label for="ideaTitle">Idea Title *</label>
+                    <input type="text" id="ideaTitle" required placeholder="e.g., Floral Hoop Design, Geometric Pattern">
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaDescription">Description</label>
+                    <textarea id="ideaDescription" rows="3" placeholder="Describe the idea, inspiration, techniques, etc."></textarea>
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaCategory">Category *</label>
+                    <select id="ideaCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="web">Web Inspiration</option>
+                        <option value="book">Book/Pattern</option>
+                        <option value="custom">Custom Design</option>
+                        <option value="technique">Technique</option>
+                        <option value="color">Color Scheme</option>
+                        <option value="style">Style</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaStatus">Status</label>
+                    <select id="ideaStatus">
+                        <option value="new">New Idea</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaImage">Image</label>
+                    <input type="file" id="ideaImage" accept="image/*">
+                    <small>Upload a photo or screenshot of your inspiration</small>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaWebLink">Web Link</label>
+                    <input type="url" id="ideaWebLink" placeholder="https://...">
+                    <small>Link to the original source or inspiration</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaSource">Source</label>
+                    <input type="text" id="ideaSource" placeholder="e.g., Pinterest, Instagram, Etsy, Book Title">
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaPriority">Priority</label>
+                    <select id="ideaPriority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaNotes">Notes</label>
+                    <textarea id="ideaNotes" rows="2" placeholder="Additional notes, materials needed, estimated time, etc."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addIdeaModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Idea</button>
                 </div>
             </form>
         </div>
