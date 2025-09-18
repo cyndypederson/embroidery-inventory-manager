@@ -1101,11 +1101,11 @@ function loadInventoryTable() {
         
         // Calculate customer stats
         const totalProjects = customerItems.length;
-        const inventoryCount = customerItems.filter(({ item }) => item.status === 'inventory').length;
-        const pendingCount = customerItems.filter(({ item }) => item.status === 'pending').length;
-        const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress' || item.status === 'work-in-progress').length;
-        const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
-        const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
+        const inventoryCount = customerItems.filter(({ item }) => item.item.status === 'inventory').length;
+        const pendingCount = customerItems.filter(({ item }) => item.item.status === 'pending').length;
+        const inProgressCount = customerItems.filter(({ item }) => item.item.status === 'in-progress' || item.item.status === 'work-in-progress').length;
+        const completedCount = customerItems.filter(({ item }) => item.item.status === 'completed').length;
+        const soldCount = customerItems.filter(({ item }) => item.item.status === 'sold').length;
         
         headerRow.innerHTML = `
             <td colspan="8">
