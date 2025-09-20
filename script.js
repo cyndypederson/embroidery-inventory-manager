@@ -1759,7 +1759,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="text-center text-muted">
+                <td colspan="10" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -1822,7 +1822,6 @@ function loadSalesTable() {
         const listPriceDisplay = `$${listedPrice.toFixed(2)}`;
         
         row.innerHTML = `
-            <td><input type="checkbox" class="sale-checkbox" value="${index}"></td>
             <td>
                 <strong>${sale.itemName}</strong>
                 ${typeBadge}
