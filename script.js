@@ -1895,13 +1895,13 @@ function calculateEditDiscount() {
 function calculateEditNetAmount() {
     const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
     const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
     const netAmountInfo = document.getElementById('editNetAmountInfo');
     const netAmount = document.getElementById('editNetAmount');
     
-    if (salePrice > 0 && commission > 0) {
-        const commissionAmount = (salePrice * commission / 100);
-        const net = salePrice - commissionAmount;
-        netAmount.textContent = net.toFixed(2);
+    if (salePrice > 0) {
+        // salePrice is now the net amount (what you receive)
+        netAmount.textContent = salePrice.toFixed(2);
         netAmountInfo.style.display = 'block';
     } else {
         netAmountInfo.style.display = 'none';
@@ -1915,11 +1915,12 @@ function calculateSalePriceFromCommission() {
     const autoCalculateInfo = document.getElementById('autoCalculateInfo');
     
     if (listedPrice > 0 && commission > 0) {
-        // Calculate what the sale price should be to achieve the desired net amount
-        // If listed price is $100 and commission is 20%, we need to charge $125 to get $100 net
-        // Formula: Sale Price = Listed Price / (1 - Commission/100)
-        const salePrice = listedPrice / (1 - commission / 100);
-        salePriceField.value = salePrice.toFixed(2);
+        // Calculate net price (what you receive) from list price and commission
+        // If list price is $100 and commission is 20%, you receive $80
+        // Formula: Net Price = List Price - (List Price × Commission/100)
+        const commissionAmount = listedPrice * (commission / 100);
+        const netPrice = listedPrice - commissionAmount;
+        salePriceField.value = netPrice.toFixed(2);
         
         // Show auto-calculate indicator
         autoCalculateInfo.style.display = 'block';
@@ -1939,11 +1940,12 @@ function calculateEditSalePriceFromCommission() {
     const autoCalculateInfo = document.getElementById('editAutoCalculateInfo');
     
     if (listedPrice > 0 && commission > 0) {
-        // Calculate what the sale price should be to achieve the desired net amount
-        // If listed price is $100 and commission is 20%, we need to charge $125 to get $100 net
-        // Formula: Sale Price = Listed Price / (1 - Commission/100)
-        const salePrice = listedPrice / (1 - commission / 100);
-        salePriceField.value = salePrice.toFixed(2);
+        // Calculate net price (what you receive) from list price and commission
+        // If list price is $100 and commission is 20%, you receive $80
+        // Formula: Net Price = List Price - (List Price × Commission/100)
+        const commissionAmount = listedPrice * (commission / 100);
+        const netPrice = listedPrice - commissionAmount;
+        salePriceField.value = netPrice.toFixed(2);
         
         // Show auto-calculate indicator
         autoCalculateInfo.style.display = 'block';
@@ -2036,40 +2038,40 @@ function handleAddSale(e) {
         // Item selection is now optional
         if (!item) {
             // Create a generic sale without specific inventory item
-        const commissionAmount = (salePrice * commission / 100);
-        const netAmount = salePrice - commissionAmount;
+        const commissionAmount = (listedPrice * commission / 100);
+        const netAmount = salePrice; // salePrice is now the net amount (what you receive)
         
         newSale = {
             itemName: 'Inventory Item (Not Specified)',
             customer: customer,
             location: '',
             listedPrice: listedPrice,
-            salePrice: salePrice,
+            salePrice: salePrice, // This is now the net amount (what you receive)
             commission: commission,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
-            discount: listedPrice - salePrice,
-            discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+            discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
+            discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
             dateSold: dateSold,
             itemIndex: null,
             saleType: 'inventory',
             notes: notes
         };
         } else {
-            const commissionAmount = (salePrice * commission / 100);
-            const netAmount = salePrice - commissionAmount;
+            const commissionAmount = (listedPrice * commission / 100);
+            const netAmount = salePrice; // salePrice is now the net amount (what you receive)
             
             newSale = {
                 itemName: item.name,
                 customer: customer,
                 location: item.location,
                 listedPrice: listedPrice,
-                salePrice: salePrice,
+                salePrice: salePrice, // This is now the net amount (what you receive)
                 commission: commission,
                 commissionAmount: commissionAmount,
                 netAmount: netAmount,
-                discount: listedPrice - salePrice,
-                discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+                discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
+                discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
                 dateSold: dateSold,
                 itemIndex: selectedItemIndex,
                 saleType: 'inventory',
@@ -2085,20 +2087,20 @@ function handleAddSale(e) {
         const itemName = document.getElementById('customItemName').value.trim() || 'Custom Item';
         const description = document.getElementById('customItemDescription').value.trim();
         
-        const commissionAmount = (salePrice * commission / 100);
-        const netAmount = salePrice - commissionAmount;
+        const commissionAmount = (listedPrice * commission / 100);
+        const netAmount = salePrice; // salePrice is now the net amount (what you receive)
         
         newSale = {
             itemName: itemName,
             customer: customer,
             location: '',
             listedPrice: listedPrice,
-            salePrice: salePrice,
+            salePrice: salePrice, // This is now the net amount (what you receive)
             commission: commission,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
-            discount: listedPrice - salePrice,
-            discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+            discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
+            discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
             dateSold: dateSold,
             itemIndex: null, // No inventory item
             saleType: 'custom',
@@ -2107,20 +2109,20 @@ function handleAddSale(e) {
         };
     } else {
         // No sale type selected - create a generic sale
-        const commissionAmount = (salePrice * commission / 100);
-        const netAmount = salePrice - commissionAmount;
+        const commissionAmount = (listedPrice * commission / 100);
+        const netAmount = salePrice; // salePrice is now the net amount (what you receive)
         
         newSale = {
             itemName: 'General Sale',
             customer: customer,
             location: '',
             listedPrice: listedPrice,
-            salePrice: salePrice,
+            salePrice: salePrice, // This is now the net amount (what you receive)
             commission: commission,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
-            discount: listedPrice - salePrice,
-            discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+            discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
+            discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
             dateSold: dateSold,
             itemIndex: null,
             saleType: 'general',
@@ -2696,8 +2698,8 @@ function handleEditSale(e) {
         return;
     }
     
-    const commissionAmount = (salePrice * commission / 100);
-    const netAmount = salePrice - commissionAmount;
+    const commissionAmount = (listedPrice * commission / 100);
+    const netAmount = salePrice; // salePrice is now the net amount (what you receive)
     
     // Update the sale record
     sales[index] = {
@@ -2711,8 +2713,8 @@ function handleEditSale(e) {
         commission: commission,
         commissionAmount: commissionAmount,
         netAmount: netAmount,
-        discount: listedPrice - salePrice,
-        discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0
+        discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
+        discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0
     };
     
     // Handle sale type specific fields

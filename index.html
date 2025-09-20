@@ -268,9 +268,10 @@
                                 <th><input type="checkbox" id="selectAllSales" onchange="toggleAllSales()"></th>
                                 <th>Item</th>
                                 <th>Customer/Location</th>
-                                <th>Sale Price</th>
+                                <th>List Price</th>
+                                <th>Net Price</th>
                                 <th>Commission %</th>
-                                <th>Net Amount</th>
+                                <th>Commission Amount</th>
                                 <th>Date Sold</th>
                                 <th>Location</th>
                                 <th>Status</th>
@@ -701,9 +702,9 @@
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
-                    <label for="salePrice">Sale Price</label>
-                    <input type="number" id="salePrice" step="0.01" min="0" placeholder="Actual selling price" oninput="calculateDiscount()">
-                    <small class="form-help">The price actually charged (auto-calculated from list price and commission)</small>
+                    <label for="salePrice">Net Price (What You Receive)</label>
+                    <input type="number" id="salePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateDiscount()">
+                    <small class="form-help">The amount you receive after commission (auto-calculated from list price and commission)</small>
                 </div>
                 <div class="form-group full-width">
                     <div id="discountInfo" class="discount-info" style="display: none;">
@@ -711,7 +712,7 @@
                         <span id="discountPercentage"></span>
                     </div>
                     <div id="autoCalculateInfo" class="auto-calculate-info" style="display: none;">
-                        <i class="fas fa-calculator"></i> Sale price auto-calculated from list price and commission
+                        <i class="fas fa-calculator"></i> Net price auto-calculated from list price and commission
                     </div>
                 </div>
                 <div class="form-group half-width">
@@ -784,9 +785,9 @@
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
-                    <label for="editSalePrice">Sale Price</label>
-                    <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Actual selling price" oninput="calculateEditDiscount()">
-                    <small class="form-help">The price actually charged</small>
+                    <label for="editSalePrice">Net Price (What You Receive)</label>
+                    <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateEditDiscount()">
+                    <small class="form-help">The amount you receive after commission</small>
                 </div>
                 <div class="form-group full-width">
                     <div id="editDiscountInfo" class="discount-info" style="display: none;">
@@ -794,7 +795,7 @@
                         <span id="editDiscountPercentage"></span>
                     </div>
                     <div id="editAutoCalculateInfo" class="auto-calculate-info" style="display: none;">
-                        <i class="fas fa-calculator"></i> Sale price auto-calculated from list price and commission
+                        <i class="fas fa-calculator"></i> Net price auto-calculated from list price and commission
                     </div>
                 </div>
                 <div class="form-group half-width">
