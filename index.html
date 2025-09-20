@@ -694,18 +694,21 @@
                 
                 <div class="form-group half-width">
                     <label for="listedPrice">Listed Price</label>
-                    <input type="number" id="listedPrice" step="0.01" min="0" placeholder="Original price">
+                    <input type="number" id="listedPrice" step="0.01" min="0" placeholder="Original price" oninput="calculateSalePriceFromCommission()">
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="salePrice">Sale Price</label>
                     <input type="number" id="salePrice" step="0.01" min="0" placeholder="Actual selling price" oninput="calculateDiscount()">
-                    <small class="form-help">The price actually charged</small>
+                    <small class="form-help">The price actually charged (auto-calculated from list price and commission)</small>
                 </div>
                 <div class="form-group full-width">
                     <div id="discountInfo" class="discount-info" style="display: none;">
                         <span id="discountAmount"></span> | 
                         <span id="discountPercentage"></span>
+                    </div>
+                    <div id="autoCalculateInfo" class="auto-calculate-info" style="display: none;">
+                        <i class="fas fa-calculator"></i> Sale price auto-calculated from list price and commission
                     </div>
                 </div>
                 <div class="form-group half-width">
@@ -718,7 +721,7 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="saleCommission">Commission %</label>
-                    <input type="number" id="saleCommission" step="0.01" min="0" max="100" placeholder="0.00">
+                    <input type="number" id="saleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateSalePriceFromCommission()">
                     <small class="form-help">Shop commission percentage (if applicable)</small>
                 </div>
                 <div class="form-group half-width">
@@ -774,7 +777,7 @@
                 
                 <div class="form-group half-width">
                     <label for="editListedPrice">Listed Price</label>
-                    <input type="number" id="editListedPrice" step="0.01" min="0" placeholder="Original price">
+                    <input type="number" id="editListedPrice" step="0.01" min="0" placeholder="Original price" oninput="calculateEditSalePriceFromCommission()">
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
@@ -787,6 +790,9 @@
                         <span id="editDiscountAmount"></span> | 
                         <span id="editDiscountPercentage"></span>
                     </div>
+                    <div id="editAutoCalculateInfo" class="auto-calculate-info" style="display: none;">
+                        <i class="fas fa-calculator"></i> Sale price auto-calculated from list price and commission
+                    </div>
                 </div>
                 <div class="form-group half-width">
                     <label for="editSaleDate">Sale Date</label>
@@ -798,7 +804,7 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="editSaleCommission">Commission %</label>
-                    <input type="number" id="editSaleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateEditNetAmount()">
+                    <input type="number" id="editSaleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateEditSalePriceFromCommission()">
                     <small class="form-help">Shop commission percentage (if applicable)</small>
                 </div>
                 <div class="form-group half-width">

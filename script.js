@@ -1877,6 +1877,55 @@ function calculateEditNetAmount() {
     }
 }
 
+function calculateSalePriceFromCommission() {
+    const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
+    const commission = parseFloat(document.getElementById('saleCommission').value) || 0;
+    const salePriceField = document.getElementById('salePrice');
+    const autoCalculateInfo = document.getElementById('autoCalculateInfo');
+    
+    if (listedPrice > 0 && commission > 0) {
+        // Calculate what the sale price should be to achieve the desired net amount
+        // If listed price is $100 and commission is 20%, we need to charge $125 to get $100 net
+        // Formula: Sale Price = Listed Price / (1 - Commission/100)
+        const salePrice = listedPrice / (1 - commission / 100);
+        salePriceField.value = salePrice.toFixed(2);
+        
+        // Show auto-calculate indicator
+        autoCalculateInfo.style.display = 'block';
+        
+        // Trigger discount calculation
+        calculateDiscount();
+    } else {
+        // Hide auto-calculate indicator
+        autoCalculateInfo.style.display = 'none';
+    }
+}
+
+function calculateEditSalePriceFromCommission() {
+    const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
+    const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    const salePriceField = document.getElementById('editSalePrice');
+    const autoCalculateInfo = document.getElementById('editAutoCalculateInfo');
+    
+    if (listedPrice > 0 && commission > 0) {
+        // Calculate what the sale price should be to achieve the desired net amount
+        // If listed price is $100 and commission is 20%, we need to charge $125 to get $100 net
+        // Formula: Sale Price = Listed Price / (1 - Commission/100)
+        const salePrice = listedPrice / (1 - commission / 100);
+        salePriceField.value = salePrice.toFixed(2);
+        
+        // Show auto-calculate indicator
+        autoCalculateInfo.style.display = 'block';
+        
+        // Trigger discount and net amount calculations
+        calculateEditDiscount();
+        calculateEditNetAmount();
+    } else {
+        // Hide auto-calculate indicator
+        autoCalculateInfo.style.display = 'none';
+    }
+}
+
 function toggleSaleItemType() {
     const saleType = document.getElementById('saleType').value;
     const inventoryFields = document.getElementById('inventorySaleFields');

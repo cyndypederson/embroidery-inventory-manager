@@ -1573,6 +1573,21 @@ tr:nth-child(even) {
     display: block;
 }
 
+.auto-calculate-info {
+    background: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    color: #1565c0;
+    font-size: 0.9rem;
+}
+
+.auto-calculate-info i {
+    margin-right: 0.5rem;
+    color: #1976d2;
+}
+
 .form-actions {
     display: flex;
     gap: 1rem;
