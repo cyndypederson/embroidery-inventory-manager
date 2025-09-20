@@ -1759,7 +1759,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center text-muted">
+                <td colspan="11" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -1817,9 +1817,12 @@ function loadSalesTable() {
         
         // Commission and net amount display
         const commissionDisplay = sale.commission ? `${sale.commission}%` : '-';
+        const commissionAmountDisplay = sale.commissionAmount ? `$${sale.commissionAmount.toFixed(2)}` : '-';
         const netAmountDisplay = sale.netAmount ? `$${sale.netAmount.toFixed(2)}` : '-';
+        const listPriceDisplay = `$${listedPrice.toFixed(2)}`;
         
         row.innerHTML = `
+            <td><input type="checkbox" class="sale-checkbox" value="${index}"></td>
             <td>
                 <strong>${sale.itemName}</strong>
                 ${typeBadge}
@@ -1827,11 +1830,13 @@ function loadSalesTable() {
                 ${notesDisplay}
             </td>
             <td>${sale.customer}</td>
-            <td>${priceDisplay}</td>
-            <td>${commissionDisplay}</td>
+            <td>${listPriceDisplay}</td>
             <td>${netAmountDisplay}</td>
+            <td>${commissionDisplay}</td>
+            <td>${commissionAmountDisplay}</td>
             <td>${new Date(sale.dateSold).toLocaleDateString()}</td>
             <td>${sale.location || '-'}</td>
+            <td>${sale.status || 'Sold'}</td>
             <td>
                 <div class="action-buttons">
                     <button class="btn btn-primary btn-sm" onclick="editSale(${index})" title="Edit Sale">
