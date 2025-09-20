@@ -1759,7 +1759,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center text-muted">
+                <td colspan="9" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -1834,7 +1834,6 @@ function loadSalesTable() {
             <td>${commissionDisplay}</td>
             <td>${commissionAmountDisplay}</td>
             <td>${new Date(sale.dateSold).toLocaleDateString()}</td>
-            <td>${sale.location || '-'}</td>
             <td>${sale.status || 'Sold'}</td>
             <td>
                 <div class="action-buttons">
