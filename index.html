@@ -660,8 +660,8 @@
             <h3>Record Sale</h3>
             <form id="addSaleForm" class="modal-form">
                 <div class="form-group full-width">
-                    <label for="saleType">Sale Type *</label>
-                    <select id="saleType" onchange="toggleSaleItemType()" required>
+                    <label for="saleType">Sale Type</label>
+                    <select id="saleType" onchange="toggleSaleItemType()">
                         <option value="">Select Sale Type</option>
                         <option value="inventory">From Inventory</option>
                         <option value="custom">Custom Item</option>
@@ -671,7 +671,7 @@
                 <!-- Inventory Item Selection -->
                 <div id="inventorySaleFields">
                     <div class="form-group half-width">
-                        <label for="saleItem">Item *</label>
+                        <label for="saleItem">Item</label>
                         <select id="saleItem">
                             <option value="">Select Item</option>
                         </select>
@@ -681,7 +681,7 @@
                 <!-- Custom Item Fields -->
                 <div id="customSaleFields" style="display: none;">
                     <div class="form-group half-width">
-                        <label for="customItemName">Item Name *</label>
+                        <label for="customItemName">Item Name</label>
                         <input type="text" id="customItemName" placeholder="Enter item name">
                     </div>
                     <div class="form-group half-width">
@@ -691,13 +691,13 @@
                 </div>
                 
                 <div class="form-group half-width">
-                    <label for="listedPrice">Listed Price *</label>
-                    <input type="number" id="listedPrice" step="0.01" min="0" required placeholder="Original price">
+                    <label for="listedPrice">Listed Price</label>
+                    <input type="number" id="listedPrice" step="0.01" min="0" placeholder="Original price">
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
-                    <label for="salePrice">Sale Price *</label>
-                    <input type="number" id="salePrice" step="0.01" min="0" required placeholder="Actual selling price" oninput="calculateDiscount()">
+                    <label for="salePrice">Sale Price</label>
+                    <input type="number" id="salePrice" step="0.01" min="0" placeholder="Actual selling price" oninput="calculateDiscount()">
                     <small class="form-help">The price actually charged</small>
                 </div>
                 <div class="form-group full-width">

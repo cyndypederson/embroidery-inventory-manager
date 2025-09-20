@@ -1844,21 +1844,13 @@ function handleAddSale(e) {
     e.preventDefault();
     
     const saleType = document.getElementById('saleType').value;
-    const listedPrice = parseFloat(document.getElementById('listedPrice').value);
-    const salePrice = parseFloat(document.getElementById('salePrice').value);
+    const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
+    const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
     const customer = document.getElementById('saleCustomer').value || 'No Customer';
     const dateSold = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
     
-    if (!listedPrice || listedPrice <= 0) {
-        showNotification('Please enter a valid listed price', 'error');
-        return;
-    }
-    
-    if (!salePrice || salePrice <= 0) {
-        showNotification('Please enter a valid sale price', 'error');
-        return;
-    }
+    // All fields are now optional - no validation required
     
     let newSale;
     
@@ -1867,37 +1859,45 @@ function handleAddSale(e) {
         const selectedItemIndex = document.getElementById('saleItem').value;
         const item = inventory[selectedItemIndex];
         
+        // Item selection is now optional
         if (!item) {
-            showNotification('Please select a valid item', 'error');
-            return;
+            // Create a generic sale without specific inventory item
+            newSale = {
+                itemName: 'Inventory Item (Not Specified)',
+                customer: customer,
+                location: '',
+                listedPrice: listedPrice,
+                salePrice: salePrice,
+                discount: listedPrice - salePrice,
+                discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+                dateSold: dateSold,
+                itemIndex: null,
+                saleType: 'inventory',
+                notes: notes
+            };
+        } else {
+            newSale = {
+                itemName: item.name,
+                customer: customer,
+                location: item.location,
+                listedPrice: listedPrice,
+                salePrice: salePrice,
+                discount: listedPrice - salePrice,
+                discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+                dateSold: dateSold,
+                itemIndex: selectedItemIndex,
+                saleType: 'inventory',
+                notes: notes
+            };
+            
+            // Update item status to sold
+            inventory[selectedItemIndex].status = 'sold';
         }
-        
-        newSale = {
-            itemName: item.name,
-            customer: customer,
-            location: item.location,
-            listedPrice: listedPrice,
-            salePrice: salePrice,
-            discount: listedPrice - salePrice,
-            discountPercent: ((listedPrice - salePrice) / listedPrice * 100).toFixed(1),
-            dateSold: dateSold,
-            itemIndex: selectedItemIndex,
-            saleType: 'inventory',
-            notes: notes
-        };
-        
-        // Update item status to sold
-        inventory[selectedItemIndex].status = 'sold';
         
     } else if (saleType === 'custom') {
         // Handle custom item sale
-        const itemName = document.getElementById('customItemName').value.trim();
+        const itemName = document.getElementById('customItemName').value.trim() || 'Custom Item';
         const description = document.getElementById('customItemDescription').value.trim();
-        
-        if (!itemName) {
-            showNotification('Please enter an item name', 'error');
-            return;
-        }
         
         newSale = {
             itemName: itemName,
@@ -1906,7 +1906,7 @@ function handleAddSale(e) {
             listedPrice: listedPrice,
             salePrice: salePrice,
             discount: listedPrice - salePrice,
-            discountPercent: ((listedPrice - salePrice) / listedPrice * 100).toFixed(1),
+            discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
             dateSold: dateSold,
             itemIndex: null, // No inventory item
             saleType: 'custom',
@@ -1914,8 +1914,20 @@ function handleAddSale(e) {
             notes: notes
         };
     } else {
-        showNotification('Please select a sale type', 'error');
-        return;
+        // No sale type selected - create a generic sale
+        newSale = {
+            itemName: 'General Sale',
+            customer: customer,
+            location: '',
+            listedPrice: listedPrice,
+            salePrice: salePrice,
+            discount: listedPrice - salePrice,
+            discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+            dateSold: dateSold,
+            itemIndex: null,
+            saleType: 'general',
+            notes: notes
+        };
     }
     
     sales.push(newSale);
