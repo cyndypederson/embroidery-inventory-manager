@@ -741,25 +741,27 @@ function editProject(index) {
     console.log('Setting edit modal status to:', item.status || 'pending');
     document.getElementById('editItemStatus').value = item.status || 'pending';
     
-    // Set project-specific fields
-    console.log(`Setting customer value to: "${item.customer}"`);
-    document.getElementById('editItemCustomer').value = item.customer || '';
+    // Set other project-specific fields first
     document.getElementById('editItemDueDate').value = item.dueDate || '';
     document.getElementById('editItemPriority').value = item.priority || 'medium';
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
-    console.log(`Customer value after setting: "${document.getElementById('editItemCustomer').value}"`);
-    
-    // Populate customer dropdown (this will preserve the value we just set)
+    // Populate customer dropdown first, then set the value
     if (customers.length > 0) {
         populateCustomerSelect('editItemCustomer');
+        console.log(`Setting customer value to: "${item.customer}"`);
+        document.getElementById('editItemCustomer').value = item.customer || '';
+        console.log(`Customer value after setting: "${document.getElementById('editItemCustomer').value}"`);
     } else {
         console.log('Customers not loaded yet, waiting...');
         // Wait a bit and try again
         setTimeout(() => {
             if (customers.length > 0) {
                 populateCustomerSelect('editItemCustomer');
+                console.log(`Setting customer value to: "${item.customer}"`);
+                document.getElementById('editItemCustomer').value = item.customer || '';
+                console.log(`Customer value after setting: "${document.getElementById('editItemCustomer').value}"`);
             } else {
                 console.log('Customers still not loaded');
             }
@@ -891,6 +893,11 @@ async function loadDataFromAPI() {
         sales = await salesRes.json();
         gallery = await galleryRes.json();
         ideas = await ideasRes.json();
+        
+        console.log('Data loaded from API:');
+        console.log('Inventory items:', inventory.length);
+        console.log('Customers:', customers.length);
+        console.log('Customer names:', customers.map(c => c.name));
 
         loadData();
         updateConnectionStatus('connected');
@@ -1979,8 +1986,24 @@ function populateCustomerSelect(selectId) {
     
     // Restore the previous value if it exists
     if (currentValue) {
-        select.value = currentValue;
-        console.log(`Restored value to: "${select.value}"`);
+        // Try to find an exact match first
+        const exactMatch = Array.from(select.options).find(option => option.value === currentValue);
+        if (exactMatch) {
+            select.value = currentValue;
+            console.log(`Restored value to: "${select.value}"`);
+        } else {
+            // Try case-insensitive match
+            const caseInsensitiveMatch = Array.from(select.options).find(option => 
+                option.value.toLowerCase() === currentValue.toLowerCase()
+            );
+            if (caseInsensitiveMatch) {
+                select.value = caseInsensitiveMatch.value;
+                console.log(`Restored value (case-insensitive) to: "${select.value}"`);
+            } else {
+                console.log(`Could not find match for: "${currentValue}"`);
+                console.log(`Available options:`, Array.from(select.options).map(opt => `"${opt.value}"`));
+            }
+        }
     } else {
         console.log(`No current value to restore`);
     }
