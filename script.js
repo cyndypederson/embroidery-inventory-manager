@@ -544,6 +544,9 @@ function initializeApp() {
     // Check connection status
     checkConnectionStatus();
     
+    // Initialize connection status display (show on localhost, hide on live site)
+    initializeConnectionStatus();
+    
     // Authentication event listeners
     document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
     document.getElementById('closeAuthModal').addEventListener('click', hideAuthModal);
@@ -756,6 +759,18 @@ function handleEditItem(e) {
     showNotification('Item updated successfully!', 'success');
 }
 
+function initializeConnectionStatus() {
+    const connectionStatusContainer = document.getElementById('connectionStatusContainer');
+    if (connectionStatusContainer) {
+        // Show connection status on localhost, hide on live site
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            connectionStatusContainer.style.display = 'flex';
+        } else {
+            connectionStatusContainer.style.display = 'none';
+        }
+    }
+}
+
 async function checkConnectionStatus() {
     const statusElement = document.getElementById('connectionStatus');
     try {
@@ -956,6 +971,8 @@ function saveData() {
 }
 
 // Update status options based on item type
+// Old helper functions removed - now using direct field visibility control
+
 function updateStatusOptions() {
     const typeSelect = document.getElementById('itemType');
     const statusSelect = document.getElementById('itemStatus');
@@ -964,7 +981,13 @@ function updateStatusOptions() {
     const modalTitle = document.getElementById('addItemModalTitle');
     const submitButton = document.querySelector('#addItemForm button[type="submit"]');
     
+    const inventoryFields = document.getElementById('inventoryFields');
+    
     if (typeSelect.value === 'inventory') {
+        // Show inventory fields, hide project fields
+        if (inventoryFields) inventoryFields.style.display = 'block';
+        if (projectFields) projectFields.style.display = 'none';
+        
         // Inventory status options
         statusSelect.innerHTML = `
             <option value="available">Available</option>
@@ -980,11 +1003,13 @@ function updateStatusOptions() {
             <option value="thread">Thread</option>
             <option value="supplies">Other Supplies</option>
         `;
-        // Hide project fields
-        projectFields.style.display = 'none';
         modalTitle.textContent = 'Add New Inventory Item';
         if (submitButton) submitButton.textContent = 'Add Item';
     } else if (typeSelect.value === 'project') {
+        // Hide inventory fields, show project fields
+        if (inventoryFields) inventoryFields.style.display = 'none';
+        if (projectFields) projectFields.style.display = 'block';
+        
         // Project status options
         statusSelect.innerHTML = `
             <option value="pending">Pending</option>
@@ -996,12 +1021,14 @@ function updateStatusOptions() {
         // Project categories
         categorySelect.innerHTML = `
             <option value="">Select Category</option>
-            <option value="custom">Custom Project</option>
-            <option value="repair">Repair Work</option>
-            <option value="alteration">Alteration</option>
+            <option value="hoop">Hoop</option>
+            <option value="clothing">Clothing</option>
+            <option value="custom">Custom</option>
+            <option value="gift">Gift</option>
+            <option value="home-decor">Home Decor</option>
+            <option value="accessories">Accessories</option>
+            <option value="other">Other</option>
         `;
-        // Show project fields
-        projectFields.style.display = 'block';
         modalTitle.textContent = 'Add New Project';
         if (submitButton) submitButton.textContent = 'Add Project';
     }
@@ -1018,7 +1045,13 @@ function updateEditStatusOptions() {
     
     console.log('updateEditStatusOptions called, typeSelect.value:', typeSelect.value); // Debug log
     
+    const inventoryFields = document.getElementById('editInventoryFields');
+    
     if (typeSelect.value === 'inventory') {
+        // Show inventory fields, hide project fields
+        if (inventoryFields) inventoryFields.style.display = 'block';
+        if (projectFields) projectFields.style.display = 'none';
+        
         // Inventory status options
         statusSelect.innerHTML = `
             <option value="available">Available</option>
@@ -1034,11 +1067,13 @@ function updateEditStatusOptions() {
             <option value="thread">Thread</option>
             <option value="supplies">Other Supplies</option>
         `;
-        // Hide project fields
-        projectFields.style.display = 'none';
         modalTitle.textContent = 'Edit Inventory Item';
         submitButton.textContent = 'Update Inventory Item';
     } else if (typeSelect.value === 'project') {
+        // Hide inventory fields, show project fields
+        if (inventoryFields) inventoryFields.style.display = 'none';
+        if (projectFields) projectFields.style.display = 'block';
+        
         // Project status options
         statusSelect.innerHTML = `
             <option value="pending">Pending</option>
@@ -1050,16 +1085,14 @@ function updateEditStatusOptions() {
         // Project categories
         categorySelect.innerHTML = `
             <option value="">Select Category</option>
-            <option value="hoop">Hoop Art</option>
+            <option value="hoop">Hoop</option>
             <option value="clothing">Clothing</option>
-            <option value="custom">Custom Design</option>
-            <option value="gift">Gift Item</option>
+            <option value="custom">Custom</option>
+            <option value="gift">Gift</option>
             <option value="home-decor">Home Decor</option>
             <option value="accessories">Accessories</option>
             <option value="other">Other</option>
         `;
-        // Show project fields
-        projectFields.style.display = 'block';
         modalTitle.textContent = 'Edit Project';
         submitButton.textContent = 'Update Project';
     }
@@ -1692,17 +1725,31 @@ function quickStatusChange(index, newStatus) {
         'sold': 'Sold'
     };
     
+    // Store expanded customer groups before updating
+    const expandedCustomers = getExpandedCustomerGroups();
+    
     inventory[index].status = newStatus;
     saveData();
     loadInventoryTable();
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
+    
     showNotification(`Item status changed to ${statusNames[newStatus]}!`, 'success');
 }
 
 function markAsSold(index) {
     if (confirm('Mark this item as sold?')) {
+        // Store expanded customer groups before updating
+        const expandedCustomers = getExpandedCustomerGroups();
+        
         inventory[index].status = 'sold';
         saveData();
         loadInventoryTable();
+        
+        // Restore expanded customer groups after reload
+        restoreExpandedCustomerGroups(expandedCustomers);
+        
         showNotification('Item marked as sold!', 'success');
     }
 }
@@ -2765,10 +2812,17 @@ function updateWIPStatus(index) {
     }
     
     if (confirm(`Mark "${item.name}" as ${newStatus.replace('-', ' ')}?`)) {
+        // Store expanded customer groups before updating
+        const expandedCustomers = getExpandedCustomerGroups();
+        
         item.status = newStatus;
         saveData();
         loadWIPTab();
         loadInventoryTable();
+        
+        // Restore expanded customer groups after reload
+        restoreExpandedCustomerGroups(expandedCustomers);
+        
         showNotification(`Item marked as ${newStatus.replace('-', ' ')}!`, 'success');
     }
 }

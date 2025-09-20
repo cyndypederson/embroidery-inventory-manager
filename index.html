@@ -14,7 +14,7 @@
                 <div class="branding">
                     <h1>CyndyP StitchCraft Inventory Management</h1>
                 </div>
-                <div class="connection-status">
+                <div class="connection-status" id="connectionStatusContainer">
                     <span id="connectionStatus" class="status-indicator">
                         <i class="fas fa-circle"></i> Connecting...
                     </span>
@@ -537,41 +537,48 @@
                     <label for="itemCategory">Category</label>
                     <select id="itemCategory">
                         <option value="">Select Category</option>
-                        <option value="kits">Kits</option>
-                        <option value="hoops">Hoops</option>
-                        <option value="fabric">Fabric</option>
-                        <option value="thread">Thread</option>
-                        <option value="supplies">Other Supplies</option>
-                        <option value="custom">Custom Project</option>
+                        <option value="hoop">Hoop</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="custom">Custom</option>
+                        <option value="gift">Gift</option>
+                        <option value="home-decor">Home Decor</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
                 <div class="form-group half-width">
                     <label for="itemStatus">Status</label>
                     <select id="itemStatus">
-                        <option value="available">Available</option>
-                        <option value="low-stock">Low Stock</option>
-                        <option value="out-of-stock">Out of Stock</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
                     </select>
                 </div>
-                <div class="form-group half-width">
-                    <label for="itemPrice">Cost (per unit)</label>
-                    <input type="number" id="itemPrice" step="0.01" min="0" placeholder="0.00">
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemTotalPrice">Total Value</label>
-                    <input type="number" id="itemTotalPrice" step="0.01" min="0" readonly>
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemLocation">Location</label>
-                    <input type="text" id="itemLocation" placeholder="e.g., Craft Room, Garage">
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemSupplier">Supplier</label>
-                    <input type="text" id="itemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
-                </div>
-                <div class="form-group half-width">
-                    <label for="itemReorderPoint">Reorder Point</label>
-                    <input type="number" id="itemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
+                
+                <!-- Inventory-specific fields (hidden for projects) -->
+                <div id="inventoryFields">
+                    <div class="form-group half-width">
+                        <label for="itemPrice">Cost (per unit)</label>
+                        <input type="number" id="itemPrice" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemTotalPrice">Total Value</label>
+                        <input type="number" id="itemTotalPrice" step="0.01" min="0" readonly>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemLocation">Location</label>
+                        <input type="text" id="itemLocation" placeholder="e.g., Craft Room, Garage">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemSupplier">Supplier</label>
+                        <input type="text" id="itemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemReorderPoint">Reorder Point</label>
+                        <input type="number" id="itemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
+                    </div>
                 </div>
                 <div class="form-group half-width">
                     <label for="itemNotes">Notes</label>
@@ -579,9 +586,9 @@
                 </div>
                 <div class="form-group full-width" id="projectFields" style="display: none;">
                     <div class="form-group half-width">
-                        <label for="itemCustomer">Customer</label>
-                        <select id="itemCustomer">
-                            <option value="">Select Customer (Optional)</option>
+                        <label for="itemCustomer">Customer *</label>
+                        <select id="itemCustomer" required>
+                            <option value="">Select Customer</option>
                         </select>
                     </div>
                     <div class="form-group half-width">
@@ -597,8 +604,13 @@
                         </select>
                     </div>
                     <div class="form-group half-width">
-                        <label for="itemPatternLink">Pattern Link</label>
-                        <input type="url" id="itemPatternLink" placeholder="https://...">
+                        <label for="itemPatternLink">Pattern Link (Google Drive)</label>
+                        <input type="url" id="itemPatternLink" placeholder="https://drive.google.com/file/d/...">
+                        <small class="form-help">Paste your Google Drive shareable link here</small>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="itemTags">Tags (comma-separated)</label>
+                        <input type="text" id="itemTags" placeholder="e.g., wedding, baby, holiday">
                     </div>
                 </div>
                 <div class="form-actions">
@@ -812,47 +824,52 @@
                     <label for="editItemCategory">Category</label>
                     <select id="editItemCategory">
                         <option value="">Select Category</option>
-                        <option value="kits">Kits</option>
-                        <option value="hoops">Hoops</option>
-                        <option value="fabric">Fabric</option>
-                        <option value="thread">Thread</option>
-                        <option value="supplies">Other Supplies</option>
-                        <option value="custom">Custom Project</option>
+                        <option value="hoop">Hoop</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="custom">Custom</option>
+                        <option value="gift">Gift</option>
+                        <option value="home-decor">Home Decor</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
                 
                 <div class="form-group half-width">
                     <label for="editItemStatus">Status</label>
                     <select id="editItemStatus">
-                        <option value="available">Available</option>
-                        <option value="low-stock">Low Stock</option>
-                        <option value="out-of-stock">Out of Stock</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
                     </select>
                 </div>
                 
-                <div class="form-group half-width">
-                    <label for="editItemPrice">Cost (per item)</label>
-                    <input type="number" id="editItemPrice" step="0.01" min="0" placeholder="0.00">
-                </div>
-                
-                <div class="form-group half-width">
-                    <label for="editItemTotalPrice">Total Value</label>
-                    <input type="number" id="editItemTotalPrice" step="0.01" min="0" readonly>
-                </div>
-                
-                <div class="form-group half-width">
-                    <label for="editItemLocation">Location</label>
-                    <input type="text" id="editItemLocation" placeholder="e.g., Craft Room, Garage">
-                </div>
-                
-                <div class="form-group half-width">
-                    <label for="editItemSupplier">Supplier</label>
-                    <input type="text" id="editItemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
-                </div>
-                
-                <div class="form-group half-width">
-                    <label for="editItemReorderPoint">Reorder Point</label>
-                    <input type="number" id="editItemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
+                <!-- Inventory-specific fields (hidden for projects) -->
+                <div id="editInventoryFields">
+                    <div class="form-group half-width">
+                        <label for="editItemPrice">Cost (per item)</label>
+                        <input type="number" id="editItemPrice" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemTotalPrice">Total Value</label>
+                        <input type="number" id="editItemTotalPrice" step="0.01" min="0" readonly>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemLocation">Location</label>
+                        <input type="text" id="editItemLocation" placeholder="e.g., Craft Room, Garage">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="editItemSupplier">Supplier</label>
+                        <input type="text" id="editItemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemReorderPoint">Reorder Point</label>
+                        <input type="number" id="editItemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
+                    </div>
                 </div>
                 
                 <div class="form-group full-width">
@@ -863,9 +880,9 @@
                 <!-- Project-specific fields (hidden by default) -->
                 <div id="editProjectFields" style="display: none;">
                     <div class="form-group half-width">
-                        <label for="editItemCustomer">Customer</label>
-                        <select id="editItemCustomer">
-                            <option value="">Select Customer (Optional)</option>
+                        <label for="editItemCustomer">Customer *</label>
+                        <select id="editItemCustomer" required>
+                            <option value="">Select Customer</option>
                         </select>
                     </div>
                     
