@@ -695,7 +695,6 @@ function editProject(index) {
     document.getElementById('editItemDescription').value = item.description || item.name || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
     document.getElementById('editItemType').value = 'project'; // Force project type
-    document.getElementById('editItemStatus').value = item.status || 'pending';
     document.getElementById('editItemCategory').value = item.category || '';
     document.getElementById('editItemNotes').value = item.notes || '';
     
@@ -706,9 +705,14 @@ function editProject(index) {
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
-    // Update status options and modal title for project
+    // Update status options and modal title for project FIRST
     console.log('Setting up edit modal for project'); // Debug log
     updateEditStatusOptions();
+    
+    // NOW set the status value after the options are created
+    console.log('Project status from data:', item.status);
+    console.log('Setting edit modal status to:', item.status || 'pending');
+    document.getElementById('editItemStatus').value = item.status || 'pending';
     
     // Populate customer dropdown
     populateCustomerSelect('editItemCustomer');
