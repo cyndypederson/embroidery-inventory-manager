@@ -718,6 +718,8 @@ function editProject(index) {
     console.log('editProject called with index:', index); // Debug log
     console.log('Total inventory items:', inventory.length);
     console.log('Inventory at index', index, ':', inventory[index]);
+    console.log('Customers array length:', customers.length);
+    console.log('Customers:', customers);
     
     const item = inventory[index];
     console.log('Project to edit:', item); // Debug log
@@ -740,14 +742,29 @@ function editProject(index) {
     document.getElementById('editItemStatus').value = item.status || 'pending';
     
     // Set project-specific fields
+    console.log(`Setting customer value to: "${item.customer}"`);
     document.getElementById('editItemCustomer').value = item.customer || '';
     document.getElementById('editItemDueDate').value = item.dueDate || '';
     document.getElementById('editItemPriority').value = item.priority || 'medium';
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
+    console.log(`Customer value after setting: "${document.getElementById('editItemCustomer').value}"`);
+    
     // Populate customer dropdown (this will preserve the value we just set)
-    populateCustomerSelect('editItemCustomer');
+    if (customers.length > 0) {
+        populateCustomerSelect('editItemCustomer');
+    } else {
+        console.log('Customers not loaded yet, waiting...');
+        // Wait a bit and try again
+        setTimeout(() => {
+            if (customers.length > 0) {
+                populateCustomerSelect('editItemCustomer');
+            } else {
+                console.log('Customers still not loaded');
+            }
+        }, 100);
+    }
     
     // Show the edit modal
     document.getElementById('editItemModal').style.display = 'block';
@@ -1949,6 +1966,9 @@ function handleAddSale(e) {
 function populateCustomerSelect(selectId) {
     const select = document.getElementById(selectId);
     const currentValue = select.value; // Save current value
+    console.log(`populateCustomerSelect(${selectId}): currentValue = "${currentValue}"`);
+    console.log(`Available customers:`, customers.map(c => c.name));
+    
     select.innerHTML = '<option value="">Select Customer</option>';
     customers.forEach(customer => {
         const option = document.createElement('option');
@@ -1956,9 +1976,13 @@ function populateCustomerSelect(selectId) {
         option.textContent = customer.name;
         select.appendChild(option);
     });
+    
     // Restore the previous value if it exists
     if (currentValue) {
         select.value = currentValue;
+        console.log(`Restored value to: "${select.value}"`);
+    } else {
+        console.log(`No current value to restore`);
     }
 }
 
