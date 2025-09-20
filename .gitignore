@@ -31,3 +31,4 @@ Thumbs.db
 # ngrok
 ngrok
 .vercel
+.env

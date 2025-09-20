@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
+
+// Load environment variables
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -132,6 +135,33 @@ app.post('/api/inventory', async (req, res) => {
     } catch (error) {
         console.error('Error saving inventory:', error);
         res.status(500).json({ error: 'Failed to save inventory data' });
+    }
+});
+
+// Update individual inventory item
+app.put('/api/inventory/:id', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const { id } = req.params;
+        const updateData = req.body;
+        
+        const result = await database.collection('inventory').updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateData }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'Item not found' });
+        }
+        
+        res.json({ success: true, modifiedCount: result.modifiedCount });
+    } catch (error) {
+        console.error('Error updating inventory item:', error);
+        res.status(500).json({ error: 'Failed to update inventory item' });
     }
 });
 

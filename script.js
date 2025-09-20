@@ -10,6 +10,13 @@ let ideas = [];
 let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
 let isAuthenticated = false;
 
+// Check if running on localhost
+function isLocalhost() {
+    return window.location.hostname === 'localhost' || 
+           window.location.hostname === '127.0.0.1' || 
+           window.location.hostname === '';
+}
+
 // Function to change password (you can call this from browser console)
 function changePassword(newPassword) {
     ADMIN_PASSWORD = newPassword;
@@ -434,6 +441,11 @@ const API_BASE = '';
 
 // Authentication functions
 function checkAuthentication() {
+    // Always authenticated on localhost
+    if (isLocalhost()) {
+        return true;
+    }
+    
     const authStatus = sessionStorage.getItem('embroideryAuth');
     isAuthenticated = authStatus === 'true';
     return isAuthenticated;
@@ -476,6 +488,12 @@ function handleAuthSubmit(event) {
 }
 
 function requireAuth(tabName) {
+    // Skip authentication on localhost
+    if (isLocalhost()) {
+        return true;
+    }
+    
+    // Only require auth for sales and reports on production
     if (tabName === 'sales' || tabName === 'reports') {
         if (!checkAuthentication()) {
             sessionStorage.setItem('requestedTab', tabName);
@@ -495,6 +513,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
+    // Show production mode indicator if not localhost
+    if (!isLocalhost()) {
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+            statusElement.innerHTML = '<i class="fas fa-shield-alt"></i> Production Mode';
+            statusElement.className = 'status-indicator connected';
+        }
+    }
+    
     // Tab navigation
     const navButtons = document.querySelectorAll('.nav-btn');
     navButtons.forEach(btn => {
@@ -686,6 +713,8 @@ function editItem(index) {
 
 function editProject(index) {
     console.log('editProject called with index:', index); // Debug log
+    console.log('Total inventory items:', inventory.length);
+    console.log('Inventory at index', index, ':', inventory[index]);
     
     const item = inventory[index];
     console.log('Project to edit:', item); // Debug log
@@ -1146,12 +1175,22 @@ function loadInventoryTable() {
     
     // Group items by customer
     const groupedItems = {};
-    projectItems.forEach((item, index) => {
+    projectItems.forEach((item, filteredIndex) => {
         const customer = item.customer || 'No Customer';
         if (!groupedItems[customer]) {
             groupedItems[customer] = [];
         }
-        groupedItems[customer].push({ item, index });
+        // Find the original inventory index by comparing _id or name
+        let originalIndex = inventory.findIndex(invItem => invItem === item);
+        if (originalIndex === -1) {
+            // Fallback: find by _id or name if reference comparison fails
+            originalIndex = inventory.findIndex(invItem => 
+                (invItem._id && item._id && invItem._id === item._id) || 
+                (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
+            );
+        }
+        console.log(`Project: ${item.name}, Filtered index: ${filteredIndex}, Original index: ${originalIndex}`);
+        groupedItems[customer].push({ item, index: originalIndex });
     });
     
     // Sort customers alphabetically, with "No Customer" at the end
@@ -1203,6 +1242,7 @@ function loadInventoryTable() {
         // Add individual project rows
         const projectsContainer = groupRow.querySelector('.customer-projects');
         customerItems.forEach(({ item, index }) => {
+            console.log(`Creating project row for: ${item.name}, using index: ${index}`);
             const projectRow = document.createElement('div');
             projectRow.className = 'project-row';
             
@@ -1402,6 +1442,44 @@ function handleAddItem(e) {
     loadInventoryItemsTable(); // Inventory items table
     updateLocationFilters();
     updateCustomerFilters();
+    
+    // Auto-expand customer group if this is a project with a customer
+    if (newItem.type === 'project' && newItem.customer) {
+        setTimeout(() => {
+            const customerName = newItem.customer;
+            const groupId = `customer-group-${customerName.replace(/\s+/g, '-').toLowerCase()}`;
+            const groupRow = document.getElementById(groupId);
+            const customerHeader = document.querySelector(`[data-customer="${customerName}"]`);
+            
+            if (groupRow && customerHeader) {
+                // Collapse all other customer groups first
+                const allCustomerGroups = document.querySelectorAll('.customer-group');
+                const allToggleIcons = document.querySelectorAll('.customer-toggle');
+                
+                allCustomerGroups.forEach(group => {
+                    if (group.id !== groupId) {
+                        group.style.display = 'none';
+                    }
+                });
+                
+                allToggleIcons.forEach(icon => {
+                    if (icon !== customerHeader.querySelector('.customer-toggle')) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-right');
+                    }
+                });
+                
+                // Expand the customer group
+                groupRow.style.display = 'table-row';
+                const toggleIcon = customerHeader.querySelector('.customer-toggle');
+                if (toggleIcon) {
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
+            }
+        }, 100); // Small delay to ensure DOM is updated
+    }
+    
     closeModal('addItemModal');
     
     showNotification('Item added successfully!', 'success');
@@ -1567,6 +1645,46 @@ function handleAddCustomer(e) {
     loadCustomersTable();
     updateLocationFilters();
     updateCustomerFilters();
+    
+    // Refresh customer dropdowns in add and edit project modals
+    populateCustomerSelect('itemCustomer');
+    populateCustomerSelect('editItemCustomer');
+    
+    // Auto-expand the newly added customer group in projects view
+    setTimeout(() => {
+        const customerName = newCustomer.name;
+        const groupId = `customer-group-${customerName.replace(/\s+/g, '-').toLowerCase()}`;
+        const groupRow = document.getElementById(groupId);
+        const customerHeader = document.querySelector(`[data-customer="${customerName}"]`);
+        
+        if (groupRow && customerHeader) {
+            // Collapse all other customer groups first
+            const allCustomerGroups = document.querySelectorAll('.customer-group');
+            const allToggleIcons = document.querySelectorAll('.customer-toggle');
+            
+            allCustomerGroups.forEach(group => {
+                if (group.id !== groupId) {
+                    group.style.display = 'none';
+                }
+            });
+            
+            allToggleIcons.forEach(icon => {
+                if (icon !== customerHeader.querySelector('.customer-toggle')) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
+            });
+            
+            // Expand the new customer group
+            groupRow.style.display = 'table-row';
+            const toggleIcon = customerHeader.querySelector('.customer-toggle');
+            if (toggleIcon) {
+                toggleIcon.classList.remove('fa-chevron-right');
+                toggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+    }, 100); // Small delay to ensure DOM is updated
+    
     closeModal('addCustomerModal');
     
     showNotification('Customer added successfully!', 'success');
@@ -1608,6 +1726,34 @@ function loadSalesTable() {
         const notesDisplay = sale.notes ? 
             `<br><small class="text-muted"><i class="fas fa-sticky-note"></i> ${sale.notes}</small>` : '';
         
+        // Calculate discount info for display
+        const listedPrice = sale.listedPrice || sale.price || 0;
+        const salePrice = sale.salePrice || sale.price || 0;
+        const discount = listedPrice - salePrice;
+        const discountPercent = listedPrice > 0 ? ((discount / listedPrice) * 100).toFixed(1) : 0;
+        
+        // Create price display
+        let priceDisplay = `$${salePrice.toFixed(2)}`;
+        if (listedPrice !== salePrice) {
+            if (discount > 0) {
+                priceDisplay = `
+                    <div class="price-info">
+                        <span class="sale-price">$${salePrice.toFixed(2)}</span>
+                        <span class="original-price">$${listedPrice.toFixed(2)}</span>
+                        <span class="discount-badge discount">${discountPercent}% off</span>
+                    </div>
+                `;
+            } else if (discount < 0) {
+                priceDisplay = `
+                    <div class="price-info">
+                        <span class="sale-price">$${salePrice.toFixed(2)}</span>
+                        <span class="original-price">$${listedPrice.toFixed(2)}</span>
+                        <span class="discount-badge markup">+${Math.abs(discountPercent)}% markup</span>
+                    </div>
+                `;
+            }
+        }
+        
         row.innerHTML = `
             <td>
                 <strong>${sale.itemName}</strong>
@@ -1616,7 +1762,7 @@ function loadSalesTable() {
                 ${notesDisplay}
             </td>
             <td>${sale.customer}</td>
-            <td>$${parseFloat(sale.price).toFixed(2)}</td>
+            <td>${priceDisplay}</td>
             <td>${new Date(sale.dateSold).toLocaleDateString()}</td>
             <td>${sale.location || '-'}</td>
             <td>
@@ -1662,16 +1808,54 @@ function toggleSaleItemType() {
     }
 }
 
+function calculateDiscount() {
+    const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
+    const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
+    const discountInfo = document.getElementById('discountInfo');
+    const discountAmount = document.getElementById('discountAmount');
+    const discountPercentage = document.getElementById('discountPercentage');
+    
+    if (listedPrice > 0 && salePrice > 0) {
+        const discount = listedPrice - salePrice;
+        const discountPercent = ((discount / listedPrice) * 100).toFixed(1);
+        
+        if (discount > 0) {
+            discountAmount.textContent = `Discount: $${discount.toFixed(2)}`;
+            discountPercentage.textContent = `${discountPercent}% off`;
+            discountInfo.style.display = 'block';
+            discountInfo.className = 'discount-info discount-applied';
+        } else if (discount < 0) {
+            discountAmount.textContent = `Markup: $${Math.abs(discount).toFixed(2)}`;
+            discountPercentage.textContent = `${Math.abs(discountPercent)}% markup`;
+            discountInfo.style.display = 'block';
+            discountInfo.className = 'discount-info markup-applied';
+        } else {
+            discountAmount.textContent = 'No discount';
+            discountPercentage.textContent = 'Full price';
+            discountInfo.style.display = 'block';
+            discountInfo.className = 'discount-info no-discount';
+        }
+    } else {
+        discountInfo.style.display = 'none';
+    }
+}
+
 function handleAddSale(e) {
     e.preventDefault();
     
     const saleType = document.getElementById('saleType').value;
-    const price = parseFloat(document.getElementById('salePrice').value);
+    const listedPrice = parseFloat(document.getElementById('listedPrice').value);
+    const salePrice = parseFloat(document.getElementById('salePrice').value);
     const customer = document.getElementById('saleCustomer').value || 'No Customer';
     const dateSold = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
     
-    if (!price || price <= 0) {
+    if (!listedPrice || listedPrice <= 0) {
+        showNotification('Please enter a valid listed price', 'error');
+        return;
+    }
+    
+    if (!salePrice || salePrice <= 0) {
         showNotification('Please enter a valid sale price', 'error');
         return;
     }
@@ -1692,7 +1876,10 @@ function handleAddSale(e) {
             itemName: item.name,
             customer: customer,
             location: item.location,
-            price: price,
+            listedPrice: listedPrice,
+            salePrice: salePrice,
+            discount: listedPrice - salePrice,
+            discountPercent: ((listedPrice - salePrice) / listedPrice * 100).toFixed(1),
             dateSold: dateSold,
             itemIndex: selectedItemIndex,
             saleType: 'inventory',
@@ -1716,7 +1903,10 @@ function handleAddSale(e) {
             itemName: itemName,
             customer: customer,
             location: '',
-            price: price,
+            listedPrice: listedPrice,
+            salePrice: salePrice,
+            discount: listedPrice - salePrice,
+            discountPercent: ((listedPrice - salePrice) / listedPrice * 100).toFixed(1),
             dateSold: dateSold,
             itemIndex: null, // No inventory item
             saleType: 'custom',
