@@ -689,6 +689,13 @@ function editItem(index) {
     document.getElementById('editItemSupplier').value = item.supplier || '';
     document.getElementById('editItemReorderPoint').value = item.reorderPoint || 0;
     
+    // Update status options and modal title based on type FIRST
+    console.log('Item type for edit:', item.type); // Debug log
+    updateEditStatusOptions();
+    
+    // NOW set all the field values after the options are created
+    document.getElementById('editItemStatus').value = item.status || 'available';
+    
     // Set project-specific fields
     document.getElementById('editItemCustomer').value = item.customer || '';
     document.getElementById('editItemDueDate').value = item.dueDate || '';
@@ -696,14 +703,10 @@ function editItem(index) {
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
-    // Update status options and modal title based on type
-    console.log('Item type for edit:', item.type); // Debug log
-    updateEditStatusOptions();
-    
     // Calculate and set total value
     calculateEditTotalValue();
     
-    // Populate customer dropdown
+    // Populate customer dropdown (this will preserve the value we just set)
     populateCustomerSelect('editItemCustomer');
     
     // Show the edit modal
@@ -727,6 +730,15 @@ function editProject(index) {
     document.getElementById('editItemCategory').value = item.category || '';
     document.getElementById('editItemNotes').value = item.notes || '';
     
+    // Update status options and modal title for project FIRST
+    console.log('Setting up edit modal for project'); // Debug log
+    updateEditStatusOptions();
+    
+    // NOW set all the field values after the options are created
+    console.log('Project status from data:', item.status);
+    console.log('Setting edit modal status to:', item.status || 'pending');
+    document.getElementById('editItemStatus').value = item.status || 'pending';
+    
     // Set project-specific fields
     document.getElementById('editItemCustomer').value = item.customer || '';
     document.getElementById('editItemDueDate').value = item.dueDate || '';
@@ -734,16 +746,7 @@ function editProject(index) {
     document.getElementById('editItemTags').value = item.tags || '';
     document.getElementById('editItemPatternLink').value = item.patternLink || '';
     
-    // Update status options and modal title for project FIRST
-    console.log('Setting up edit modal for project'); // Debug log
-    updateEditStatusOptions();
-    
-    // NOW set the status value after the options are created
-    console.log('Project status from data:', item.status);
-    console.log('Setting edit modal status to:', item.status || 'pending');
-    document.getElementById('editItemStatus').value = item.status || 'pending';
-    
-    // Populate customer dropdown
+    // Populate customer dropdown (this will preserve the value we just set)
     populateCustomerSelect('editItemCustomer');
     
     // Show the edit modal
@@ -1376,7 +1379,6 @@ function toggleCustomerGroup(customer) {
 }
 
 function openAddItemModal() {
-    populateCustomerSelect('itemCustomer');
     document.getElementById('addItemForm').reset();
     
     // Determine which tab is calling this function
@@ -1391,6 +1393,9 @@ function openAddItemModal() {
     }
     
     updateStatusOptions();
+    
+    // Populate customer dropdown after form reset
+    populateCustomerSelect('itemCustomer');
     
     document.getElementById('addItemModal').style.display = 'block';
 }
@@ -1943,6 +1948,7 @@ function handleAddSale(e) {
 // Utility Functions
 function populateCustomerSelect(selectId) {
     const select = document.getElementById(selectId);
+    const currentValue = select.value; // Save current value
     select.innerHTML = '<option value="">Select Customer</option>';
     customers.forEach(customer => {
         const option = document.createElement('option');
@@ -1950,6 +1956,10 @@ function populateCustomerSelect(selectId) {
         option.textContent = customer.name;
         select.appendChild(option);
     });
+    // Restore the previous value if it exists
+    if (currentValue) {
+        select.value = currentValue;
+    }
 }
 
 function populateItemSelect(selectId) {
