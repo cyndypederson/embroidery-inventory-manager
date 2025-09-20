@@ -1846,7 +1846,7 @@ function handleAddSale(e) {
     const saleType = document.getElementById('saleType').value;
     const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
     const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
-    const customer = document.getElementById('saleCustomer').value || 'No Customer';
+    const customer = document.getElementById('saleCustomer').value || 'No Customer/Location';
     const dateSold = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
     
