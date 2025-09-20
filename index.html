@@ -587,9 +587,14 @@
                 <div class="form-group full-width" id="projectFields" style="display: none;">
                     <div class="form-group half-width">
                         <label for="itemCustomer">Customer</label>
-                        <select id="itemCustomer">
-                            <option value="">Select Customer (Optional)</option>
-                        </select>
+                        <div class="input-with-button">
+                            <select id="itemCustomer">
+                                <option value="">Select Customer (Optional)</option>
+                            </select>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group half-width">
                         <label for="itemDueDate">Due Date</label>
@@ -634,8 +639,8 @@
                     <input type="text" id="customerName" required>
                 </div>
                 <div class="form-group half-width">
-                    <label for="customerLocation">Location *</label>
-                    <input type="text" id="customerLocation" required>
+                    <label for="customerLocation">Location</label>
+                    <input type="text" id="customerLocation">
                 </div>
                 <div class="form-group full-width">
                     <label for="customerContact">Contact Info</label>
@@ -686,8 +691,20 @@
                 </div>
                 
                 <div class="form-group half-width">
+                    <label for="listedPrice">Listed Price *</label>
+                    <input type="number" id="listedPrice" step="0.01" min="0" required placeholder="Original price">
+                    <small class="form-help">The original/regular price</small>
+                </div>
+                <div class="form-group half-width">
                     <label for="salePrice">Sale Price *</label>
-                    <input type="number" id="salePrice" step="0.01" min="0" required>
+                    <input type="number" id="salePrice" step="0.01" min="0" required placeholder="Actual selling price" oninput="calculateDiscount()">
+                    <small class="form-help">The price actually charged</small>
+                </div>
+                <div class="form-group full-width">
+                    <div id="discountInfo" class="discount-info" style="display: none;">
+                        <span id="discountAmount"></span> | 
+                        <span id="discountPercentage"></span>
+                    </div>
                 </div>
                 <div class="form-group half-width">
                     <label for="saleDate">Sale Date</label>
@@ -910,9 +927,14 @@
                 <div id="editProjectFields" style="display: none;">
                     <div class="form-group half-width">
                         <label for="editItemCustomer">Customer</label>
-                        <select id="editItemCustomer">
-                            <option value="">Select Customer (Optional)</option>
-                        </select>
+                        <div class="input-with-button">
+                            <select id="editItemCustomer">
+                                <option value="">Select Customer (Optional)</option>
+                            </select>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="form-group half-width">
