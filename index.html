@@ -266,6 +266,8 @@
                                 <th>Item</th>
                                 <th>Customer/Location</th>
                                 <th>Sale Price</th>
+                                <th>Commission %</th>
+                                <th>Net Amount</th>
                                 <th>Date Sold</th>
                                 <th>Location</th>
                                 <th>Status</th>
@@ -715,12 +717,102 @@
                     <input type="text" id="saleCustomer" placeholder="Customer name or store location">
                 </div>
                 <div class="form-group half-width">
+                    <label for="saleCommission">Commission %</label>
+                    <input type="number" id="saleCommission" step="0.01" min="0" max="100" placeholder="0.00">
+                    <small class="form-help">Shop commission percentage (if applicable)</small>
+                </div>
+                <div class="form-group half-width">
                     <label for="saleNotes">Notes</label>
                     <input type="text" id="saleNotes" placeholder="Additional notes">
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addSaleModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Record Sale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Sale Modal -->
+    <div id="editSaleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editSaleModal')">&times;</span>
+            <h3>Edit Sale</h3>
+            <form id="editSaleForm" class="modal-form">
+                <input type="hidden" id="editSaleIndex">
+                
+                <div class="form-group full-width">
+                    <label for="editSaleType">Sale Type</label>
+                    <select id="editSaleType" onchange="toggleEditSaleItemType()">
+                        <option value="">Select Sale Type</option>
+                        <option value="inventory">From Inventory</option>
+                        <option value="custom">Custom Item</option>
+                    </select>
+                </div>
+                
+                <!-- Inventory Item Selection -->
+                <div id="editInventorySaleFields">
+                    <div class="form-group half-width">
+                        <label for="editSaleItem">Item</label>
+                        <select id="editSaleItem">
+                            <option value="">Select Item</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Custom Item Fields -->
+                <div id="editCustomSaleFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="editCustomItemName">Item Name</label>
+                        <input type="text" id="editCustomItemName" placeholder="Enter item name">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="editCustomItemDescription">Description</label>
+                        <input type="text" id="editCustomItemDescription" placeholder="Item description">
+                    </div>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editListedPrice">Listed Price</label>
+                    <input type="number" id="editListedPrice" step="0.01" min="0" placeholder="Original price">
+                    <small class="form-help">The original/regular price</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSalePrice">Sale Price</label>
+                    <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Actual selling price" oninput="calculateEditDiscount()">
+                    <small class="form-help">The price actually charged</small>
+                </div>
+                <div class="form-group full-width">
+                    <div id="editDiscountInfo" class="discount-info" style="display: none;">
+                        <span id="editDiscountAmount"></span> | 
+                        <span id="editDiscountPercentage"></span>
+                    </div>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleDate">Sale Date</label>
+                    <input type="date" id="editSaleDate">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleCustomer">Customer/Location</label>
+                    <input type="text" id="editSaleCustomer" placeholder="Customer name or store location">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleCommission">Commission %</label>
+                    <input type="number" id="editSaleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateEditNetAmount()">
+                    <small class="form-help">Shop commission percentage (if applicable)</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleNotes">Notes</label>
+                    <input type="text" id="editSaleNotes" placeholder="Additional notes">
+                </div>
+                <div class="form-group full-width">
+                    <div id="editNetAmountInfo" class="net-amount-info" style="display: none;">
+                        <strong>Net Amount (after commission): $<span id="editNetAmount"></span></strong>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editSaleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Sale</button>
                 </div>
             </form>
         </div>

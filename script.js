@@ -538,6 +538,7 @@ function initializeApp() {
     document.getElementById('addItemForm').addEventListener('submit', handleAddItem);
     document.getElementById('addCustomerForm').addEventListener('submit', handleAddCustomer);
     document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
+    document.getElementById('editSaleForm').addEventListener('submit', handleEditSale);
     document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
     document.getElementById('addIdeaForm').addEventListener('submit', handleAddIdea);
     
@@ -1727,7 +1728,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center text-muted">
+                <td colspan="9" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -1783,6 +1784,10 @@ function loadSalesTable() {
             }
         }
         
+        // Commission and net amount display
+        const commissionDisplay = sale.commission ? `${sale.commission}%` : '-';
+        const netAmountDisplay = sale.netAmount ? `$${sale.netAmount.toFixed(2)}` : '-';
+        
         row.innerHTML = `
             <td>
                 <strong>${sale.itemName}</strong>
@@ -1792,11 +1797,16 @@ function loadSalesTable() {
             </td>
             <td>${sale.customer}</td>
             <td>${priceDisplay}</td>
+            <td>${commissionDisplay}</td>
+            <td>${netAmountDisplay}</td>
             <td>${new Date(sale.dateSold).toLocaleDateString()}</td>
             <td>${sale.location || '-'}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteSale(${index})" title="Delete Sale">
+                    <button class="btn btn-primary btn-sm" onclick="editSale(${index})" title="Edit Sale">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteSale(${index})" title="Delete Sale">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1811,6 +1821,60 @@ function openAddSaleModal() {
     document.getElementById('addSaleForm').reset();
     document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('addSaleModal').style.display = 'block';
+}
+
+function toggleEditSaleItemType() {
+    const saleType = document.getElementById('editSaleType').value;
+    const inventoryFields = document.getElementById('editInventorySaleFields');
+    const customFields = document.getElementById('editCustomSaleFields');
+    const saleItemSelect = document.getElementById('editSaleItem');
+    
+    if (saleType === 'inventory') {
+        if (inventoryFields) inventoryFields.style.display = 'block';
+        if (customFields) customFields.style.display = 'none';
+        populateItemSelect('editSaleItem');
+    } else if (saleType === 'custom') {
+        if (inventoryFields) inventoryFields.style.display = 'none';
+        if (customFields) customFields.style.display = 'block';
+    } else {
+        if (inventoryFields) inventoryFields.style.display = 'none';
+        if (customFields) customFields.style.display = 'none';
+    }
+}
+
+function calculateEditDiscount() {
+    const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
+    const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
+    const discountInfo = document.getElementById('editDiscountInfo');
+    const discountAmount = document.getElementById('editDiscountAmount');
+    const discountPercentage = document.getElementById('editDiscountPercentage');
+    
+    if (listedPrice > 0 && salePrice !== listedPrice) {
+        const discount = listedPrice - salePrice;
+        const discountPercent = ((discount / listedPrice) * 100).toFixed(1);
+        
+        discountAmount.textContent = `$${discount.toFixed(2)}`;
+        discountPercentage.textContent = `${discountPercent}%`;
+        discountInfo.style.display = 'block';
+    } else {
+        discountInfo.style.display = 'none';
+    }
+}
+
+function calculateEditNetAmount() {
+    const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
+    const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    const netAmountInfo = document.getElementById('editNetAmountInfo');
+    const netAmount = document.getElementById('editNetAmount');
+    
+    if (salePrice > 0 && commission > 0) {
+        const commissionAmount = (salePrice * commission / 100);
+        const net = salePrice - commissionAmount;
+        netAmount.textContent = net.toFixed(2);
+        netAmountInfo.style.display = 'block';
+    } else {
+        netAmountInfo.style.display = 'none';
+    }
 }
 
 function toggleSaleItemType() {
@@ -1878,6 +1942,7 @@ function handleAddSale(e) {
     const customer = document.getElementById('saleCustomer').value || 'No Customer/Location';
     const dateSold = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
+    const commission = parseFloat(document.getElementById('saleCommission').value) || 0;
     
     // All fields are now optional - no validation required
     
@@ -1891,26 +1956,38 @@ function handleAddSale(e) {
         // Item selection is now optional
         if (!item) {
             // Create a generic sale without specific inventory item
-            newSale = {
-                itemName: 'Inventory Item (Not Specified)',
-                customer: customer,
-                location: '',
-                listedPrice: listedPrice,
-                salePrice: salePrice,
-                discount: listedPrice - salePrice,
-                discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
-                dateSold: dateSold,
-                itemIndex: null,
-                saleType: 'inventory',
-                notes: notes
-            };
+        const commissionAmount = (salePrice * commission / 100);
+        const netAmount = salePrice - commissionAmount;
+        
+        newSale = {
+            itemName: 'Inventory Item (Not Specified)',
+            customer: customer,
+            location: '',
+            listedPrice: listedPrice,
+            salePrice: salePrice,
+            commission: commission,
+            commissionAmount: commissionAmount,
+            netAmount: netAmount,
+            discount: listedPrice - salePrice,
+            discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
+            dateSold: dateSold,
+            itemIndex: null,
+            saleType: 'inventory',
+            notes: notes
+        };
         } else {
+            const commissionAmount = (salePrice * commission / 100);
+            const netAmount = salePrice - commissionAmount;
+            
             newSale = {
                 itemName: item.name,
                 customer: customer,
                 location: item.location,
                 listedPrice: listedPrice,
                 salePrice: salePrice,
+                commission: commission,
+                commissionAmount: commissionAmount,
+                netAmount: netAmount,
                 discount: listedPrice - salePrice,
                 discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
                 dateSold: dateSold,
@@ -1928,12 +2005,18 @@ function handleAddSale(e) {
         const itemName = document.getElementById('customItemName').value.trim() || 'Custom Item';
         const description = document.getElementById('customItemDescription').value.trim();
         
+        const commissionAmount = (salePrice * commission / 100);
+        const netAmount = salePrice - commissionAmount;
+        
         newSale = {
             itemName: itemName,
             customer: customer,
             location: '',
             listedPrice: listedPrice,
             salePrice: salePrice,
+            commission: commission,
+            commissionAmount: commissionAmount,
+            netAmount: netAmount,
             discount: listedPrice - salePrice,
             discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
             dateSold: dateSold,
@@ -1944,12 +2027,18 @@ function handleAddSale(e) {
         };
     } else {
         // No sale type selected - create a generic sale
+        const commissionAmount = (salePrice * commission / 100);
+        const netAmount = salePrice - commissionAmount;
+        
         newSale = {
             itemName: 'General Sale',
             customer: customer,
             location: '',
             listedPrice: listedPrice,
             salePrice: salePrice,
+            commission: commission,
+            commissionAmount: commissionAmount,
+            netAmount: netAmount,
             discount: listedPrice - salePrice,
             discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0,
             dateSold: dateSold,
@@ -2476,6 +2565,97 @@ function exportCustomerList() {
     window.URL.revokeObjectURL(url);
     
     showNotification('Customer list exported as CSV!', 'success');
+}
+
+function editSale(index) {
+    const sale = sales[index];
+    if (!sale) return;
+    
+    // Populate the edit form
+    document.getElementById('editSaleIndex').value = index;
+    document.getElementById('editSaleType').value = sale.saleType || '';
+    document.getElementById('editListedPrice').value = sale.listedPrice || 0;
+    document.getElementById('editSalePrice').value = sale.salePrice || sale.price || 0;
+    document.getElementById('editSaleCustomer').value = sale.customer || '';
+    document.getElementById('editSaleDate').value = sale.dateSold || '';
+    document.getElementById('editSaleCommission').value = sale.commission || 0;
+    document.getElementById('editSaleNotes').value = sale.notes || '';
+    
+    // Handle sale type specific fields
+    toggleEditSaleItemType();
+    
+    if (sale.saleType === 'inventory' && sale.itemIndex !== null) {
+        document.getElementById('editSaleItem').value = sale.itemIndex;
+    } else if (sale.saleType === 'custom') {
+        document.getElementById('editCustomItemName').value = sale.itemName || '';
+        document.getElementById('editCustomItemDescription').value = sale.description || '';
+    }
+    
+    // Calculate and display discount and net amount
+    calculateEditDiscount();
+    calculateEditNetAmount();
+    
+    // Show the edit modal
+    document.getElementById('editSaleModal').style.display = 'block';
+}
+
+function handleEditSale(e) {
+    e.preventDefault();
+    
+    const index = parseInt(document.getElementById('editSaleIndex').value);
+    const saleType = document.getElementById('editSaleType').value;
+    const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
+    const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
+    const customer = document.getElementById('editSaleCustomer').value || 'No Customer/Location';
+    const dateSold = document.getElementById('editSaleDate').value;
+    const notes = document.getElementById('editSaleNotes').value;
+    const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    
+    if (isNaN(index) || index < 0 || index >= sales.length) {
+        showNotification('Invalid sale record', 'error');
+        return;
+    }
+    
+    const commissionAmount = (salePrice * commission / 100);
+    const netAmount = salePrice - commissionAmount;
+    
+    // Update the sale record
+    sales[index] = {
+        ...sales[index],
+        saleType: saleType,
+        listedPrice: listedPrice,
+        salePrice: salePrice,
+        customer: customer,
+        dateSold: dateSold,
+        notes: notes,
+        commission: commission,
+        commissionAmount: commissionAmount,
+        netAmount: netAmount,
+        discount: listedPrice - salePrice,
+        discountPercent: listedPrice > 0 ? ((listedPrice - salePrice) / listedPrice * 100).toFixed(1) : 0
+    };
+    
+    // Handle sale type specific fields
+    if (saleType === 'inventory') {
+        const selectedItemIndex = document.getElementById('editSaleItem').value;
+        if (selectedItemIndex) {
+            sales[index].itemIndex = selectedItemIndex;
+            sales[index].itemName = inventory[selectedItemIndex]?.name || 'Inventory Item';
+            sales[index].location = inventory[selectedItemIndex]?.location || '';
+        }
+    } else if (saleType === 'custom') {
+        const itemName = document.getElementById('editCustomItemName').value.trim() || 'Custom Item';
+        const description = document.getElementById('editCustomItemDescription').value.trim();
+        sales[index].itemName = itemName;
+        sales[index].description = description;
+        sales[index].itemIndex = null;
+    }
+    
+    saveData();
+    loadSalesTable();
+    closeModal('editSaleModal');
+    
+    showNotification('Sale updated successfully!', 'success');
 }
 
 function deleteSale(index) {

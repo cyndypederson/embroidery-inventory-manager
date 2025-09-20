@@ -1547,6 +1547,32 @@ tr:nth-child(even) {
     justify-content: center;
 }
 
+/* Commission and net amount styling */
+.net-amount-info {
+    background: #e8f5e8;
+    border: 1px solid #4caf50;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    color: #2e7d32;
+}
+
+.discount-info {
+    background: #fff3e0;
+    border: 1px solid #ff9800;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    color: #e65100;
+}
+
+.form-help {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+    display: block;
+}
+
 .form-actions {
     display: flex;
     gap: 1rem;
