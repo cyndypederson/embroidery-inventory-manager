@@ -1577,17 +1577,51 @@ function loadSalesTable() {
     const tbody = document.getElementById('salesTableBody');
     tbody.innerHTML = '';
     
+    if (sales.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <i class="fas fa-shopping-cart"></i><br>
+                    No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
     sales.forEach((sale, index) => {
         const row = document.createElement('tr');
+        
+        // Create type badge
+        const typeBadge = sale.saleType === 'custom' ? 
+            '<span class="type-badge type-custom">Custom</span>' : 
+            '<span class="type-badge type-inventory">Inventory</span>';
+        
+        // Create item name with type indicator
+        const itemDisplay = `${sale.itemName} ${typeBadge}`;
+        
+        // Show description for custom items
+        const descriptionDisplay = sale.saleType === 'custom' && sale.description ? 
+            `<br><small class="text-muted">${sale.description}</small>` : '';
+        
+        // Show notes if available
+        const notesDisplay = sale.notes ? 
+            `<br><small class="text-muted"><i class="fas fa-sticky-note"></i> ${sale.notes}</small>` : '';
+        
         row.innerHTML = `
-            <td><strong>${sale.itemName}</strong></td>
+            <td>
+                <strong>${sale.itemName}</strong>
+                ${typeBadge}
+                ${descriptionDisplay}
+                ${notesDisplay}
+            </td>
             <td>${sale.customer}</td>
             <td>$${parseFloat(sale.price).toFixed(2)}</td>
             <td>${new Date(sale.dateSold).toLocaleDateString()}</td>
-            <td>${sale.location}</td>
+            <td>${sale.location || '-'}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteSale(${index})">
+                    <button class="btn btn-danger" onclick="deleteSale(${index})" title="Delete Sale">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1604,30 +1638,97 @@ function openAddSaleModal() {
     document.getElementById('addSaleModal').style.display = 'block';
 }
 
+function toggleSaleItemType() {
+    const saleType = document.getElementById('saleType').value;
+    const inventoryFields = document.getElementById('inventorySaleFields');
+    const customFields = document.getElementById('customSaleFields');
+    const saleItemSelect = document.getElementById('saleItem');
+    
+    if (saleType === 'inventory') {
+        inventoryFields.style.display = 'block';
+        customFields.style.display = 'none';
+        saleItemSelect.required = true;
+        document.getElementById('customItemName').required = false;
+    } else if (saleType === 'custom') {
+        inventoryFields.style.display = 'none';
+        customFields.style.display = 'block';
+        saleItemSelect.required = false;
+        document.getElementById('customItemName').required = true;
+    } else {
+        inventoryFields.style.display = 'none';
+        customFields.style.display = 'none';
+        saleItemSelect.required = false;
+        document.getElementById('customItemName').required = false;
+    }
+}
+
 function handleAddSale(e) {
     e.preventDefault();
     
-    const selectedItemIndex = document.getElementById('saleItem').value;
-    const item = inventory[selectedItemIndex];
+    const saleType = document.getElementById('saleType').value;
+    const price = parseFloat(document.getElementById('salePrice').value);
+    const customer = document.getElementById('saleCustomer').value || 'No Customer';
+    const dateSold = document.getElementById('saleDate').value;
+    const notes = document.getElementById('saleNotes').value;
     
-    if (!item) {
-        showNotification('Please select a valid item', 'error');
+    if (!price || price <= 0) {
+        showNotification('Please enter a valid sale price', 'error');
         return;
     }
     
-    const newSale = {
-        itemName: item.name,
-        customer: document.getElementById('saleCustomer').value || item.customer || 'No Customer',
-        location: item.location,
-        price: parseFloat(document.getElementById('salePrice').value),
-        dateSold: document.getElementById('saleDate').value,
-        itemIndex: selectedItemIndex
-    };
+    let newSale;
+    
+    if (saleType === 'inventory') {
+        // Handle inventory item sale
+        const selectedItemIndex = document.getElementById('saleItem').value;
+        const item = inventory[selectedItemIndex];
+        
+        if (!item) {
+            showNotification('Please select a valid item', 'error');
+            return;
+        }
+        
+        newSale = {
+            itemName: item.name,
+            customer: customer,
+            location: item.location,
+            price: price,
+            dateSold: dateSold,
+            itemIndex: selectedItemIndex,
+            saleType: 'inventory',
+            notes: notes
+        };
+        
+        // Update item status to sold
+        inventory[selectedItemIndex].status = 'sold';
+        
+    } else if (saleType === 'custom') {
+        // Handle custom item sale
+        const itemName = document.getElementById('customItemName').value.trim();
+        const description = document.getElementById('customItemDescription').value.trim();
+        
+        if (!itemName) {
+            showNotification('Please enter an item name', 'error');
+            return;
+        }
+        
+        newSale = {
+            itemName: itemName,
+            customer: customer,
+            location: '',
+            price: price,
+            dateSold: dateSold,
+            itemIndex: null, // No inventory item
+            saleType: 'custom',
+            description: description,
+            notes: notes
+        };
+    } else {
+        showNotification('Please select a sale type', 'error');
+        return;
+    }
     
     sales.push(newSale);
-    
-    // Update item status to sold
-    inventory[selectedItemIndex].status = 'sold';
     
     saveData();
     loadSalesTable();

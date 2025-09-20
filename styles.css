@@ -2465,6 +2465,7 @@ tr:nth-child(even) {
     font-size: 0.8rem;
     font-weight: bold;
     text-transform: uppercase;
+    margin-left: 0.5rem;
 }
 
 .type-inventory {
@@ -2477,6 +2478,12 @@ tr:nth-child(even) {
     background-color: #F3E8FF;
     color: #7C3AED;
     border: 1px solid #DDD6FE;
+}
+
+.type-custom {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
 }
 
 /* Inventory-specific styles */
