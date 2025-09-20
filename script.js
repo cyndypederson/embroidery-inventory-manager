@@ -684,6 +684,40 @@ function editItem(index) {
     console.log('Edit modal should be visible now'); // Debug log
 }
 
+function editProject(index) {
+    console.log('editProject called with index:', index); // Debug log
+    
+    const item = inventory[index];
+    console.log('Project to edit:', item); // Debug log
+    
+    // Populate the edit form
+    document.getElementById('editItemIndex').value = index;
+    document.getElementById('editItemDescription').value = item.description || item.name || '';
+    document.getElementById('editItemQuantity').value = item.quantity || 1;
+    document.getElementById('editItemType').value = 'project'; // Force project type
+    document.getElementById('editItemStatus').value = item.status || 'pending';
+    document.getElementById('editItemCategory').value = item.category || '';
+    document.getElementById('editItemNotes').value = item.notes || '';
+    
+    // Set project-specific fields
+    document.getElementById('editItemCustomer').value = item.customer || '';
+    document.getElementById('editItemDueDate').value = item.dueDate || '';
+    document.getElementById('editItemPriority').value = item.priority || 'medium';
+    document.getElementById('editItemTags').value = item.tags || '';
+    document.getElementById('editItemPatternLink').value = item.patternLink || '';
+    
+    // Update status options and modal title for project
+    console.log('Setting up edit modal for project'); // Debug log
+    updateEditStatusOptions();
+    
+    // Populate customer dropdown
+    populateCustomerSelect('editItemCustomer');
+    
+    // Show the edit modal
+    document.getElementById('editItemModal').style.display = 'block';
+    console.log('Edit project modal should be visible now'); // Debug log
+}
+
 function handleEditItem(e) {
     e.preventDefault();
     
@@ -1241,7 +1275,7 @@ function loadInventoryTable() {
                 <div class="project-cell project-pattern">${patternLinkButton}</div>
                 <div class="project-cell project-actions">
                     <div class="action-buttons">
-                        <button class="btn btn-secondary" onclick="editItem(${index})" title="Edit Item">
+                        <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
                             <i class="fas fa-edit"></i>
                         </button>
                         <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
@@ -2732,7 +2766,7 @@ function loadWIPGrid(wipItems) {
                     </div>
                 </div>
                 <div class="wip-item-actions">
-                    <button class="btn btn-primary" onclick="editItem(${originalIndex})">
+                    <button class="btn btn-primary" onclick="${item.type === 'project' ? 'editProject' : 'editItem'}(${originalIndex})">
                         <i class="fas fa-edit"></i> Edit
                     </button>
                     <button class="btn btn-info" onclick="updateWIPStatus(${originalIndex})">
