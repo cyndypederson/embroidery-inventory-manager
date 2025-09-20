@@ -1743,12 +1743,19 @@ function updateExistingSalesWithCommission() {
         // Save updated sales data
         saveDataToAPI();
         console.log(`Updated ${updatedCount} existing sales with commission fields`);
-        showNotification(`Updated ${updatedCount} sales with commission fields. You can now edit them to add commission percentages.`, 'success');
+        
+        // Only show notifications on localhost
+        if (isLocalhost()) {
+            showNotification(`Updated ${updatedCount} sales with commission fields. You can now edit them to add commission percentages.`, 'success');
+        }
         
         // Refresh the sales table to show updated data
         loadSalesTable();
     } else {
-        showNotification('All sales already have commission data.', 'info');
+        // Only show notifications on localhost
+        if (isLocalhost()) {
+            showNotification('All sales already have commission data.', 'info');
+        }
     }
 }
 
@@ -1759,7 +1766,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center text-muted">
+                <td colspan="9" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -1828,10 +1835,13 @@ function loadSalesTable() {
                 ${descriptionDisplay}
                 ${notesDisplay}
             </td>
+            <td>${sale.customer}</td>
             <td>${listPriceDisplay}</td>
             <td>${netAmountDisplay}</td>
             <td>${commissionDisplay}</td>
             <td>${commissionAmountDisplay}</td>
+            <td>${new Date(sale.dateSold).toLocaleDateString()}</td>
+            <td>${sale.status || 'Sold'}</td>
             <td>
                 <div class="action-buttons">
                     <button class="btn btn-primary btn-sm" onclick="editSale(${index})" title="Edit Sale">
