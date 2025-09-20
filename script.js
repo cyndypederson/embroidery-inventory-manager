@@ -1778,13 +1778,8 @@ function loadSalesTable() {
     sales.forEach((sale, index) => {
         const row = document.createElement('tr');
         
-        // Create type badge
-        const typeBadge = sale.saleType === 'custom' ? 
-            '<span class="type-badge type-custom">Custom</span>' : 
-            '<span class="type-badge type-inventory">Inventory</span>';
-        
-        // Create item name with type indicator
-        const itemDisplay = `${sale.itemName} ${typeBadge}`;
+        // Create item name without type badge
+        const itemDisplay = sale.itemName;
         
         // Show description for custom items
         const descriptionDisplay = sale.saleType === 'custom' && sale.description ? 
@@ -1830,8 +1825,7 @@ function loadSalesTable() {
         
         row.innerHTML = `
             <td>
-                <strong>${sale.itemName}</strong>
-                ${typeBadge}
+                <strong>${itemDisplay}</strong>
                 ${descriptionDisplay}
                 ${notesDisplay}
             </td>
