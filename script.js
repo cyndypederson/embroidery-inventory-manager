@@ -507,7 +507,10 @@ function requireAuth(tabName) {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
-    loadDataFromAPI();
+    loadDataFromAPI().then(() => {
+        // Update existing sales with commission fields after data is loaded
+        updateExistingSalesWithCommission();
+    });
     updateLocationFilters();
     updateCustomerFilters();
 });
@@ -1721,6 +1724,34 @@ function handleAddCustomer(e) {
 }
 
 // Sales Management
+function updateExistingSalesWithCommission() {
+    let updated = false;
+    let updatedCount = 0;
+    
+    sales.forEach((sale, index) => {
+        // If commission fields are missing, add them with default values
+        if (sale.commission === undefined || sale.commissionAmount === undefined || sale.netAmount === undefined) {
+            sale.commission = 0;
+            sale.commissionAmount = 0;
+            sale.netAmount = sale.salePrice || sale.price || 0;
+            updated = true;
+            updatedCount++;
+        }
+    });
+    
+    if (updated) {
+        // Save updated sales data
+        saveDataToAPI();
+        console.log(`Updated ${updatedCount} existing sales with commission fields`);
+        showNotification(`Updated ${updatedCount} sales with commission fields. You can now edit them to add commission percentages.`, 'success');
+        
+        // Refresh the sales table to show updated data
+        loadSalesTable();
+    } else {
+        showNotification('All sales already have commission data.', 'info');
+    }
+}
+
 function loadSalesTable() {
     const tbody = document.getElementById('salesTableBody');
     tbody.innerHTML = '';
