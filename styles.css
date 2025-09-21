@@ -3086,7 +3086,11 @@ td:nth-child(4) {
     min-width: 200px;
 }
 
-/* OCR Analyze Button Styling */
+/* OCR Analyze Button Styling - Mobile Only */
+.mobile-only {
+    display: none; /* Hidden on desktop by default */
+}
+
 .photo-input-container .btn-secondary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: 2px solid #667eea;
@@ -4107,6 +4111,11 @@ body {
     .photo-input-container .btn:hover {
         background: #4A90A4;
         color: white;
+    }
+    
+    /* Show OCR buttons on mobile only */
+    .mobile-only {
+        display: inline-block !important;
     }
     
     /* Mobile form actions */
