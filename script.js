@@ -648,11 +648,6 @@ function requireAuth(tabName) {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Embroidery Inventory Manager Initialized');
-    console.log('🔍 Checking for edit form elements...');
-    console.log('📋 editItemForm element:', document.getElementById('editItemForm'));
-    console.log('📋 editItemSubmitButton element:', document.getElementById('editItemSubmitButton'));
-    console.log('🔍 Checking for confirmModal element...');
-    console.log('📋 confirmModal element:', document.getElementById('confirmModal'));
     initializeApp();
     loadDataFromAPI().then(() => {
         // Update existing sales with commission fields after data is loaded
@@ -3454,48 +3449,19 @@ function testDeleteClick(index) {
 let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
-    console.log('🎯 showConfirmModal called with:', { title, message });
-    
-    // Try multiple approaches to find the modal element
+    // Try to find the modal element
     let modal = document.getElementById('confirmModal');
-    console.log('🔍 confirmModal element found:', modal);
     
-    // If not found, try querySelector as backup
+    // If not found, fallback to browser confirm (simpler and works fine for internal use)
     if (!modal) {
-        modal = document.querySelector('#confirmModal');
-        console.log('🔍 confirmModal via querySelector:', modal);
-    }
-    
-    // If still not found, try to find any element with modal class
-    if (!modal) {
-        modal = document.querySelector('.modal[id="confirmModal"]');
-        console.log('🔍 confirmModal via class selector:', modal);
-    }
-    
-    // If still not found, wait and retry
-    if (!modal) {
-        console.log('⏳ Modal not found, waiting 200ms and retrying...');
-        setTimeout(() => {
-            modal = document.getElementById('confirmModal');
-            console.log('🔍 confirmModal element found after delay:', modal);
-            
-            if (!modal) {
-                console.error('❌ confirmModal element still not found after delay! Falling back to browser confirm.');
-                console.log('🔍 Available modal elements:', document.querySelectorAll('.modal'));
-                const result = confirm(message);
-                if (result && onConfirm) {
-                    onConfirm();
-                }
-                return;
-            }
-            
-            // Modal found after delay, proceed with showing it
-            displayConfirmModal(modal, title, message, onConfirm);
-        }, 200);
+        const result = confirm(message);
+        if (result && onConfirm) {
+            onConfirm();
+        }
         return;
     }
     
-    // Modal found, proceed with showing it
+    // Modal found, show custom modal
     displayConfirmModal(modal, title, message, onConfirm);
 }
 
@@ -3530,11 +3496,6 @@ function closeConfirmModal() {
 
 function deleteItem(index) {
     console.log('🗑️ Delete item function called with index:', index);
-    console.log('📋 Total inventory items:', inventory.length);
-    console.log('📋 Item to delete:', inventory[index]);
-    console.log('🎯 About to show custom confirmation modal...');
-    console.log('📋 Index type:', typeof index, 'Index value:', index);
-    console.log('🔍 Checking if showConfirmModal function exists:', typeof showConfirmModal);
     
     // Check if index is valid
     if (index === undefined || index === null || isNaN(index)) {
