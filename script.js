@@ -658,6 +658,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     updateLocationFilters();
     updateCustomerFilters();
+    
+    // Set up cross-view synchronization
+    setupViewSynchronization();
+    
+    // Initialize photo functionality and mobile features
+    setupPhotoPreviews();
+    registerServiceWorker();
+    setupMobileFeatures();
+    setupMobileModalEnhancements();
 });
 
 function initializeApp() {
@@ -1268,12 +1277,79 @@ function saveDataToLocalStorage() {
     localStorage.setItem('embroiderySales', JSON.stringify(sales));
     localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
     localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
+    
+    // Add timestamp for synchronization tracking
+    localStorage.setItem('lastDataSave', Date.now().toString());
 }
 
 function saveData() {
     // Try API first, fallback to localStorage
     saveDataToAPI();
     saveDataToLocalStorage();
+    
+    // Trigger synchronization for both desktop and mobile views
+    synchronizeViews();
+}
+
+function synchronizeViews() {
+    // Refresh all tabs to ensure desktop and mobile are in sync
+    loadData();
+    
+    // Also trigger mobile card refreshes specifically
+    if (window.innerWidth <= 768) {
+        // We're on mobile, ensure mobile cards are refreshed
+        loadMobileInventoryCards();
+        loadMobileInventoryItemsCards();
+        loadMobileWIPCards();
+        loadMobileGalleryCards();
+        loadMobileIdeasCards();
+        loadMobileCustomerCards();
+        loadMobileSalesCards();
+    }
+}
+
+function setupViewSynchronization() {
+    // Handle window resize to switch between desktop/mobile views
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // Refresh the current view when switching between desktop/mobile
+            synchronizeViews();
+        }, 250); // Debounce resize events
+    });
+    
+    // Set up periodic data refresh to catch changes from other tabs/windows
+    setInterval(() => {
+        // Check if data has changed by comparing localStorage timestamps
+        const lastSaved = localStorage.getItem('lastDataSave');
+        const currentTime = Date.now();
+        
+        if (lastSaved && (currentTime - parseInt(lastSaved)) < 5000) {
+            // Data was recently saved, refresh views
+            synchronizeViews();
+        }
+    }, 3000); // Check every 3 seconds
+    
+    // Listen for storage changes from other tabs
+    window.addEventListener('storage', function(e) {
+        if (e.key && e.key.startsWith('embroidery')) {
+            // Data was updated in another tab, refresh current view
+            console.log('🔄 Data changed in another tab, refreshing...');
+            setTimeout(() => {
+                loadDataFromLocalStorage();
+                synchronizeViews();
+            }, 100);
+        }
+    });
+    
+    // Listen for focus events to refresh when user returns to tab
+    window.addEventListener('focus', function() {
+        // Refresh data when user returns to the tab
+        loadDataFromAPI().catch(() => {
+            loadDataFromLocalStorage();
+        });
+    });
 }
 
 // Update status options based on item type
@@ -5546,13 +5622,7 @@ function showPhotoPreview(inputId, imageUrl) {
     }
 }
 
-// Initialize photo functionality when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    setupPhotoPreviews();
-    registerServiceWorker();
-    setupMobileFeatures();
-    setupMobileModalEnhancements();
-});
+// Photo functionality and mobile features are now initialized in the main DOMContentLoaded listener
 
 // ===== PWA & MOBILE FEATURES =====
 
