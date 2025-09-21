@@ -5871,10 +5871,8 @@ function setupMobileFeatures() {
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        // Only show install prompt on mobile devices
-        if (window.innerWidth <= 768) {
-            showInstallPrompt();
-        }
+        // Install banner disabled - users are already using the app
+        // showInstallPrompt();
     });
     
     // Handle app installed
