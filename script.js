@@ -2454,8 +2454,23 @@ function saveItemWithPhoto(item) {
             }, 100);
         }
         
-        closeModal('addItemModal');
-        showNotification('Item added successfully!', 'success');
+        // Add small delay for mobile modal closing
+        setTimeout(() => {
+            closeModal('addItemModal');
+            
+            // Force close on mobile if needed
+            if (window.innerWidth <= 768) {
+                const modal = document.getElementById('addItemModal');
+                if (modal && modal.style.display !== 'none') {
+                    console.log('🔄 Force closing modal on mobile');
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            }
+            
+            showNotification('Item added successfully!', 'success');
+            console.log('✅ Item added and modal should be closed');
+        }, 100);
     }
 }
 
@@ -4600,7 +4615,17 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'none';
-        console.log('Modal closed successfully'); // Debug log
+        
+        // Remove mobile modal-open class from body
+        document.body.classList.remove('modal-open');
+        
+        // Clear any form data
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+        
+        console.log('Modal closed successfully and body class removed'); // Debug log
     } else {
         console.error('Modal not found:', modalId); // Debug log
     }
