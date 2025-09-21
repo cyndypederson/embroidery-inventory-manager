@@ -2504,6 +2504,8 @@ function loadInventoryItemsTable() {
             originalItem.type === item.type && 
             originalItem.dateAdded === item.dateAdded
         );
+        
+        console.log(`Item: ${item.name}, Original Index: ${originalIndex}, Filtered Index: ${index}`);
         const row = document.createElement('tr');
         
         // Format category display
@@ -3365,18 +3367,29 @@ function markAsSold(index) {
 }
 
 function deleteItem(index) {
+    console.log('🗑️ Delete item clicked with index:', index);
+    console.log('📋 Total inventory items:', inventory.length);
+    console.log('📋 Item to delete:', inventory[index]);
+    
     if (confirm('Are you sure you want to delete this item?')) {
         // Store expanded customer groups before deleting
         const expandedCustomers = getExpandedCustomerGroups();
         
-        inventory.splice(index, 1);
-        saveData();
-        loadInventoryTable();
-        
-        // Restore expanded customer groups after reload
-        restoreExpandedCustomerGroups(expandedCustomers);
-        
-        showNotification('Item deleted successfully!', 'success');
+        if (index >= 0 && index < inventory.length) {
+            inventory.splice(index, 1);
+            saveData();
+            loadInventoryTable();
+            loadInventoryItemsTable(); // Also reload inventory items table
+            
+            // Restore expanded customer groups after reload
+            restoreExpandedCustomerGroups(expandedCustomers);
+            
+            showNotification('Item deleted successfully!', 'success');
+            console.log('✅ Item deleted successfully');
+        } else {
+            console.error('❌ Invalid index for deletion:', index);
+            showNotification('Error: Invalid item index', 'error');
+        }
     }
 }
 
