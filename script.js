@@ -1561,6 +1561,153 @@ function loadInventoryTable() {
             projectsContainer.appendChild(projectRow);
         });
     });
+    
+    // Load mobile cards
+    loadMobileInventoryCards();
+}
+
+// Mobile card functions
+function loadMobileInventoryCards() {
+    const container = document.getElementById('mobileInventoryCards');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Filter for projects only (not inventory items)
+    const projectItems = inventory.filter(item => item.type === 'project' || !item.type);
+    
+    // Group items by customer
+    const groupedItems = {};
+    projectItems.forEach((item, filteredIndex) => {
+        const customer = item.customer || 'No Customer';
+        if (!groupedItems[customer]) {
+            groupedItems[customer] = [];
+        }
+        // Find the original inventory index
+        let originalIndex = inventory.findIndex(invItem => invItem === item);
+        if (originalIndex === -1) {
+            originalIndex = inventory.findIndex(invItem => 
+                (invItem._id && item._id && invItem._id === item._id) || 
+                (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
+            );
+        }
+        groupedItems[customer].push({ item, index: originalIndex });
+    });
+    
+    // Sort customers alphabetically, with "No Customer" at the end
+    const sortedCustomers = Object.keys(groupedItems).sort((a, b) => {
+        if (a === 'No Customer') return 1;
+        if (b === 'No Customer') return -1;
+        return a.localeCompare(b);
+    });
+    
+    sortedCustomers.forEach(customer => {
+        const customerItems = groupedItems[customer];
+        
+        // Create customer header card
+        const customerHeaderCard = document.createElement('div');
+        customerHeaderCard.className = 'mobile-card mobile-customer-card';
+        
+        // Calculate customer stats
+        const totalProjects = customerItems.length;
+        const pendingCount = customerItems.filter(({ item }) => item.status === 'pending').length;
+        const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress' || item.status === 'work-in-progress').length;
+        const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
+        const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
+        
+        customerHeaderCard.innerHTML = `
+            <div class="mobile-customer-header">
+                <h3 class="mobile-customer-name">${customer}</h3>
+                <span class="mobile-card-status status-customer">${totalProjects} Projects</span>
+            </div>
+            <div class="mobile-customer-stats">
+                <div class="mobile-stat">
+                    <div class="mobile-stat-number">${completedCount}</div>
+                    <div class="mobile-stat-label">Completed</div>
+                </div>
+                <div class="mobile-stat">
+                    <div class="mobile-stat-number">${inProgressCount}</div>
+                    <div class="mobile-stat-label">In Progress</div>
+                </div>
+                <div class="mobile-stat">
+                    <div class="mobile-stat-number">${pendingCount}</div>
+                    <div class="mobile-stat-label">Pending</div>
+                </div>
+            </div>
+        `;
+        container.appendChild(customerHeaderCard);
+        
+        // Add individual item cards
+        customerItems.forEach(({ item, index }) => {
+            const card = document.createElement('div');
+            card.className = 'mobile-card';
+            
+            // Format due date
+            let dueDate = 'No due date';
+            let dueDateClass = '';
+            if (item.dueDate) {
+                const dueDateObj = new Date(item.dueDate);
+                const today = new Date();
+                const diffTime = dueDateObj - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                dueDate = dueDateObj.toLocaleDateString();
+                
+                if (diffDays < 0) {
+                    dueDateClass = 'overdue';
+                    dueDate += ' (Overdue)';
+                } else if (diffDays <= 3) {
+                    dueDateClass = 'due-soon';
+                    dueDate += ` (${diffDays} day${diffDays !== 1 ? 's' : ''} left)`;
+                }
+            }
+            
+            // Truncate notes for display
+            const notes = item.notes || '';
+            const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
+            
+            card.innerHTML = `
+                <div class="mobile-card-header">
+                    <h4 class="mobile-card-title">${item.name}</h4>
+                    <span class="mobile-card-status status-${item.status}">${item.status}</span>
+                </div>
+                <div class="mobile-card-content">
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Category</div>
+                        <div class="mobile-card-value">${item.category || 'No category'}</div>
+                    </div>
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Quantity</div>
+                        <div class="mobile-card-value">${item.quantity || 1}</div>
+                    </div>
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Due Date</div>
+                        <div class="mobile-card-value ${dueDateClass}">${dueDate}</div>
+                    </div>
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Notes</div>
+                        <div class="mobile-card-value">${truncatedNotes || 'No notes'}</div>
+                    </div>
+                </div>
+                <div class="mobile-card-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="editProject(${index})" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="copyItem(${index})" title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteItem(${index})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        });
+    });
 }
 
 function toggleCustomerGroup(customer) {
