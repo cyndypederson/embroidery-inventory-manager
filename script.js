@@ -3455,20 +3455,33 @@ let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
     console.log('🎯 showConfirmModal called with:', { title, message });
-    console.log('🔍 Looking for confirmModal element...');
     
-    // Try to find the modal element, with a small delay if needed
+    // Try multiple approaches to find the modal element
     let modal = document.getElementById('confirmModal');
     console.log('🔍 confirmModal element found:', modal);
     
+    // If not found, try querySelector as backup
     if (!modal) {
-        console.log('⏳ Modal not found immediately, waiting 100ms...');
+        modal = document.querySelector('#confirmModal');
+        console.log('🔍 confirmModal via querySelector:', modal);
+    }
+    
+    // If still not found, try to find any element with modal class
+    if (!modal) {
+        modal = document.querySelector('.modal[id="confirmModal"]');
+        console.log('🔍 confirmModal via class selector:', modal);
+    }
+    
+    // If still not found, wait and retry
+    if (!modal) {
+        console.log('⏳ Modal not found, waiting 200ms and retrying...');
         setTimeout(() => {
             modal = document.getElementById('confirmModal');
             console.log('🔍 confirmModal element found after delay:', modal);
             
             if (!modal) {
-                console.error('❌ confirmModal element still not found! Falling back to browser confirm.');
+                console.error('❌ confirmModal element still not found after delay! Falling back to browser confirm.');
+                console.log('🔍 Available modal elements:', document.querySelectorAll('.modal'));
                 const result = confirm(message);
                 if (result && onConfirm) {
                     onConfirm();
@@ -3478,11 +3491,11 @@ function showConfirmModal(title, message, onConfirm) {
             
             // Modal found after delay, proceed with showing it
             displayConfirmModal(modal, title, message, onConfirm);
-        }, 100);
+        }, 200);
         return;
     }
     
-    // Modal found immediately, proceed with showing it
+    // Modal found, proceed with showing it
     displayConfirmModal(modal, title, message, onConfirm);
 }
 
