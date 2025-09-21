@@ -1295,17 +1295,8 @@ function synchronizeViews() {
     // Refresh all tabs to ensure desktop and mobile are in sync
     loadData();
     
-    // Also trigger mobile card refreshes specifically
-    if (window.innerWidth <= 768) {
-        // We're on mobile, ensure mobile cards are refreshed
-        loadMobileInventoryCards();
-        loadMobileInventoryItemsCards();
-        loadMobileWIPCards();
-        loadMobileGalleryCards();
-        loadMobileIdeasCards();
-        loadMobileCustomerCards();
-        loadMobileSalesCards();
-    }
+    // Note: Mobile card refreshes are handled within the individual load functions
+    // (loadInventoryTable, loadWIPTab, etc.) so we don't need to call them separately
 }
 
 function setupViewSynchronization() {
