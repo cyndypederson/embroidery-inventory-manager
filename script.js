@@ -2618,7 +2618,7 @@ function loadInventoryItemsTable() {
                     <button class="btn btn-info" onclick="console.log('Copy button clicked for index:', ${originalIndex}); copyItem(${originalIndex})" title="Copy Item">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="btn btn-danger" onclick="console.log('🔴 Delete button clicked for originalIndex:', ${originalIndex}); testDeleteClick(${originalIndex}); deleteItem(${originalIndex})" title="Delete Item">
+                    <button class="btn btn-danger" onclick="deleteItem(${originalIndex})" title="Delete Item">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
