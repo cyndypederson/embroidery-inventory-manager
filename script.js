@@ -685,6 +685,7 @@ function initializeApp() {
     // Form submissions
     document.getElementById('addItemForm').addEventListener('submit', handleAddItem);
     document.getElementById('addCustomerForm').addEventListener('submit', handleAddCustomer);
+    document.getElementById('editCustomerForm').addEventListener('submit', handleEditCustomer);
     document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
     document.getElementById('editSaleForm').addEventListener('submit', handleEditSale);
     document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
@@ -2600,6 +2601,57 @@ function handleAddCustomer(e) {
     showNotification('Customer added successfully!', 'success');
 }
 
+function handleEditCustomer(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const customerIndex = parseInt(form.dataset.customerIndex);
+    
+    if (isNaN(customerIndex) || customerIndex < 0 || customerIndex >= customers.length) {
+        showNotification('Error: Invalid customer selected', 'error');
+        return;
+    }
+    
+    const customer = customers[customerIndex];
+    const oldName = customer.name;
+    
+    // Update customer data
+    customer.name = document.getElementById('editCustomerName').value;
+    customer.contact = document.getElementById('editCustomerContact').value;
+    customer.location = document.getElementById('editCustomerLocation').value;
+    customer.status = document.getElementById('editCustomerStatus').value;
+    
+    // If customer name changed, update all references in inventory and sales
+    if (oldName !== customer.name) {
+        inventory.forEach(item => {
+            if (item.customer === oldName) {
+                item.customer = customer.name;
+            }
+        });
+        
+        sales.forEach(sale => {
+            if (sale.customer === oldName) {
+                sale.customer = customer.name;
+            }
+        });
+    }
+    
+    saveData();
+    loadCustomersTable();
+    loadInventoryTable();
+    loadSalesTable();
+    updateLocationFilters();
+    updateCustomerFilters();
+    
+    // Refresh customer dropdowns
+    populateCustomerSelect('itemCustomer');
+    populateCustomerSelect('editItemCustomer');
+    
+    closeModal('editCustomerModal');
+    
+    showNotification('Customer updated successfully!', 'success');
+}
+
 // Sales Management
 function updateExistingSalesWithCommission() {
     let updated = false;
@@ -3363,6 +3415,63 @@ function copyCurrentItem() {
     
     // Show success message
     showNotification('Item copied successfully!', 'success');
+}
+
+function editCustomer(index) {
+    const customer = customers[index];
+    if (!customer) return;
+    
+    // Populate the edit form with customer data
+    document.getElementById('editCustomerName').value = customer.name || '';
+    document.getElementById('editCustomerContact').value = customer.contact || '';
+    document.getElementById('editCustomerLocation').value = customer.location || '';
+    document.getElementById('editCustomerStatus').value = customer.status || 'active';
+    
+    // Store the index for the update function
+    document.getElementById('editCustomerForm').dataset.customerIndex = index;
+    
+    // Show the edit modal
+    document.getElementById('editCustomerModal').style.display = 'block';
+}
+
+function viewCustomerProjects(customerName) {
+    // Filter inventory to show only this customer's projects
+    const customerProjects = inventory.filter(item => item.customer === customerName);
+    
+    if (customerProjects.length === 0) {
+        showNotification(`${customerName} has no projects yet`, 'info');
+        return;
+    }
+    
+    // Switch to inventory tab and filter by customer
+    switchTab('inventory');
+    
+    // Set the customer filter
+    const customerFilter = document.getElementById('customerFilter');
+    if (customerFilter) {
+        customerFilter.value = customerName;
+        filterItems(); // Apply the filter
+    }
+    
+    showNotification(`Showing ${customerProjects.length} projects for ${customerName}`, 'success');
+}
+
+function createProjectForCustomer(customerName) {
+    // Switch to inventory tab
+    switchTab('inventory');
+    
+    // Open the add project modal
+    openAddItemModal();
+    
+    // Set the customer field
+    setTimeout(() => {
+        const customerSelect = document.getElementById('itemCustomer');
+        if (customerSelect) {
+            customerSelect.value = customerName;
+        }
+    }, 100);
+    
+    showNotification(`Creating new project for ${customerName}`, 'info');
 }
 
 function deleteCustomer(index) {

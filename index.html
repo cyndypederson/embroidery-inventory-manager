@@ -747,6 +747,39 @@
         </div>
     </div>
 
+    <!-- Edit Customer Modal -->
+    <div id="editCustomerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editCustomerModal')">&times;</span>
+            <h3>Edit Customer</h3>
+            <form id="editCustomerForm" class="modal-form">
+                <div class="form-group half-width">
+                    <label for="editCustomerName">Customer Name *</label>
+                    <input type="text" id="editCustomerName" required>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editCustomerLocation">Location</label>
+                    <input type="text" id="editCustomerLocation">
+                </div>
+                <div class="form-group full-width">
+                    <label for="editCustomerContact">Contact Info</label>
+                    <input type="text" id="editCustomerContact" placeholder="Phone, email, etc.">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editCustomerStatus">Status</label>
+                    <select id="editCustomerStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCustomerModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="addSaleModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('addSaleModal')">&times;</span>
