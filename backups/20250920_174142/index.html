@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyndyp Stitchcraft Inventory</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="top-bar">
+                <div class="branding">
+                    <h1>CyndyP StitchCraft Inventory Management</h1>
+                </div>
+                <div class="connection-status" id="connectionStatusContainer">
+                    <span id="connectionStatus" class="status-indicator">
+                        <i class="fas fa-circle"></i> Connecting...
+                    </span>
+                </div>
+            </div>
+            <nav>
+                <button class="nav-btn active" data-tab="projects">
+                    <i class="fas fa-project-diagram"></i> Projects
+                </button>
+                <button class="nav-btn" data-tab="inventory">
+                    <i class="fas fa-boxes"></i> Inventory
+                </button>
+                <button class="nav-btn" data-tab="customers">
+                    <i class="fas fa-users"></i> Customers
+                </button>
+                <button class="nav-btn" data-tab="wip">
+                    <i class="fas fa-tools"></i> Work In Progress
+                </button>
+                <button class="nav-btn" data-tab="ideas">
+                    <i class="fas fa-lightbulb"></i> Ideas
+                </button>
+                <button class="nav-btn" data-tab="gallery">
+                    <i class="fas fa-images"></i> Gallery
+                </button>
+                <button class="nav-btn" data-tab="sales">
+                    <i class="fas fa-chart-line"></i> Sales
+                </button>
+                <button class="nav-btn" data-tab="reports">
+                    <i class="fas fa-file-alt"></i> Reports
+                </button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Projects Tab -->
+            <div id="projects" class="tab-content active">
+                <div class="filters">
+                    <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="filterItems()">
+                    <select id="statusFilter" onchange="filterItems()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                    <select id="customerFilter" onchange="filterItems()">
+                        <option value="">All Customers</option>
+                    </select>
+                    <select id="locationFilter" onchange="filterItems()">
+                        <option value="">All Locations</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add New Project
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="inventoryTable">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Category</th>
+                                <th>Qty</th>
+                                <th>Status</th>
+                                <th>Due Date</th>
+                                <th>Notes</th>
+                                <th>Link</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div id="inventory" class="tab-content">
+                <div class="filters">
+                    <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
+                    <select id="inventoryStatusFilter" onchange="filterInventory()">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="low-stock">Low Stock</option>
+                        <option value="out-of-stock">Out of Stock</option>
+                    </select>
+                    <select id="inventoryCategoryFilter" onchange="filterInventory()">
+                        <option value="">All Categories</option>
+                        <option value="kits">Kits</option>
+                        <option value="hoops">Hoops</option>
+                        <option value="fabric">Fabric</option>
+                        <option value="thread">Thread</option>
+                        <option value="supplies">Other Supplies</option>
+                    </select>
+                    <select id="inventoryLocationFilter" onchange="filterInventory()">
+                        <option value="">All Locations</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add Inventory Item
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="inventoryItemsTable">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryItemsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Customers Tab -->
+            <div id="customers" class="tab-content">
+                <div class="section-header">
+                    <h2>Customer Management</h2>
+                    <div class="customer-actions">
+                        <button class="btn btn-primary" onclick="openAddCustomerModal()">
+                            <i class="fas fa-plus"></i> Add New Customer
+                        </button>
+                        <button class="btn btn-info" onclick="printCustomerList()">
+                            <i class="fas fa-print"></i> Print Customer List
+                        </button>
+                        <button class="btn btn-success" onclick="exportCustomerList()">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="customersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Location</th>
+                                <th>Total Orders</th>
+                                <th>Total Spent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Work In Progress Tab -->
+            <div id="wip" class="tab-content">
+                <div class="section-header">
+                    <h2>Work In Progress</h2>
+                    <div class="wip-actions">
+                        <button class="btn btn-success" onclick="markAllWIPComplete()">
+                            <i class="fas fa-check-double"></i> Mark All Complete
+                        </button>
+                    </div>
+                </div>
+
+                <div class="wip-stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="wipCount">0</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="wipPendingCount">0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="wipCompletedToday">0</div>
+                        <div class="stat-label">Completed Today</div>
+                    </div>
+                </div>
+
+                <div class="wip-filters">
+                    <input type="text" id="wipSearch" placeholder="Search WIP items..." onkeyup="filterWIP()">
+                    <select id="wipStatusFilter" onchange="filterWIP()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                    </select>
+                    <select id="wipPriorityFilter" onchange="filterWIP()">
+                        <option value="">All Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                </div>
+
+                <div id="wipGrid" class="wip-grid">
+                    <!-- WIP items will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Gallery Tab -->
+            <div id="gallery" class="tab-content">
+                <div class="section-header">
+                    <h2>Work Gallery</h2>
+                    <button class="btn btn-primary" onclick="openAddPhotoModal()">
+                        <i class="fas fa-plus"></i> Add Photo
+                    </button>
+                </div>
+
+                <div class="gallery-filters">
+                    <select id="galleryStatusFilter" onchange="filterGallery()">
+                        <option value="">All Items</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                    </select>
+                    <input type="text" id="gallerySearch" placeholder="Search gallery..." onkeyup="filterGallery()">
+                </div>
+
+                <div id="galleryGrid" class="gallery-grid">
+                    <!-- Gallery items will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Sales Tab -->
+            <div id="sales" class="tab-content">
+                <div class="section-header">
+                    <h2>Sales Management</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-outline" onclick="updateExistingSalesWithCommission()" title="Update existing sales with commission fields">
+                            <i class="fas fa-sync-alt"></i> Update Commission Data
+                        </button>
+                        <button class="btn btn-secondary" onclick="openAddSaleModal()">
+                            <i class="fas fa-plus"></i> Record Sale
+                        </button>
+                        <button class="btn btn-primary" onclick="generateInvoice()">
+                            <i class="fas fa-file-invoice"></i> Generate Invoice
+                        </button>
+                        <button class="btn btn-info" onclick="viewInvoices()">
+                            <i class="fas fa-list"></i> View Invoices
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="salesTable">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>List Price</th>
+                                <th>Net Price</th>
+                                <th>Commission %</th>
+                                <th>Commission Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Ideas Tab -->
+            <div id="ideas" class="tab-content">
+                <div class="section-header">
+                    <h2>Inspiration & Ideas</h2>
+                    <div class="ideas-actions">
+                        <button class="btn btn-primary" onclick="openAddIdeaModal()">
+                            <i class="fas fa-plus"></i> Add New Idea
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportIdeas()">
+                            <i class="fas fa-download"></i> Export Ideas
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ideas-filters">
+                    <input type="text" id="ideasSearch" placeholder="Search ideas..." onkeyup="filterIdeas()">
+                    <select id="ideasCategoryFilter" onchange="filterIdeas()">
+                        <option value="">All Categories</option>
+                        <option value="web">Web Inspiration</option>
+                        <option value="book">Book/Pattern</option>
+                        <option value="custom">Custom Design</option>
+                        <option value="technique">Technique</option>
+                        <option value="color">Color Scheme</option>
+                        <option value="style">Style</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <select id="ideasStatusFilter" onchange="filterIdeas()">
+                        <option value="">All Status</option>
+                        <option value="new">New Idea</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+
+                <div id="ideasGrid" class="ideas-grid">
+                    <!-- Ideas will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports" class="tab-content">
+                <div class="section-header">
+                    <h2>Reports & Analytics Dashboard</h2>
+                    <div class="report-actions">
+                        <button class="btn btn-primary" onclick="generateComprehensiveReport()">
+                            <i class="fas fa-chart-bar"></i> Generate Full Report
+                        </button>
+                        <button class="btn btn-secondary" onclick="printLocationInventory()">
+                            <i class="fas fa-print"></i> Print Report
+                        </button>
+                        <button class="btn btn-info" onclick="exportData()">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Statistics Dashboard -->
+                <div class="reports-dashboard">
+                    <div class="dashboard-stats">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalProjects">0</div>
+                            <div class="stat-label">Total Projects</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalRevenue">$0.00</div>
+                            <div class="stat-label">Total Revenue</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="completedProjects">0</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="activeCustomers">0</div>
+                            <div class="stat-label">Active Customers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="avgProjectValue">$0.00</div>
+                            <div class="stat-label">Avg Project Value</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="completionRate">0%</div>
+                            <div class="stat-label">Completion Rate</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Reports Section -->
+                    <div class="quick-reports">
+                        <h3>Quick Reports</h3>
+                        <div class="report-buttons">
+                            <button class="btn btn-outline" onclick="generateFinancialReport()">
+                                <i class="fas fa-dollar-sign"></i> Financial Summary
+                            </button>
+                            <button class="btn btn-outline" onclick="generateCustomerReport()">
+                                <i class="fas fa-users"></i> Customer Analytics
+                            </button>
+                            <button class="btn btn-outline" onclick="generateProductivityReport()">
+                                <i class="fas fa-tasks"></i> Productivity Report
+                            </button>
+                            <button class="btn btn-outline" onclick="generateInventoryReport()">
+                                <i class="fas fa-boxes"></i> Inventory Status
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Report Filters -->
+                    <div class="report-filters">
+                        <h3>Report Filters</h3>
+                        <div class="filter-row">
+                            <select id="reportLocationFilter">
+                                <option value="">All Locations</option>
+                            </select>
+                            <select id="reportStatusFilter">
+                                <option value="">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="work-in-progress">Work in Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="sold">Sold</option>
+                            </select>
+                            <select id="reportDateFilter">
+                                <option value="">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="quarter">This Quarter</option>
+                                <option value="year">This Year</option>
+                            </select>
+                            <input type="date" id="reportStartDate" placeholder="Start Date">
+                            <input type="date" id="reportEndDate" placeholder="End Date">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Content Area -->
+                <div id="reportContent" class="report-content">
+                    <div class="welcome-message">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Welcome to Reports & Analytics</h3>
+                        <p>Select a quick report above or use the filters to generate custom reports. View your business insights and track your embroidery business performance.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Authentication Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeAuthModal">&times;</span>
+            <h2><i class="fas fa-lock"></i> Admin Access Required</h2>
+            <p>Please enter the admin password to access Sales and Reports:</p>
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="adminPassword">Password:</label>
+                    <div class="password-input-container">
+                        <input type="password" id="adminPassword" name="adminPassword" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('adminPassword')">
+                            <i class="fas fa-eye" id="adminPassword-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelAuth">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+            <div id="authError" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> Invalid password. Please try again.
+            </div>
+            <div class="auth-footer">
+                <button type="button" class="btn btn-link" id="changePasswordBtn">
+                    <i class="fas fa-key"></i> Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeChangePasswordModal">&times;</span>
+            <h2><i class="fas fa-key"></i> Change Admin Password</h2>
+            <p>Enter a new password for Sales and Reports access:</p>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password:</label>
+                    <div class="password-input-container">
+                        <input type="password" id="currentPassword" name="currentPassword" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('currentPassword')">
+                            <i class="fas fa-eye" id="currentPassword-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">New Password:</label>
+                    <div class="password-input-container">
+                        <input type="password" id="newPassword" name="newPassword" required minlength="4">
+                        <button type="button" class="password-toggle" onclick="togglePassword('newPassword')">
+                            <i class="fas fa-eye" id="newPassword-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm New Password:</label>
+                    <div class="password-input-container">
+                        <input type="password" id="confirmPassword" name="confirmPassword" required minlength="4">
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">
+                            <i class="fas fa-eye" id="confirmPassword-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Change Password
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelChangePassword">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+            <div id="changePasswordError" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> <span id="changePasswordErrorText"></span>
+            </div>
+            <div id="changePasswordSuccess" class="success-message" style="display: none;">
+                <i class="fas fa-check-circle"></i> Password changed successfully!
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addItemModal')">&times;</span>
+            <h3 id="addItemModalTitle">Add New Item</h3>
+            <form id="addItemForm" class="modal-form">
+                <div class="form-group full-width">
+                    <label for="itemDescription">Description *</label>
+                    <input type="text" id="itemDescription" required placeholder="e.g., Embroidery Thread - Red, 4-inch Hoop, Cotton Fabric">
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemQuantity">Quantity</label>
+                    <input type="number" id="itemQuantity" min="1" value="1">
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemType">Type</label>
+                    <select id="itemType" onchange="updateStatusOptions()">
+                        <option value="inventory">Inventory (Supplies/Materials)</option>
+                        <option value="project">Project (Customer Work)</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemCategory">Category</label>
+                    <select id="itemCategory">
+                        <option value="">Select Category</option>
+                        <option value="hoop">Hoop</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="custom">Custom</option>
+                        <option value="gift">Gift</option>
+                        <option value="home-decor">Home Decor</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemStatus">Status</label>
+                    <select id="itemStatus">
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                </div>
+                
+                <!-- Inventory-specific fields (hidden for projects) -->
+                <div id="inventoryFields">
+                    <div class="form-group half-width">
+                        <label for="itemPrice">Cost (per unit)</label>
+                        <input type="number" id="itemPrice" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemTotalPrice">Total Value</label>
+                        <input type="number" id="itemTotalPrice" step="0.01" min="0" readonly>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemLocation">Location</label>
+                        <input type="text" id="itemLocation" placeholder="e.g., Craft Room, Garage">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemSupplier">Supplier</label>
+                        <input type="text" id="itemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemReorderPoint">Reorder Point</label>
+                        <input type="number" id="itemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
+                    </div>
+                </div>
+                <div class="form-group half-width">
+                    <label for="itemNotes">Notes</label>
+                    <input type="text" id="itemNotes" placeholder="Color, size, special instructions, etc.">
+                </div>
+                <div class="form-group full-width" id="projectFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="itemCustomer">Customer</label>
+                        <div class="input-with-button">
+                            <select id="itemCustomer">
+                                <option value="">Select Customer (Optional)</option>
+                            </select>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemDueDate">Due Date</label>
+                        <input type="date" id="itemDueDate">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemPriority">Priority</label>
+                        <select id="itemPriority">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="itemPatternLink">Pattern Link (Google Drive)</label>
+                        <input type="url" id="itemPatternLink" placeholder="https://drive.google.com/file/d/...">
+                        <small class="form-help">Paste your Google Drive shareable link here</small>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="itemTags">Tags (comma-separated)</label>
+                        <input type="text" id="itemTags" placeholder="e.g., wedding, baby, holiday">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addItemModal')">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="copyFromLastItem()" title="Copy from last added item">
+                        <i class="fas fa-copy"></i> Copy Last
+                    </button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addCustomerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addCustomerModal')">&times;</span>
+            <h3>Add New Customer</h3>
+            <form id="addCustomerForm" class="modal-form">
+                <div class="form-group half-width">
+                    <label for="customerName">Customer Name *</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                <div class="form-group half-width">
+                    <label for="customerLocation">Location</label>
+                    <input type="text" id="customerLocation">
+                </div>
+                <div class="form-group full-width">
+                    <label for="customerContact">Contact Info</label>
+                    <input type="text" id="customerContact" placeholder="Phone, email, etc.">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCustomerModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addSaleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addSaleModal')">&times;</span>
+            <h3>Record Sale</h3>
+            <form id="addSaleForm" class="modal-form">
+                <div class="form-group full-width">
+                    <label for="saleType">Sale Type</label>
+                    <select id="saleType" onchange="toggleSaleItemType()">
+                        <option value="">Select Sale Type</option>
+                        <option value="inventory">From Inventory</option>
+                        <option value="custom">Custom Item</option>
+                    </select>
+                </div>
+                
+                <!-- Inventory Item Selection -->
+                <div id="inventorySaleFields">
+                    <div class="form-group half-width">
+                        <label for="saleItem">Item</label>
+                        <select id="saleItem">
+                            <option value="">Select Item</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Custom Item Fields -->
+                <div id="customSaleFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="customItemName">Item Name</label>
+                        <input type="text" id="customItemName" placeholder="Enter item name">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="customItemDescription">Description</label>
+                        <input type="text" id="customItemDescription" placeholder="Item description">
+                    </div>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="listedPrice">Listed Price</label>
+                    <input type="number" id="listedPrice" step="0.01" min="0" placeholder="Original price" oninput="calculateSalePriceFromCommission()">
+                    <small class="form-help">The original/regular price</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="salePrice">Net Price (What You Receive)</label>
+                    <input type="number" id="salePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateDiscount()">
+                    <small class="form-help">The amount you receive after commission (auto-calculated from list price and commission)</small>
+                </div>
+                <div class="form-group full-width">
+                    <div id="discountInfo" class="discount-info" style="display: none;">
+                        <span id="discountAmount"></span> | 
+                        <span id="discountPercentage"></span>
+                    </div>
+                    <div id="autoCalculateInfo" class="auto-calculate-info" style="display: none;">
+                        <i class="fas fa-calculator"></i> Net price auto-calculated from list price and commission
+                    </div>
+                </div>
+                <div class="form-group half-width">
+                    <label for="saleDate">Sale Date</label>
+                    <input type="date" id="saleDate">
+                </div>
+                <div class="form-group half-width">
+                    <label for="saleCustomer">Customer/Location</label>
+                    <input type="text" id="saleCustomer" placeholder="Customer name or store location">
+                </div>
+                <div class="form-group half-width">
+                    <label for="saleCommission">Commission %</label>
+                    <input type="number" id="saleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateSalePriceFromCommission()">
+                    <small class="form-help">Shop commission percentage (if applicable)</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="saleNotes">Notes</label>
+                    <input type="text" id="saleNotes" placeholder="Additional notes">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addSaleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Record Sale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Sale Modal -->
+    <div id="editSaleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editSaleModal')">&times;</span>
+            <h3>Edit Sale</h3>
+            <form id="editSaleForm" class="modal-form">
+                <input type="hidden" id="editSaleIndex">
+                
+                <div class="form-group full-width">
+                    <label for="editSaleType">Sale Type</label>
+                    <select id="editSaleType" onchange="toggleEditSaleItemType()">
+                        <option value="">Select Sale Type</option>
+                        <option value="inventory">From Inventory</option>
+                        <option value="custom">Custom Item</option>
+                    </select>
+                </div>
+                
+                <!-- Inventory Item Selection -->
+                <div id="editInventorySaleFields">
+                    <div class="form-group half-width">
+                        <label for="editSaleItem">Item</label>
+                        <select id="editSaleItem">
+                            <option value="">Select Item</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Custom Item Fields -->
+                <div id="editCustomSaleFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="editCustomItemName">Item Name</label>
+                        <input type="text" id="editCustomItemName" placeholder="Enter item name">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="editCustomItemDescription">Description</label>
+                        <input type="text" id="editCustomItemDescription" placeholder="Item description">
+                    </div>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editListedPrice">Listed Price</label>
+                    <input type="number" id="editListedPrice" step="0.01" min="0" placeholder="Original price" oninput="calculateEditSalePriceFromCommission()">
+                    <small class="form-help">The original/regular price</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSalePrice">Net Price (What You Receive)</label>
+                    <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateEditDiscount()">
+                    <small class="form-help">The amount you receive after commission</small>
+                </div>
+                <div class="form-group full-width">
+                    <div id="editDiscountInfo" class="discount-info" style="display: none;">
+                        <span id="editDiscountAmount"></span> | 
+                        <span id="editDiscountPercentage"></span>
+                    </div>
+                    <div id="editAutoCalculateInfo" class="auto-calculate-info" style="display: none;">
+                        <i class="fas fa-calculator"></i> Net price auto-calculated from list price and commission
+                    </div>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleDate">Sale Date</label>
+                    <input type="date" id="editSaleDate">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleCustomer">Customer/Location</label>
+                    <input type="text" id="editSaleCustomer" placeholder="Customer name or store location">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleCommission">Commission %</label>
+                    <input type="number" id="editSaleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateEditSalePriceFromCommission()">
+                    <small class="form-help">Shop commission percentage (if applicable)</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editSaleNotes">Notes</label>
+                    <input type="text" id="editSaleNotes" placeholder="Additional notes">
+                </div>
+                <div class="form-group full-width">
+                    <div id="editNetAmountInfo" class="net-amount-info" style="display: none;">
+                        <strong>Net Amount (after commission): $<span id="editNetAmount"></span></strong>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editSaleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Sale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addPhotoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addPhotoModal')">&times;</span>
+            <h3>Add Photo to Gallery</h3>
+            <form id="addPhotoForm" class="modal-form">
+                <div class="form-group full-width">
+                    <label for="photoFile">Photo *</label>
+                    <input type="file" id="photoFile" accept="image/*" required>
+                    <small>Upload a photo of your completed work</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="photoTitle">Photo Title *</label>
+                    <input type="text" id="photoTitle" required placeholder="e.g., Custom Embroidered T-Shirt">
+                </div>
+                <div class="form-group half-width">
+                    <label for="photoItem">Related Item</label>
+                    <select id="photoItem">
+                        <option value="">Select Item (Optional)</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="photoDescription">Description</label>
+                    <textarea id="photoDescription" rows="3" placeholder="Describe the work, techniques used, etc."></textarea>
+                </div>
+                <div class="form-group half-width">
+                    <label for="photoStatus">Status</label>
+                    <select id="photoStatus">
+                        <option value="completed">Completed</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="photoTags">Tags</label>
+                    <input type="text" id="photoTags" placeholder="e.g., t-shirt, custom, embroidery">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPhotoModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Photo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addIdeaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addIdeaModal')">&times;</span>
+            <h3>Add New Idea</h3>
+            <form id="addIdeaForm" class="modal-form">
+                <div class="form-group full-width">
+                    <label for="ideaTitle">Idea Title *</label>
+                    <input type="text" id="ideaTitle" required placeholder="e.g., Floral Hoop Design, Geometric Pattern">
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaDescription">Description</label>
+                    <textarea id="ideaDescription" rows="3" placeholder="Describe the idea, inspiration, techniques, etc."></textarea>
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaCategory">Category *</label>
+                    <select id="ideaCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="web">Web Inspiration</option>
+                        <option value="book">Book/Pattern</option>
+                        <option value="custom">Custom Design</option>
+                        <option value="technique">Technique</option>
+                        <option value="color">Color Scheme</option>
+                        <option value="style">Style</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaStatus">Status</label>
+                    <select id="ideaStatus">
+                        <option value="new">New Idea</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaImage">Image</label>
+                    <input type="file" id="ideaImage" accept="image/*">
+                    <small>Upload a photo or screenshot of your inspiration</small>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaWebLink">Web Link</label>
+                    <input type="url" id="ideaWebLink" placeholder="https://...">
+                    <small>Link to the original source or inspiration</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaSource">Source</label>
+                    <input type="text" id="ideaSource" placeholder="e.g., Pinterest, Instagram, Etsy, Book Title">
+                </div>
+                <div class="form-group half-width">
+                    <label for="ideaPriority">Priority</label>
+                    <select id="ideaPriority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaNotes">Notes</label>
+                    <textarea id="ideaNotes" rows="2" placeholder="Additional notes, materials needed, estimated time, etc."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addIdeaModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Idea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div id="editItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editItemModal')">&times;</span>
+            <h3 id="editItemModalTitle">Edit Item</h3>
+            <form id="editItemForm" class="modal-form">
+                <input type="hidden" id="editItemIndex">
+                
+                <!-- Common Fields -->
+                <div class="form-group full-width">
+                    <label for="editItemDescription">Description *</label>
+                    <input type="text" id="editItemDescription" required placeholder="e.g., Embroidery Thread - Red, 4-inch Hoop, Cotton Fabric">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editItemQuantity">Quantity</label>
+                    <input type="number" id="editItemQuantity" min="1" value="1">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editItemType">Type</label>
+                    <select id="editItemType" onchange="updateEditStatusOptions()">
+                        <option value="inventory">Inventory (Supplies/Materials)</option>
+                        <option value="project">Project (Customer Work)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editItemCategory">Category</label>
+                    <select id="editItemCategory">
+                        <option value="">Select Category</option>
+                        <option value="hoop">Hoop</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="custom">Custom</option>
+                        <option value="gift">Gift</option>
+                        <option value="home-decor">Home Decor</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editItemStatus">Status</label>
+                    <select id="editItemStatus">
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                </div>
+                
+                <!-- Inventory-specific fields (hidden for projects) -->
+                <div id="editInventoryFields">
+                    <div class="form-group half-width">
+                        <label for="editItemPrice">Cost (per item)</label>
+                        <input type="number" id="editItemPrice" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemTotalPrice">Total Value</label>
+                        <input type="number" id="editItemTotalPrice" step="0.01" min="0" readonly>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemLocation">Location</label>
+                        <input type="text" id="editItemLocation" placeholder="e.g., Craft Room, Garage">
+                    </div>
+                    <div class="form-group half-width">
+                        <label for="editItemSupplier">Supplier</label>
+                        <input type="text" id="editItemSupplier" placeholder="e.g., Joann's, Amazon, Local Store">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemReorderPoint">Reorder Point</label>
+                        <input type="number" id="editItemReorderPoint" min="0" placeholder="Minimum quantity before reordering">
+                    </div>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="editItemNotes">Notes</label>
+                    <input type="text" id="editItemNotes" placeholder="Color, size, special instructions, etc.">
+                </div>
+                
+                <!-- Project-specific fields (hidden by default) -->
+                <div id="editProjectFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="editItemCustomer">Customer</label>
+                        <div class="input-with-button">
+                            <select id="editItemCustomer">
+                                <option value="">Select Customer (Optional)</option>
+                            </select>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemDueDate">Due Date</label>
+                        <input type="date" id="editItemDueDate">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemPriority">Priority</label>
+                        <select id="editItemPriority">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemTags">Tags (comma-separated)</label>
+                        <input type="text" id="editItemTags" placeholder="e.g., wedding, baby, holiday">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="editItemPatternLink">Pattern Link (Google Drive)</label>
+                        <input type="url" id="editItemPatternLink" placeholder="https://drive.google.com/file/d/...">
+                        <small class="form-help">Paste your Google Drive shareable link here</small>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editItemModal')">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="copyCurrentItem()" title="Create a copy of this item">
+                        <i class="fas fa-copy"></i> Copy Item
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="editItemSubmitButton">Update Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invoice Generation Modal -->
+    <div id="invoiceModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('invoiceModal')">&times;</span>
+            <h2><i class="fas fa-file-invoice"></i> Generate Invoice</h2>
+            <form id="invoiceForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="invoiceCustomer">Customer:</label>
+                        <select id="invoiceCustomer" name="invoiceCustomer" required>
+                            <option value="">Select Customer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="invoiceDate">Invoice Date:</label>
+                        <input type="date" id="invoiceDate" name="invoiceDate" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="invoiceNotes">Notes:</label>
+                    <textarea id="invoiceNotes" name="invoiceNotes" rows="3" placeholder="Additional notes for the invoice..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Select Sales to Include:</label>
+                    <div id="salesSelection" class="sales-selection">
+                        <!-- Sales will be loaded here -->
+                    </div>
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-invoice"></i> Generate Invoice
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('invoiceModal')">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invoice Preview Modal -->
+    <div id="invoicePreviewModal" class="modal">
+        <div class="modal-content invoice-preview">
+            <div class="invoice-header">
+                <button class="btn btn-primary" onclick="printInvoice()">
+                    <i class="fas fa-print"></i> Print Invoice
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal('invoicePreviewModal')">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+            <div id="invoiceContent" class="invoice-content">
+                <!-- Invoice content will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices List Modal -->
+    <div id="invoicesListModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('invoicesListModal')">&times;</span>
+            <h2><i class="fas fa-list"></i> Invoices</h2>
+            <div class="table-container">
+                <table id="invoicesTable">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoicesTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
