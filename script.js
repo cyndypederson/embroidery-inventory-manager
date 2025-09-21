@@ -1986,47 +1986,10 @@ function setupMobileModalEnhancements() {
     // Only apply on mobile devices
     if (window.innerWidth > 768) return;
     
-    // Override modal display functions for mobile
-    const originalCloseModal = window.closeModal;
-    window.closeModal = function(modalId) {
-        if (originalCloseModal) {
-            originalCloseModal(modalId);
-        }
-        // Remove mobile class when modal closes
-        document.body.classList.remove('modal-open');
-    };
-    
-    // Add mobile class when modals are opened
+    // Add mobile-specific modal behavior
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
-        const originalDisplay = modal.style.display;
-        Object.defineProperty(modal.style, 'display', {
-            get: function() {
-                return this.getAttribute('data-display') || 'none';
-            },
-            set: function(value) {
-                this.setAttribute('data-display', value);
-                if (value === 'block' || value === 'flex') {
-                    document.body.classList.add('modal-open');
-                } else {
-                    document.body.classList.remove('modal-open');
-                }
-            }
-        });
-    });
-    
-    // Add mobile-specific modal behavior
-    modals.forEach(modal => {
-        // Prevent body scroll when modal is open
-        modal.addEventListener('show', () => {
-            document.body.classList.add('modal-open');
-        });
-        
-        modal.addEventListener('hide', () => {
-            document.body.classList.remove('modal-open');
-        });
-        
-        // Also handle when modal is shown/hidden via JavaScript
+        // Use MutationObserver to watch for style changes
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
@@ -2043,30 +2006,26 @@ function setupMobileModalEnhancements() {
         observer.observe(modal, { attributes: true });
     });
     
-    // Enhanced form validation for mobile
+    // Enhanced form validation for mobile (non-intrusive)
     const forms = document.querySelectorAll('.modal-form');
     forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            // Add mobile-specific validation feedback
-            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-            let isValid = true;
-            
-            inputs.forEach(input => {
-                if (!input.value.trim()) {
-                    input.style.borderColor = '#dc3545';
-                    input.style.backgroundColor = '#fff5f5';
-                    isValid = false;
+        // Only add visual feedback, don't interfere with form submission
+        const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (!this.value.trim()) {
+                    this.style.borderColor = '#dc3545';
+                    this.style.backgroundColor = '#fff5f5';
                 } else {
-                    input.style.borderColor = '#28a745';
-                    input.style.backgroundColor = '#f8fff8';
+                    this.style.borderColor = '#28a745';
+                    this.style.backgroundColor = '#f8fff8';
                 }
             });
             
-            if (!isValid) {
-                e.preventDefault();
-                // Show mobile-friendly error message
-                showMobileNotification('Please fill in all required fields', 'error');
-            }
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#4A90A4';
+                this.style.backgroundColor = 'white';
+            });
         });
     });
 }
