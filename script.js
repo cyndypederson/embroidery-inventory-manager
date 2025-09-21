@@ -6,6 +6,20 @@ let gallery = [];
 let invoices = [];
 let ideas = [];
 
+// Error handling utilities
+function logError(context, error, additionalInfo = {}) {
+    console.error(`❌ ${context}:`, {
+        message: error.message,
+        stack: error.stack,
+        ...additionalInfo
+    });
+}
+
+function handleApiError(operation, error) {
+    logError(`API ${operation} failed`, error);
+    // For internal use, just log - no user notifications needed
+}
+
 // Authentication
 let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
 let isAuthenticated = false;
@@ -97,11 +111,64 @@ function generateInvoice() {
     // Load customers
     loadCustomersForInvoice();
     
-    // Load sales for selection
-    loadSalesForInvoice();
+    // Clear sales selection initially
+    document.getElementById('salesSelection').innerHTML = '<p>Please select a customer first to see their sales.</p>';
+    
+    // Add event listener to customer dropdown
+    const customerSelect = document.getElementById('invoiceCustomer');
+    customerSelect.onchange = function() {
+        loadSalesForInvoice();
+    };
     
     // Show modal
     document.getElementById('invoiceModal').style.display = 'block';
+}
+
+function generateTestInvoice() {
+    if (!checkAuthentication()) {
+        sessionStorage.setItem('requestedTab', 'sales');
+        showAuthModal();
+        return;
+    }
+    
+    // Create test invoice with sample data
+    const testInvoice = {
+        id: generateInvoiceId(),
+        customer: 'Test Customer',
+        date: new Date().toISOString().split('T')[0],
+        notes: 'This is a test invoice to preview the layout and branding.',
+        sales: [
+            {
+                itemName: 'Custom Embroidered T-Shirt',
+                customer: 'Test Customer',
+                dateSold: new Date().toISOString().split('T')[0],
+                salePrice: 35.00,
+                saleChannel: 'individual'
+            },
+            {
+                itemName: 'Personalized Baseball Cap',
+                customer: 'Test Customer',
+                dateSold: new Date().toISOString().split('T')[0],
+                salePrice: 25.00,
+                saleChannel: 'individual'
+            },
+            {
+                itemName: 'Logo Embroidery on Hoodie',
+                customer: 'Test Customer',
+                dateSold: new Date().toISOString().split('T')[0],
+                salePrice: 45.00,
+                saleChannel: 'individual'
+            }
+        ],
+        total: 105.00,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+    };
+    
+    // Show the test invoice preview
+    showInvoicePreview(testInvoice);
+    
+    showNotification('Test invoice generated successfully!', 'success');
 }
 
 function loadCustomersForInvoice() {
@@ -118,6 +185,7 @@ function loadCustomersForInvoice() {
 
 function loadSalesForInvoice() {
     const container = document.getElementById('salesSelection');
+    const customerSelect = document.getElementById('invoiceCustomer');
     container.innerHTML = '';
     
     if (sales.length === 0) {
@@ -125,18 +193,40 @@ function loadSalesForInvoice() {
         return;
     }
     
+    // Get selected customer
+    const selectedCustomer = customerSelect.value;
+    
+    if (!selectedCustomer) {
+        container.innerHTML = '<p>Please select a customer first to see their sales.</p>';
+        return;
+    }
+    
+    // Filter sales by selected customer and only show individual sales (exclude shop sales)
+    const customerSales = sales.filter(sale => 
+        sale.customer === selectedCustomer && 
+        sale.saleChannel !== 'shop'
+    );
+    
+    if (customerSales.length === 0) {
+        container.innerHTML = `<p>No individual sales found for customer "${selectedCustomer}". Shop sales are not included in invoices.</p>`;
+        return;
+    }
+    
+    // Show individual sales for the selected customer (exclude shop sales)
     sales.forEach((sale, index) => {
-        const saleDiv = document.createElement('div');
-        saleDiv.className = 'sale-item';
-        saleDiv.innerHTML = `
-            <label class="sale-checkbox">
-                <input type="checkbox" name="selectedSales" value="${index}" checked>
-                <span class="sale-info">
-                    <strong>${sale.item}</strong> - ${sale.customer} - $${sale.salePrice} - ${sale.dateSold}
-                </span>
-            </label>
-        `;
-        container.appendChild(saleDiv);
+        if (sale.customer === selectedCustomer && sale.saleChannel !== 'shop') {
+            const saleDiv = document.createElement('div');
+            saleDiv.className = 'sale-item';
+            saleDiv.innerHTML = `
+                <label class="sale-checkbox">
+                    <input type="checkbox" name="selectedSales" value="${index}" checked>
+                    <span class="sale-info">
+                        <strong>${sale.itemName}</strong> - $${sale.salePrice} - ${sale.dateSold}
+                    </span>
+                </label>
+            `;
+            container.appendChild(saleDiv);
+        }
     });
 }
 
@@ -153,6 +243,20 @@ function handleInvoiceGeneration(event) {
     
     if (selectedSales.length === 0) {
         alert('Please select at least one sale to include in the invoice.');
+        return;
+    }
+    
+    // Validate that all selected sales belong to the same customer and are individual sales
+    const invalidSales = selectedSales.filter(sale => sale.customer !== customer);
+    if (invalidSales.length > 0) {
+        alert('Error: Some selected sales do not belong to the selected customer. Please refresh the page and try again.');
+        return;
+    }
+    
+    // Validate that no shop sales are included (double-check)
+    const shopSales = selectedSales.filter(sale => sale.saleChannel === 'shop');
+    if (shopSales.length > 0) {
+        alert('Error: Shop sales cannot be included in invoices. Please select only individual customer sales.');
         return;
     }
     
@@ -200,18 +304,26 @@ function showInvoicePreview(invoice) {
 }
 
 function generateInvoiceHTML(invoice) {
-    const businessName = "Cyndy's Embroidery";
-    const businessAddress = "Your Business Address";
-    const businessPhone = "Your Phone Number";
-    const businessEmail = "your@email.com";
+    const businessName = "CyndyP Stitchcraft";
+    const businessEmail = "cyndypstitchcraft@gmail.com";
+    
+    // Get customer details
+    const customer = customers.find(c => c.name === invoice.customer);
+    const customerInfo = customer ? `
+        <p><strong>${customer.name}</strong></p>
+        ${customer.location ? `<p>${customer.location}</p>` : ''}
+        ${customer.contact ? `<p>${customer.contact}</p>` : ''}
+    ` : `<p><strong>${invoice.customer}</strong></p>`;
     
     return `
         <div class="invoice-document">
             <div class="invoice-header-section">
                 <div class="business-info">
+                    <div class="business-logo">
+                        <img src="logo.png" alt="${businessName} Logo" class="invoice-logo">
+                    </div>
                     <h1>${businessName}</h1>
-                    <p>${businessAddress}</p>
-                    <p>Phone: ${businessPhone} | Email: ${businessEmail}</p>
+                    <p>Email: ${businessEmail}</p>
                 </div>
                 <div class="invoice-info">
                     <h2>INVOICE</h2>
@@ -223,7 +335,7 @@ function generateInvoiceHTML(invoice) {
             
             <div class="customer-info">
                 <h3>Bill To:</h3>
-                <p><strong>${invoice.customer}</strong></p>
+                ${customerInfo}
             </div>
             
             <div class="invoice-items">
@@ -231,7 +343,6 @@ function generateInvoiceHTML(invoice) {
                     <thead>
                         <tr>
                             <th>Item</th>
-                            <th>Customer</th>
                             <th>Date Sold</th>
                             <th>Price</th>
                         </tr>
@@ -239,8 +350,7 @@ function generateInvoiceHTML(invoice) {
                     <tbody>
                         ${invoice.sales.map(sale => `
                             <tr>
-                                <td>${sale.item}</td>
-                                <td>${sale.customer}</td>
+                                <td>${sale.itemName}</td>
                                 <td>${sale.dateSold}</td>
                                 <td>$${sale.salePrice}</td>
                             </tr>
@@ -248,7 +358,7 @@ function generateInvoiceHTML(invoice) {
                     </tbody>
                     <tfoot>
                         <tr class="total-row">
-                            <td colspan="3"><strong>Total:</strong></td>
+                            <td colspan="2"><strong>Total:</strong></td>
                             <td><strong>$${invoice.total.toFixed(2)}</strong></td>
                         </tr>
                     </tfoot>
@@ -264,7 +374,6 @@ function generateInvoiceHTML(invoice) {
             
             <div class="invoice-footer">
                 <p>Thank you for your business!</p>
-                <p>Payment due within 30 days.</p>
             </div>
         </div>
     `;
@@ -282,6 +391,8 @@ function printInvoice() {
                     .invoice-document { max-width: 800px; margin: 0 auto; }
                     .invoice-header-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
                     .business-info h1 { color: #2C3E2D; margin-bottom: 10px; }
+                    .business-logo { text-align: center; margin-bottom: 15px; }
+                    .invoice-logo { max-width: 120px; max-height: 60px; object-fit: contain; }
                     .invoice-info h2 { color: #6B8E5A; margin-bottom: 10px; }
                     .invoice-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
                     .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -308,8 +419,38 @@ function viewInvoices() {
         return;
     }
     
+    // Clean up any existing invoices that contain shop sales
+    cleanupInvalidInvoices();
+    
     loadInvoicesTable();
     document.getElementById('invoicesListModal').style.display = 'block';
+}
+
+function cleanupInvalidInvoices() {
+    let hasChanges = false;
+    let removedCount = 0;
+    
+    // Filter out invoices that contain shop sales
+    const validInvoices = invoices.filter(invoice => {
+        const hasShopSales = invoice.sales && invoice.sales.some(sale => sale.saleChannel === 'shop');
+        if (hasShopSales) {
+            hasChanges = true;
+            removedCount++;
+            console.log(`Removing invoice ${invoice.id} - contains shop sales`);
+            return false;
+        }
+        return true;
+    });
+    
+    if (hasChanges) {
+        invoices.length = 0; // Clear the array
+        invoices.push(...validInvoices); // Add back only valid invoices
+        saveInvoicesToLocalStorage();
+        console.log(`Cleaned up ${removedCount} invalid invoices`);
+        showNotification(`Cleaned up ${removedCount} invalid invoices containing shop sales`, 'success');
+    } else {
+        showNotification('No invalid invoices found', 'info');
+    }
 }
 
 function loadInvoicesTable() {
@@ -506,6 +647,10 @@ function requireAuth(tabName) {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Embroidery Inventory Manager Initialized');
+    console.log('🔍 Checking for edit form elements...');
+    console.log('📋 editItemForm element:', document.getElementById('editItemForm'));
+    console.log('📋 editItemSubmitButton element:', document.getElementById('editItemSubmitButton'));
     initializeApp();
     loadDataFromAPI().then(() => {
         // Update existing sales with commission fields after data is loaded
@@ -550,6 +695,19 @@ function initializeApp() {
     if (editForm) {
         editForm.addEventListener('submit', handleEditItem);
         console.log('Edit form event listener added');
+        
+        // Also add click listener to the submit button for debugging
+        const submitButton = document.getElementById('editItemSubmitButton');
+        if (submitButton) {
+            submitButton.addEventListener('click', function(e) {
+                console.log('🔘 Submit button clicked!', e);
+                console.log('📋 Form element:', editForm);
+                console.log('📋 Form validity:', editForm.checkValidity());
+            });
+            console.log('Submit button click listener added');
+        } else {
+            console.error('Submit button not found!');
+        }
     } else {
         console.error('Edit form not found!');
     }
@@ -675,10 +833,11 @@ function calculateEditTotalValue() {
 }
 
 function editItem(index) {
-    console.log('editItem called with index:', index); // Debug log
+    console.log('📦 editItem called with index:', index); // Debug log
     
     const item = inventory[index];
-    console.log('Item to edit:', item); // Debug log
+    console.log('📝 Item to edit:', item); // Debug log
+    console.log('📝 Item type:', item.type); // Debug log
     
     // Populate the edit form
     document.getElementById('editItemIndex').value = index;
@@ -718,12 +877,30 @@ function editItem(index) {
     console.log('Edit modal should be visible now'); // Debug log
 }
 
+// Dedicated function for editing Work in Progress items
+function editWIPItem(index) {
+    console.log('🔧 editWIPItem called with index:', index);
+    
+    const item = inventory[index];
+    console.log('📝 WIP Item to edit:', item);
+    console.log('📝 Item type:', item.type);
+    
+    // Force the item to be treated as a project for WIP items
+    if (!item.type || item.type === 'inventory') {
+        console.log('⚠️ Item has no type or is inventory, treating as project for WIP');
+        item.type = 'project';
+    }
+    
+    // Call editProject with the corrected item
+    editProject(index);
+}
+
 function editProject(index) {
-    console.log('editProject called with index:', index); // Debug log
-    console.log('Total inventory items:', inventory.length);
-    console.log('Inventory at index', index, ':', inventory[index]);
-    console.log('Customers array length:', customers.length);
-    console.log('Customers:', customers);
+    console.log('🎯 editProject called with index:', index); // Debug log
+    console.log('📊 Total inventory items:', inventory.length);
+    console.log('📝 Inventory at index', index, ':', inventory[index]);
+    console.log('👥 Customers array length:', customers.length);
+    console.log('👥 Customers:', customers);
     
     const item = inventory[index];
     console.log('Project to edit:', item); // Debug log
@@ -732,11 +909,11 @@ function editProject(index) {
     document.getElementById('editItemIndex').value = index;
     document.getElementById('editItemDescription').value = item.description || item.name || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
-    document.getElementById('editItemType').value = 'project'; // Force project type
     document.getElementById('editItemCategory').value = item.category || '';
     document.getElementById('editItemNotes').value = item.notes || '';
     
-    // Update status options and modal title for project FIRST
+    // Set the item type FIRST, then update status options
+    document.getElementById('editItemType').value = 'project'; // Force project type
     console.log('Setting up edit modal for project'); // Debug log
     updateEditStatusOptions();
     
@@ -780,7 +957,15 @@ function editProject(index) {
 function handleEditItem(e) {
     e.preventDefault();
     
-    console.log('Edit form submitted'); // Debug log
+    console.log('🎯 handleEditItem called!'); // Debug log
+    console.log('📋 Event:', e);
+    console.log('📋 Form data:', new FormData(e.target));
+    
+    // Get form elements safely - define this first!
+    const getElementValue = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
     
     // Basic validation
     const description = document.getElementById('editItemDescription').value.trim();
@@ -797,14 +982,13 @@ function handleEditItem(e) {
     
     console.log('Updating item at index:', index); // Debug log
     
+    // Get the new status before updating
+    const newStatus = getElementValue('editItemStatus');
+    const oldStatus = inventory[index].status;
+    console.log(`🔄 Status change: ${oldStatus} → ${newStatus}`);
+    
     // Store expanded customer groups before updating
     const expandedCustomers = getExpandedCustomerGroups();
-    
-    // Get form elements safely
-    const getElementValue = (id) => {
-        const element = document.getElementById(id);
-        return element ? element.value : '';
-    };
     
     // Update the item
     inventory[index] = {
@@ -833,6 +1017,7 @@ function handleEditItem(e) {
     saveData();
     loadInventoryTable(); // Projects table
     loadInventoryItemsTable(); // Inventory items table
+    loadWIPTab(); // Refresh Work in Progress tab
     updateCustomerFilters();
     
     // Restore expanded customer groups after reload
@@ -872,9 +1057,10 @@ async function checkConnectionStatus() {
             statusElement.innerHTML = '<i class="fas fa-circle"></i> Connected';
             statusElement.className = 'status-indicator connected';
         } else {
-            throw new Error('Server not responding');
+            throw new Error(`Server responded with status: ${response.status} ${response.statusText}`);
         }
     } catch (error) {
+        console.error('Connection check failed:', error.message);
         statusElement.innerHTML = '<i class="fas fa-circle"></i> Offline Mode';
         statusElement.className = 'status-indicator disconnected';
         // Fallback to localStorage
@@ -892,21 +1078,40 @@ async function loadDataFromAPI() {
             fetch('/api/ideas')
         ]);
 
+        // Check each response for errors
+        const responses = [
+            { name: 'inventory', response: inventoryRes },
+            { name: 'customers', response: customersRes },
+            { name: 'sales', response: salesRes },
+            { name: 'gallery', response: galleryRes },
+            { name: 'ideas', response: ideasRes }
+        ];
+
+        for (const { name, response } of responses) {
+            if (!response.ok) {
+                throw new Error(`Failed to load ${name}: ${response.status} ${response.statusText}`);
+            }
+        }
+
+        // Parse JSON data
         inventory = await inventoryRes.json();
         customers = await customersRes.json();
         sales = await salesRes.json();
         gallery = await galleryRes.json();
         ideas = await ideasRes.json();
         
-        console.log('Data loaded from API:');
-        console.log('Inventory items:', inventory.length);
-        console.log('Customers:', customers.length);
-        console.log('Customer names:', customers.map(c => c.name));
+        console.log('✅ Data loaded from API successfully:');
+        console.log('  📦 Inventory items:', inventory.length);
+        console.log('  👥 Customers:', customers.length);
+        console.log('  💰 Sales records:', sales.length);
+        console.log('  🖼️ Gallery items:', gallery.length);
+        console.log('  💡 Ideas:', ideas.length);
 
         loadData();
         updateConnectionStatus('connected');
     } catch (error) {
-        console.log('API not available, using localStorage');
+        console.error('❌ API data loading failed:', error.message);
+        console.log('🔄 Falling back to localStorage...');
         loadDataFromLocalStorage();
         updateConnectionStatus('disconnected');
     }
@@ -1021,35 +1226,32 @@ function cleanCopyText() {
 // API Functions
 async function saveDataToAPI() {
     try {
-        await Promise.all([
-            fetch('/api/inventory', {
+        const savePromises = [
+            { name: 'inventory', data: inventory },
+            { name: 'customers', data: customers },
+            { name: 'sales', data: sales },
+            { name: 'gallery', data: gallery },
+            { name: 'ideas', data: ideas }
+        ].map(async ({ name, data }) => {
+            const response = await fetch(`/api/${name}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(inventory)
-            }),
-            fetch('/api/customers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(customers)
-            }),
-            fetch('/api/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sales)
-            }),
-            fetch('/api/gallery', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(gallery)
-            }),
-            fetch('/api/ideas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(ideas)
-            })
-        ]);
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to save ${name}: ${response.status} ${response.statusText}`);
+            }
+            
+            return { name, success: true };
+        });
+
+        const results = await Promise.all(savePromises);
+        console.log('✅ Data saved to API successfully:', results.map(r => r.name).join(', '));
+        
     } catch (error) {
-        console.log('API save failed, using localStorage');
+        console.error('❌ API save failed:', error.message);
+        console.log('🔄 Falling back to localStorage...');
         saveDataToLocalStorage();
     }
 }
@@ -1073,7 +1275,6 @@ function saveData() {
 
 function updateStatusOptions() {
     const typeSelect = document.getElementById('itemType');
-    const statusSelect = document.getElementById('itemStatus');
     const categorySelect = document.getElementById('itemCategory');
     const projectFields = document.getElementById('projectFields');
     const modalTitle = document.getElementById('addItemModalTitle');
@@ -1086,12 +1287,6 @@ function updateStatusOptions() {
         if (inventoryFields) inventoryFields.style.display = 'block';
         if (projectFields) projectFields.style.display = 'none';
         
-        // Inventory status options
-        statusSelect.innerHTML = `
-            <option value="available">Available</option>
-            <option value="low-stock">Low Stock</option>
-            <option value="out-of-stock">Out of Stock</option>
-        `;
         // Inventory categories
         categorySelect.innerHTML = `
             <option value="">Select Category</option>
@@ -1108,14 +1303,6 @@ function updateStatusOptions() {
         if (inventoryFields) inventoryFields.style.display = 'none';
         if (projectFields) projectFields.style.display = 'block';
         
-        // Project status options
-        statusSelect.innerHTML = `
-            <option value="pending">Pending</option>
-            <option value="in-progress">In Progress</option>
-            <option value="work-in-progress">Work in Progress</option>
-            <option value="completed">Completed</option>
-            <option value="sold">Sold</option>
-        `;
         // Project categories
         categorySelect.innerHTML = `
             <option value="">Select Category</option>
@@ -1169,8 +1356,14 @@ function updateEditStatusOptions() {
         submitButton.textContent = 'Update Inventory Item';
     } else if (typeSelect.value === 'project') {
         // Hide inventory fields, show project fields
-        if (inventoryFields) inventoryFields.style.display = 'none';
-        if (projectFields) projectFields.style.display = 'block';
+        if (inventoryFields) {
+            inventoryFields.style.display = 'none';
+            console.log('Hiding inventory fields');
+        }
+        if (projectFields) {
+            projectFields.style.display = 'block';
+            console.log('Showing project fields');
+        }
         
         // Project status options
         statusSelect.innerHTML = `
@@ -1249,7 +1442,7 @@ function loadInventoryTable() {
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
         headerRow.innerHTML = `
-            <td colspan="8">
+            <td colspan="9">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -1267,7 +1460,7 @@ function loadInventoryTable() {
         groupRow.className = 'customer-group';
         groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
         groupRow.style.display = 'none';
-        groupRow.innerHTML = '<td colspan="8"><div class="customer-projects"></div></td>';
+        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
         tbody.appendChild(groupRow);
         
         // Add individual project rows
@@ -1337,7 +1530,13 @@ function loadInventoryTable() {
             const typeDisplay = item.type === 'inventory' ? 'Inventory' : 'Project';
             const typeClass = item.type === 'inventory' ? 'type-inventory' : 'type-project';
             
+            // Create photo display
+            const photoDisplay = item.photo && item.photo.dataUrl ? 
+                `<img src="${item.photo.dataUrl}" class="item-photo" onclick="viewPhoto('${item.photo.dataUrl}', '${item.name}')" title="Click to view full size">` : 
+                '<span class="text-muted">No photo</span>';
+
             projectRow.innerHTML = `
+                <div class="project-cell project-photo">${photoDisplay}</div>
                 <div class="project-cell project-name"><strong>${item.name}</strong></div>
                 <div class="project-cell project-category">${categoryDisplay}</div>
                 <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
@@ -1448,6 +1647,30 @@ function handleAddItem(e) {
         return element ? element.value : '';
     };
     
+    // Handle photo if present
+    const photoFile = document.getElementById('itemPhoto').files[0];
+    let photoData = null;
+    
+    if (photoFile) {
+        photoData = {
+            name: photoFile.name,
+            size: photoFile.size,
+            type: photoFile.type,
+            lastModified: photoFile.lastModified,
+            dataUrl: null // Will be populated after reading
+        };
+        
+        // Convert to base64 for storage
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            photoData.dataUrl = e.target.result;
+            saveItemWithPhoto(newItem);
+        };
+        reader.readAsDataURL(photoFile);
+    } else {
+        saveItemWithPhoto(null);
+    }
+    
     const newItem = {
         name: document.getElementById('itemDescription').value, // Use description as name
         customer: getElementValue('itemCustomer'),
@@ -1466,56 +1689,41 @@ function handleAddItem(e) {
         reorderPoint: parseInt(getElementValue('itemReorderPoint')) || 0,
         tags: '', // Default empty
         patternLink: getElementValue('itemPatternLink'),
-        dateAdded: new Date().toISOString()
+        dateAdded: new Date().toISOString(),
+        photo: photoData
     };
     
-    inventory.push(newItem);
-    saveData();
-    loadInventoryTable(); // Projects table
-    loadInventoryItemsTable(); // Inventory items table
-    updateLocationFilters();
-    updateCustomerFilters();
-    
-    // Auto-expand customer group if this is a project with a customer
-    if (newItem.type === 'project' && newItem.customer) {
-        setTimeout(() => {
-            const customerName = newItem.customer;
-            const groupId = `customer-group-${customerName.replace(/\s+/g, '-').toLowerCase()}`;
-            const groupRow = document.getElementById(groupId);
-            const customerHeader = document.querySelector(`[data-customer="${customerName}"]`);
-            
-            if (groupRow && customerHeader) {
-                // Collapse all other customer groups first
-                const allCustomerGroups = document.querySelectorAll('.customer-group');
-                const allToggleIcons = document.querySelectorAll('.customer-toggle');
-                
-                allCustomerGroups.forEach(group => {
-                    if (group.id !== groupId) {
-                        group.style.display = 'none';
-                    }
-                });
-                
-                allToggleIcons.forEach(icon => {
-                    if (icon !== customerHeader.querySelector('.customer-toggle')) {
-                        icon.classList.remove('fa-chevron-down');
-                        icon.classList.add('fa-chevron-right');
-                    }
-                });
-                
-                // Expand the customer group
-                groupRow.style.display = 'table-row';
-                const toggleIcon = customerHeader.querySelector('.customer-toggle');
-                if (toggleIcon) {
-                    toggleIcon.classList.remove('fa-chevron-right');
-                    toggleIcon.classList.add('fa-chevron-down');
-                }
-            }
-        }, 100); // Small delay to ensure DOM is updated
+    if (!photoFile) {
+        saveItemWithPhoto(newItem);
     }
-    
-    closeModal('addItemModal');
-    
-    showNotification('Item added successfully!', 'success');
+}
+
+function saveItemWithPhoto(item) {
+    if (item) {
+        inventory.push(item);
+        saveData();
+        loadInventoryTable(); // Projects table
+        loadInventoryItemsTable(); // Inventory items table
+        updateLocationFilters();
+        updateCustomerFilters();
+        
+        // Auto-expand customer group if this is a project with a customer
+        if (item.type === 'project' && item.customer) {
+            setTimeout(() => {
+                const customerGroup = document.querySelector(`[data-customer="${item.customer}"]`);
+                if (customerGroup) {
+                    customerGroup.classList.add('expanded');
+                    const customerItems = customerGroup.querySelector('.customer-items');
+                    if (customerItems) {
+                        customerItems.style.display = 'block';
+                    }
+                }
+            }, 100);
+        }
+        
+        closeModal('addItemModal');
+        showNotification('Item added successfully!', 'success');
+    }
 }
 
 // Inventory Items Management (Supplies/Materials)
@@ -1766,7 +1974,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center text-muted">
+                <td colspan="7" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -1829,6 +2037,7 @@ function loadSalesTable() {
                 ${descriptionDisplay}
                 ${notesDisplay}
             </td>
+            <td><strong>${sale.customer}</strong></td>
             <td>${listPriceDisplay}</td>
             <td>${netAmountDisplay}</td>
             <td>${commissionDisplay}</td>
@@ -2020,6 +2229,7 @@ function handleAddSale(e) {
     e.preventDefault();
     
     const saleType = document.getElementById('saleType').value;
+    const saleChannel = document.getElementById('saleChannel').checked ? 'shop' : 'individual';
     const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
     const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
     const customer = document.getElementById('saleCustomer').value || 'No Customer/Location';
@@ -2056,6 +2266,7 @@ function handleAddSale(e) {
             dateSold: dateSold,
             itemIndex: null,
             saleType: 'inventory',
+            saleChannel: saleChannel || 'individual',
             notes: notes
         };
         } else {
@@ -2076,6 +2287,7 @@ function handleAddSale(e) {
                 dateSold: dateSold,
                 itemIndex: selectedItemIndex,
                 saleType: 'inventory',
+                saleChannel: saleChannel || 'individual',
                 notes: notes
             };
             
@@ -2105,6 +2317,7 @@ function handleAddSale(e) {
             dateSold: dateSold,
             itemIndex: null, // No inventory item
             saleType: 'custom',
+            saleChannel: saleChannel || 'individual',
             description: description,
             notes: notes
         };
@@ -2127,6 +2340,7 @@ function handleAddSale(e) {
             dateSold: dateSold,
             itemIndex: null,
             saleType: 'general',
+            saleChannel: saleChannel || 'individual',
             notes: notes
         };
     }
@@ -2657,6 +2871,7 @@ function editSale(index) {
     // Populate the edit form
     document.getElementById('editSaleIndex').value = index;
     document.getElementById('editSaleType').value = sale.saleType || '';
+    document.getElementById('editSaleChannel').checked = sale.saleChannel === 'shop';
     document.getElementById('editListedPrice').value = sale.listedPrice || 0;
     document.getElementById('editSalePrice').value = sale.salePrice || sale.price || 0;
     document.getElementById('editSaleCustomer').value = sale.customer || '';
@@ -2687,6 +2902,7 @@ function handleEditSale(e) {
     
     const index = parseInt(document.getElementById('editSaleIndex').value);
     const saleType = document.getElementById('editSaleType').value;
+    const saleChannel = document.getElementById('editSaleChannel').checked ? 'shop' : 'individual';
     const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
     const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
     const customer = document.getElementById('editSaleCustomer').value || 'No Customer/Location';
@@ -2706,6 +2922,7 @@ function handleEditSale(e) {
     sales[index] = {
         ...sales[index],
         saleType: saleType,
+        saleChannel: saleChannel || 'individual',
         listedPrice: listedPrice,
         salePrice: salePrice,
         customer: customer,
@@ -2795,6 +3012,112 @@ function updateReportFilters() {
         locationFilter.appendChild(option);
     });
     locationFilter.value = currentLocation;
+}
+
+function generateTestReport() {
+    if (!checkAuthentication()) {
+        sessionStorage.setItem('requestedTab', 'reports');
+        showAuthModal();
+        return;
+    }
+    
+    // Create test report with sample data
+    const reportContent = document.getElementById('reportContent');
+    
+    reportContent.innerHTML = `
+        <div class="report-header">
+            <h2>📊 CyndyP Stitchcraft - Business Report</h2>
+            <p class="report-date">Generated on: ${new Date().toLocaleDateString()}</p>
+        </div>
+        
+        <div class="report-section">
+            <h3>📈 Business Overview</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>Total Projects</h4>
+                    <div class="stat-number">47</div>
+                    <div class="stat-change positive">+12% from last month</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Total Revenue</h4>
+                    <div class="stat-number">$2,450.00</div>
+                    <div class="stat-change positive">+18% from last month</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Completed Projects</h4>
+                    <div class="stat-number">32</div>
+                    <div class="stat-change positive">68% completion rate</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Active Customers</h4>
+                    <div class="stat-number">28</div>
+                    <div class="stat-change positive">+5 new this month</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <h3>🎯 Project Status Breakdown</h3>
+            <div class="status-breakdown">
+                <div class="status-item">
+                    <span class="status-badge status-pending">Pending</span>
+                    <span class="status-count">8 projects</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-badge status-in-progress">In Progress</span>
+                    <span class="status-count">7 projects</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-badge status-completed">Completed</span>
+                    <span class="status-count">25 projects</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-badge status-sold">Sold</span>
+                    <span class="status-count">7 projects</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <h3>💰 Revenue Analysis</h3>
+            <div class="revenue-breakdown">
+                <div class="revenue-item">
+                    <strong>Individual Sales:</strong> $1,850.00 (76%)
+                </div>
+                <div class="revenue-item">
+                    <strong>Shop Sales:</strong> $600.00 (24%)
+                </div>
+                <div class="revenue-item">
+                    <strong>Average Project Value:</strong> $52.13
+                </div>
+            </div>
+        </div>
+        
+        <div class="report-section">
+            <h3>📅 Upcoming Deadlines</h3>
+            <div class="deadlines-list">
+                <div class="deadline-item urgent">
+                    <strong>Custom Wedding Dress</strong> - Due: Tomorrow
+                </div>
+                <div class="deadline-item warning">
+                    <strong>Team Logo Shirts</strong> - Due: In 3 days
+                </div>
+                <div class="deadline-item normal">
+                    <strong>Baby Blanket Set</strong> - Due: Next week
+                </div>
+            </div>
+        </div>
+        
+        <div class="report-footer">
+            <p><strong>Report Summary:</strong> Business is performing well with strong growth in both project volume and revenue. Focus on completing pending projects to maintain customer satisfaction.</p>
+            <p class="report-note">This is a test report with sample data for preview purposes.</p>
+        </div>
+    `;
+    
+    // Show the report
+    document.getElementById('reportModal').style.display = 'block';
+    
+    showNotification('Test report generated successfully!', 'success');
 }
 
 function generateComprehensiveReport() {
@@ -3248,9 +3571,138 @@ function generateProductivitySummary(data) {
     `;
 }
 
-function printLocationInventory() {
-    generateInventoryReport();
-    window.print();
+function printCurrentReport() {
+    console.log('🖨️ Starting print report process...');
+    
+    try {
+        // Check what report is currently displayed
+        const reportContent = document.getElementById('reportContent');
+        if (!reportContent || !reportContent.innerHTML.trim()) {
+            console.log('📊 No report content found, generating default inventory report...');
+            generateInventoryReport();
+        } else {
+            console.log('📊 Using existing report content...');
+        }
+        console.log('✅ Report content ready for printing');
+        
+        // Get the current report content for printing
+        if (!reportContent) {
+            console.error('❌ Report content element not found');
+            alert('Error: Report content not found. Please try generating a report first.');
+            return;
+        }
+        
+        console.log('📄 Report content found, creating print window...');
+        
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) {
+            console.error('❌ Failed to open print window (popup blocked?)');
+            alert('Error: Could not open print window. Please check if popups are blocked.');
+            return;
+        }
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>CyndyP Stitchcraft - Inventory Report</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            margin: 20px; 
+                            color: #333;
+                            line-height: 1.4;
+                        }
+                        .inventory-report { 
+                            max-width: 100%; 
+                            margin: 0 auto; 
+                        }
+                        .inventory-report h2 { 
+                            color: #2C3E2D; 
+                            margin-bottom: 20px;
+                            text-align: center;
+                            border-bottom: 2px solid #6B8E5A;
+                            padding-bottom: 10px;
+                        }
+                        .inventory-summary { 
+                            background-color: #f8f9fa; 
+                            padding: 15px; 
+                            border-radius: 5px; 
+                            margin-bottom: 20px;
+                            display: flex;
+                            justify-content: space-between;
+                            flex-wrap: wrap;
+                        }
+                        .inventory-summary p {
+                            margin: 5px 0;
+                            font-weight: bold;
+                        }
+                        .report-table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin: 20px 0;
+                            font-size: 12px;
+                        }
+                        .report-table th, .report-table td { 
+                            border: 1px solid #ddd; 
+                            padding: 8px; 
+                            text-align: left; 
+                        }
+                        .report-table th { 
+                            background-color: #6B8E5A; 
+                            color: white;
+                            font-weight: bold;
+                        }
+                        .report-table tr:nth-child(even) {
+                            background-color: #f9f9f9;
+                        }
+                        .status-badge {
+                            padding: 2px 6px;
+                            border-radius: 3px;
+                            font-size: 10px;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                        }
+                        .status-pending { background-color: #fff3cd; color: #856404; }
+                        .status-in-progress { background-color: #d1ecf1; color: #0c5460; }
+                        .status-completed { background-color: #d4edda; color: #155724; }
+                        .status-sold { background-color: #f8d7da; color: #721c24; }
+                        @media print { 
+                            body { margin: 0; }
+                            .inventory-summary { 
+                                flex-direction: column; 
+                                gap: 5px;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${reportContent.innerHTML}
+                </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+        console.log('📝 Print window content written');
+        
+        // Wait for content to load, then print
+        setTimeout(() => {
+            console.log('🖨️ Attempting to print...');
+            printWindow.focus();
+            printWindow.print();
+            
+            // Close window after a delay to allow printing
+            setTimeout(() => {
+                printWindow.close();
+                console.log('✅ Print window closed');
+            }, 1000);
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Error in print function:', error);
+        alert('Error generating print report: ' + error.message);
+    }
 }
 
 function exportData() {
@@ -3298,18 +3750,21 @@ window.onclick = function(event) {
 
 // Work In Progress Management
 function loadWIPTab() {
-    // Check if we're on the WIP tab before updating
-    const wipTab = document.getElementById('wip');
-    if (!wipTab || !wipTab.classList.contains('active')) {
-        console.log('WIP tab not active, skipping WIP update');
-        return;
-    }
+    // Always update WIP tab content when called
+    console.log('🔄 Loading WIP tab content');
     
     const wipItems = inventory.filter(item => 
         item.status === 'pending' || 
         item.status === 'in-progress' || 
         item.status === 'work-in-progress'
     );
+    
+    console.log('🔍 WIP Items found:', wipItems.length);
+    console.log('📋 WIP Items details:', wipItems.map(item => ({
+        name: item.name,
+        status: item.status,
+        index: inventory.indexOf(item)
+    })));
     
     updateWIPStats(wipItems);
     loadWIPGrid(wipItems);
@@ -3365,6 +3820,12 @@ function loadWIPGrid(wipItems) {
         const daysInProgress = item.dateAdded ? 
             Math.floor((new Date() - new Date(item.dateAdded)) / (1000 * 60 * 60 * 24)) : 0;
         
+        console.log(`🔄 WIP Item ${index}:`, {
+            name: item.name,
+            status: item.status,
+            originalIndex: originalIndex
+        });
+        
         const wipItem = document.createElement('div');
         wipItem.className = `wip-item wip-priority-${priority}`;
         wipItem.innerHTML = `
@@ -3393,7 +3854,7 @@ function loadWIPGrid(wipItems) {
                     </div>
                 </div>
                 <div class="wip-item-actions">
-                    <button class="btn btn-primary" onclick="${item.type === 'project' ? 'editProject' : 'editItem'}(${originalIndex})">
+                    <button class="btn btn-primary" onclick="editWIPItem(${originalIndex})">
                         <i class="fas fa-edit"></i> Edit
                     </button>
                     <button class="btn btn-info" onclick="updateWIPStatus(${originalIndex})">
@@ -3459,8 +3920,13 @@ function markAllWIPComplete() {
 }
 
 function updateWIPStatus(index) {
+    console.log('🔄 updateWIPStatus called with index:', index);
+    
     const item = inventory[index];
     const currentStatus = item.status;
+    
+    console.log('📝 Current item:', item);
+    console.log('📝 Current status:', currentStatus);
     
     let newStatus;
     if (currentStatus === 'pending') {
@@ -3472,14 +3938,23 @@ function updateWIPStatus(index) {
         return;
     }
     
-    if (confirm(`Mark "${item.name}" as ${newStatus.replace('-', ' ')}?`)) {
+    console.log('📝 New status will be:', newStatus);
+    
+    if (confirm(`Mark "${item.name || item.description}" as ${newStatus.replace('-', ' ')}?`)) {
         // Store expanded customer groups before updating
         const expandedCustomers = getExpandedCustomerGroups();
         
         item.status = newStatus;
+        console.log('✅ Item status updated to:', item.status);
+        
         saveData();
+        console.log('💾 Data saved');
+        
         loadWIPTab();
+        console.log('🔄 WIP tab reloaded');
+        
         loadInventoryTable();
+        console.log('🔄 Inventory table reloaded');
         
         // Restore expanded customer groups after reload
         restoreExpandedCustomerGroups(expandedCustomers);
@@ -3914,3 +4389,392 @@ function exportIdeas() {
     URL.revokeObjectURL(url);
     showNotification('Ideas exported successfully!', 'success');
 }
+
+// ===== CAMERA FUNCTIONALITY =====
+
+let cameraStream = null;
+let currentCameraContext = null; // 'inventory', 'ideas', 'gallery'
+let capturedPhotoBlob = null;
+
+// Open camera for different contexts
+function openCameraForInventory() {
+    currentCameraContext = 'inventory';
+    openCamera();
+}
+
+function openCameraForIdeas() {
+    currentCameraContext = 'ideas';
+    openCamera();
+}
+
+function openCameraForGallery() {
+    currentCameraContext = 'gallery';
+    openCamera();
+}
+
+function openCamera() {
+    document.getElementById('cameraModal').style.display = 'block';
+    document.getElementById('cameraError').style.display = 'none';
+    
+    // Reset camera state
+    document.getElementById('captureBtn').style.display = 'inline-block';
+    document.getElementById('retakeBtn').style.display = 'none';
+    document.getElementById('usePhotoBtn').style.display = 'none';
+    
+    // Check if device supports camera
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        document.getElementById('cameraError').style.display = 'block';
+        document.getElementById('cameraVideo').style.display = 'none';
+        return;
+    }
+    
+    // Mobile-optimized camera constraints
+    const constraints = {
+        video: {
+            facingMode: 'environment', // Use back camera on mobile
+            width: { ideal: 1920, max: 1920 },
+            height: { ideal: 1080, max: 1080 },
+            frameRate: { ideal: 30, max: 60 }
+        }
+    };
+    
+    // Try to get camera access
+    navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream => {
+        cameraStream = stream;
+        const video = document.getElementById('cameraVideo');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        document.getElementById('cameraCanvas').style.display = 'none';
+        
+        // Add loading indicator removal
+        video.onloadedmetadata = () => {
+            console.log('Camera ready');
+        };
+        
+        // Handle orientation changes on mobile
+        if (window.screen && window.screen.orientation) {
+            window.screen.orientation.addEventListener('change', handleOrientationChange);
+        }
+    })
+    .catch(error => {
+        console.error('Camera access denied:', error);
+        let errorMessage = 'Camera not available. Please use file upload instead.';
+        
+        if (error.name === 'NotAllowedError') {
+            errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+        } else if (error.name === 'NotFoundError') {
+            errorMessage = 'No camera found on this device.';
+        } else if (error.name === 'NotReadableError') {
+            errorMessage = 'Camera is already in use by another application.';
+        }
+        
+        document.getElementById('cameraError').innerHTML = 
+            `<i class="fas fa-exclamation-triangle"></i> ${errorMessage}`;
+        document.getElementById('cameraError').style.display = 'block';
+        document.getElementById('cameraVideo').style.display = 'none';
+    });
+}
+
+function handleOrientationChange() {
+    // Handle orientation changes for better mobile experience
+    setTimeout(() => {
+        const video = document.getElementById('cameraVideo');
+        if (video && video.srcObject) {
+            // Force video to recalculate dimensions
+            video.style.height = 'auto';
+        }
+    }, 100);
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert canvas to blob
+    canvas.toBlob(blob => {
+        capturedPhotoBlob = blob;
+        
+        // Show captured image and controls
+        video.style.display = 'none';
+        canvas.style.display = 'block';
+        document.getElementById('captureBtn').style.display = 'none';
+        document.getElementById('retakeBtn').style.display = 'inline-block';
+        document.getElementById('usePhotoBtn').style.display = 'inline-block';
+        
+        // Stop camera stream
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+    }, 'image/jpeg', 0.8);
+}
+
+function retakePhoto() {
+    // Reset to camera view
+    document.getElementById('cameraVideo').style.display = 'block';
+    document.getElementById('cameraCanvas').style.display = 'none';
+    document.getElementById('captureBtn').style.display = 'inline-block';
+    document.getElementById('retakeBtn').style.display = 'none';
+    document.getElementById('usePhotoBtn').style.display = 'none';
+    
+    // Restart camera
+    openCamera();
+}
+
+function useCapturedPhoto() {
+    if (!capturedPhotoBlob) return;
+    
+    // Create a File object from the blob
+    const file = new File([capturedPhotoBlob], 'captured-photo.jpg', { type: 'image/jpeg' });
+    
+    // Set the file input based on context
+    let fileInput;
+    switch (currentCameraContext) {
+        case 'inventory':
+            fileInput = document.getElementById('itemPhoto');
+            break;
+        case 'ideas':
+            fileInput = document.getElementById('ideaImage');
+            break;
+        case 'gallery':
+            fileInput = document.getElementById('photoFile');
+            break;
+    }
+    
+    if (fileInput) {
+        // Create a new FileList with the captured photo
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        
+        // Trigger change event to update preview
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    // Close camera modal
+    closeCameraModal();
+    
+    showNotification('Photo captured successfully!', 'success');
+}
+
+function closeCameraModal() {
+    // Stop camera stream
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    
+    // Reset state
+    capturedPhotoBlob = null;
+    currentCameraContext = null;
+    
+    // Hide modal
+    document.getElementById('cameraModal').style.display = 'none';
+}
+
+// ===== PHOTO MANAGEMENT =====
+
+function viewPhoto(photoUrl, photoTitle = 'Photo') {
+    document.getElementById('photoFullImage').src = photoUrl;
+    document.getElementById('photoFullImage').alt = photoTitle;
+    document.getElementById('photoViewModal').style.display = 'block';
+}
+
+function deletePhoto() {
+    // This would need to be implemented based on how photos are stored
+    // For now, just close the modal
+    closeModal('photoViewModal');
+    showNotification('Photo deleted successfully!', 'success');
+}
+
+// Enhanced file input handling with preview
+function setupPhotoPreviews() {
+    // Add preview functionality to all photo inputs
+    const photoInputs = ['itemPhoto', 'ideaImage', 'photoFile'];
+    
+    photoInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        showPhotoPreview(inputId, e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+}
+
+function showPhotoPreview(inputId, imageUrl) {
+    // Remove existing preview
+    const existingPreview = document.querySelector(`#${inputId}_preview`);
+    if (existingPreview) {
+        existingPreview.remove();
+    }
+    
+    // Create new preview
+    const preview = document.createElement('div');
+    preview.id = `${inputId}_preview`;
+    preview.className = 'photo-preview';
+    preview.innerHTML = `<img src="${imageUrl}" alt="Preview">`;
+    
+    // Insert after the input container
+    const inputContainer = document.querySelector(`#${inputId}`).closest('.photo-input-container');
+    if (inputContainer) {
+        inputContainer.parentNode.insertBefore(preview, inputContainer.nextSibling);
+    }
+}
+
+// Initialize photo functionality when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    setupPhotoPreviews();
+    registerServiceWorker();
+    setupMobileFeatures();
+});
+
+// ===== PWA & MOBILE FEATURES =====
+
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('Service Worker registered successfully:', registration);
+                
+                // Check for updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showNotification('App update available! Refresh to get the latest version.', 'info');
+                        }
+                    });
+                });
+            })
+            .catch(error => {
+                console.log('Service Worker registration failed:', error);
+            });
+    }
+}
+
+function setupMobileFeatures() {
+    // Prevent zoom on double tap
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+    
+    // Handle viewport height on mobile browsers
+    function setViewportHeight() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    
+    setViewportHeight();
+    window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('orientationchange', setViewportHeight);
+    
+    // Add install prompt for PWA
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallPrompt();
+    });
+    
+    // Handle app installed
+    window.addEventListener('appinstalled', () => {
+        showNotification('App installed successfully!', 'success');
+        deferredPrompt = null;
+    });
+    
+    // Detect if running as PWA
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        document.body.classList.add('pwa-mode');
+        console.log('Running as PWA');
+    }
+}
+
+function showInstallPrompt() {
+    // Create install banner
+    const installBanner = document.createElement('div');
+    installBanner.className = 'install-banner';
+    installBanner.innerHTML = `
+        <div class="install-banner-content">
+            <i class="fas fa-mobile-alt"></i>
+            <span>Install StitchCraft for easy access</span>
+            <button class="btn btn-primary btn-sm" onclick="installPWA()">Install</button>
+            <button class="btn btn-secondary btn-sm" onclick="dismissInstallBanner()">×</button>
+        </div>
+    `;
+    document.body.appendChild(installBanner);
+}
+
+function installPWA() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            }
+            deferredPrompt = null;
+        });
+    }
+    dismissInstallBanner();
+}
+
+function dismissInstallBanner() {
+    const banner = document.querySelector('.install-banner');
+    if (banner) {
+        banner.remove();
+    }
+}
+
+// Enhanced photo capture with mobile gestures
+function setupMobilePhotoGestures() {
+    const cameraModal = document.getElementById('cameraModal');
+    if (cameraModal) {
+        // Add swipe gestures for camera controls
+        let startX = 0;
+        let startY = 0;
+        
+        cameraModal.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+        
+        cameraModal.addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const diffX = startX - endX;
+            const diffY = startY - endY;
+            
+            // Swipe up to capture
+            if (Math.abs(diffY) > Math.abs(diffX) && diffY > 50) {
+                capturePhoto();
+            }
+            // Swipe down to close
+            else if (Math.abs(diffY) > Math.abs(diffX) && diffY < -50) {
+                closeCameraModal();
+            }
+        });
+    }
+}
+
+// ===== ENHANCED DATA STRUCTURES =====

@@ -2,8 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyndyp Stitchcraft Inventory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CyndyP StitchCraft Inventory</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="StitchCraft">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="StitchCraft">
+    <meta name="description" content="Embroidery inventory and project management system">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#2C5F7C">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#2C5F7C">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="logo.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
+    
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -76,6 +102,7 @@
                     <table id="inventoryTable">
                         <thead>
                             <tr>
+                                <th>Photo</th>
                                 <th>Project</th>
                                 <th>Category</th>
                                 <th>Qty</th>
@@ -249,11 +276,17 @@
                         <button class="btn btn-outline" onclick="updateExistingSalesWithCommission()" title="Update existing sales with commission fields">
                             <i class="fas fa-sync-alt"></i> Update Commission Data
                         </button>
+                        <button class="btn btn-outline" onclick="cleanupInvalidInvoices()" title="Remove any invoices containing shop sales">
+                            <i class="fas fa-broom"></i> Clean Invalid Invoices
+                        </button>
                         <button class="btn btn-secondary" onclick="openAddSaleModal()">
                             <i class="fas fa-plus"></i> Record Sale
                         </button>
                         <button class="btn btn-primary" onclick="generateInvoice()">
                             <i class="fas fa-file-invoice"></i> Generate Invoice
+                        </button>
+                        <button class="btn btn-info" onclick="generateTestInvoice()" title="Generate a test invoice with sample data">
+                            <i class="fas fa-flask"></i> Generate Test Invoice
                         </button>
                         <button class="btn btn-info" onclick="viewInvoices()">
                             <i class="fas fa-list"></i> View Invoices
@@ -266,6 +299,7 @@
                         <thead>
                             <tr>
                                 <th>Item</th>
+                                <th>Customer</th>
                                 <th>List Price</th>
                                 <th>Net Price</th>
                                 <th>Commission %</th>
@@ -327,7 +361,10 @@
                         <button class="btn btn-primary" onclick="generateComprehensiveReport()">
                             <i class="fas fa-chart-bar"></i> Generate Full Report
                         </button>
-                        <button class="btn btn-secondary" onclick="printLocationInventory()">
+                        <button class="btn btn-info" onclick="generateTestReport()" title="Generate a test report with sample data">
+                            <i class="fas fa-flask"></i> Generate Test Report
+                        </button>
+                        <button class="btn btn-secondary" onclick="printCurrentReport()">
                             <i class="fas fa-print"></i> Print Report
                         </button>
                         <button class="btn btn-info" onclick="exportData()">
@@ -547,19 +584,16 @@
                         <option value="other">Other</option>
                     </select>
                 </div>
-                <div class="form-group half-width">
-                    <label for="itemStatus">Status</label>
-                    <select id="itemStatus">
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                    </select>
-                </div>
-                
                 <!-- Inventory-specific fields (hidden for projects) -->
                 <div id="inventoryFields">
+                    <div class="form-group half-width">
+                        <label for="itemStatus">Status</label>
+                        <select id="itemStatus">
+                            <option value="available">Available</option>
+                            <option value="low-stock">Low Stock</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                        </select>
+                    </div>
                     <div class="form-group half-width">
                         <label for="itemPrice">Cost (per unit)</label>
                         <input type="number" id="itemPrice" step="0.01" min="0" placeholder="0.00">
@@ -585,7 +619,27 @@
                     <label for="itemNotes">Notes</label>
                     <input type="text" id="itemNotes" placeholder="Color, size, special instructions, etc.">
                 </div>
+                <div class="form-group full-width">
+                    <label for="itemPhoto">Photo</label>
+                    <div class="photo-input-container">
+                        <input type="file" id="itemPhoto" accept="image/*">
+                        <button type="button" class="btn btn-outline" onclick="openCameraForInventory()" title="Take Photo with Camera">
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                    </div>
+                    <small>Add a photo of your inventory item or project</small>
+                </div>
                 <div class="form-group full-width" id="projectFields" style="display: none;">
+                    <div class="form-group half-width">
+                        <label for="itemStatus">Status</label>
+                        <select id="itemStatus">
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="work-in-progress">Work in Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="sold">Sold</option>
+                        </select>
+                    </div>
                     <div class="form-group half-width">
                         <label for="itemCustomer">Customer</label>
                         <div class="input-with-button">
@@ -660,13 +714,21 @@
             <span class="close" onclick="closeModal('addSaleModal')">&times;</span>
             <h3>Record Sale</h3>
             <form id="addSaleForm" class="modal-form">
-                <div class="form-group full-width">
+                <div class="form-group half-width">
                     <label for="saleType">Sale Type</label>
                     <select id="saleType" onchange="toggleSaleItemType()">
                         <option value="">Select Sale Type</option>
                         <option value="inventory">From Inventory</option>
                         <option value="custom">Custom Item</option>
                     </select>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="saleChannel" checked>
+                        <span class="checkmark"></span>
+                        Shop/Retailer Sale (uncheck for individual customer)
+                    </label>
                 </div>
                 
                 <!-- Inventory Item Selection -->
@@ -743,13 +805,21 @@
             <form id="editSaleForm" class="modal-form">
                 <input type="hidden" id="editSaleIndex">
                 
-                <div class="form-group full-width">
+                <div class="form-group half-width">
                     <label for="editSaleType">Sale Type</label>
                     <select id="editSaleType" onchange="toggleEditSaleItemType()">
                         <option value="">Select Sale Type</option>
                         <option value="inventory">From Inventory</option>
                         <option value="custom">Custom Item</option>
                     </select>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editSaleChannel">
+                        <span class="checkmark"></span>
+                        Shop/Retailer Sale (uncheck for individual customer)
+                    </label>
                 </div>
                 
                 <!-- Inventory Item Selection -->
@@ -830,8 +900,13 @@
             <form id="addPhotoForm" class="modal-form">
                 <div class="form-group full-width">
                     <label for="photoFile">Photo *</label>
-                    <input type="file" id="photoFile" accept="image/*" required>
-                    <small>Upload a photo of your completed work</small>
+                    <div class="photo-input-container">
+                        <input type="file" id="photoFile" accept="image/*" required>
+                        <button type="button" class="btn btn-outline" onclick="openCameraForGallery()" title="Take Photo with Camera">
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                    </div>
+                    <small>Upload a photo or take one with your camera</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="photoTitle">Photo Title *</label>
@@ -904,8 +979,13 @@
                 </div>
                 <div class="form-group full-width">
                     <label for="ideaImage">Image</label>
-                    <input type="file" id="ideaImage" accept="image/*">
-                    <small>Upload a photo or screenshot of your inspiration</small>
+                    <div class="photo-input-container">
+                        <input type="file" id="ideaImage" accept="image/*">
+                        <button type="button" class="btn btn-outline" onclick="openCameraForIdeas()" title="Take Photo with Camera">
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                    </div>
+                    <small>Upload a photo or take one with your camera</small>
                 </div>
                 <div class="form-group full-width">
                     <label for="ideaWebLink">Web Link</label>
@@ -977,17 +1057,6 @@
                     </select>
                 </div>
                 
-                <div class="form-group half-width">
-                    <label for="editItemStatus">Status</label>
-                    <select id="editItemStatus">
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                    </select>
-                </div>
-                
                 <!-- Inventory-specific fields (hidden for projects) -->
                 <div id="editInventoryFields">
                     <div class="form-group half-width">
@@ -1032,6 +1101,17 @@
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="editItemStatus">Status</label>
+                        <select id="editItemStatus">
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="work-in-progress">Work in Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="sold">Sold</option>
+                        </select>
                     </div>
                     
                     <div class="form-group half-width">
@@ -1148,6 +1228,51 @@
                     <tbody id="invoicesTableBody">
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="modal">
+        <div class="modal-content camera-modal">
+            <span class="close" onclick="closeCameraModal()">&times;</span>
+            <h3><i class="fas fa-camera"></i> Take Photo</h3>
+            <div class="camera-container">
+                <video id="cameraVideo" autoplay playsinline></video>
+                <canvas id="cameraCanvas" style="display: none;"></canvas>
+                <div class="camera-controls">
+                    <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()">
+                        <i class="fas fa-camera"></i> Capture
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="retakeBtn" onclick="retakePhoto()" style="display: none;">
+                        <i class="fas fa-redo"></i> Retake
+                    </button>
+                    <button type="button" class="btn btn-success" id="usePhotoBtn" onclick="useCapturedPhoto()" style="display: none;">
+                        <i class="fas fa-check"></i> Use Photo
+                    </button>
+                </div>
+                <div id="cameraError" class="error-message" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i> Camera not available. Please use file upload instead.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo View Modal -->
+    <div id="photoViewModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('photoViewModal')">&times;</span>
+            <h3><i class="fas fa-image"></i> Photo</h3>
+            <div class="photo-container">
+                <img id="photoFullImage" class="photo-full" src="" alt="Photo">
+                <div class="photo-actions">
+                    <button type="button" class="btn btn-danger" onclick="deletePhoto()">
+                        <i class="fas fa-trash"></i> Delete Photo
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('photoViewModal')">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
             </div>
         </div>
     </div>
