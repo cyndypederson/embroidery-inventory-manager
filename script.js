@@ -3452,6 +3452,7 @@ function testDeleteClick(index) {
 let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
+    console.log('🎯 showConfirmModal called with:', { title, message });
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     pendingConfirmAction = onConfirm;
@@ -3459,6 +3460,7 @@ function showConfirmModal(title, message, onConfirm) {
     
     // Add body class for modal styling
     document.body.classList.add('modal-open');
+    console.log('✅ Custom confirmation modal displayed');
 }
 
 function confirmAction() {
@@ -3483,6 +3485,7 @@ function deleteItem(index) {
     console.log('🗑️ Delete item function called with index:', index);
     console.log('📋 Total inventory items:', inventory.length);
     console.log('📋 Item to delete:', inventory[index]);
+    console.log('🎯 About to show custom confirmation modal...');
     console.log('📋 Index type:', typeof index, 'Index value:', index);
     
     // Check if index is valid
