@@ -2040,6 +2040,88 @@ function loadMobileCustomerCards() {
     });
 }
 
+function loadMobileSalesCards() {
+    const container = document.getElementById('mobileSalesCards');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (sales.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-shopping-cart"></i>
+                <h3>No Sales Yet</h3>
+                <p>Record your first sale to get started!</p>
+                <button class="btn btn-primary" onclick="openAddSaleModal()">
+                    <i class="fas fa-plus"></i> Record Sale
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    sales.forEach((sale, index) => {
+        const listedPrice = sale.listedPrice || sale.price || 0;
+        const salePrice = sale.salePrice || sale.price || 0;
+        const discount = listedPrice - salePrice;
+        const discountPercent = listedPrice > 0 ? ((discount / listedPrice) * 100).toFixed(1) : 0;
+
+        let priceDisplay = `$${salePrice.toFixed(2)}`;
+        if (listedPrice !== salePrice && discount > 0) {
+            priceDisplay = `
+                <div class="price-info">
+                    <span class="sale-price">$${salePrice.toFixed(2)}</span>
+                    <span class="original-price">$${listedPrice.toFixed(2)}</span>
+                    <span class="discount-badge discount">${discountPercent}% off</span>
+                </div>
+            `;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
+        card.innerHTML = `
+            <div class="mobile-card-header">
+                <h3 class="mobile-card-title">${sale.itemName}</h3>
+                <span class="mobile-card-status status-${sale.saleChannel}">${sale.saleChannel}</span>
+            </div>
+            <div class="mobile-card-content">
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Customer:</span>
+                    <span class="mobile-card-value">${sale.customer}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Price:</span>
+                    <span class="mobile-card-value">${priceDisplay}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Commission:</span>
+                    <span class="mobile-card-value">${sale.commissionPercent || 0}% ($${(sale.commissionAmount || 0).toFixed(2)})</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Date:</span>
+                    <span class="mobile-card-value">${new Date(sale.date).toLocaleDateString()}</span>
+                </div>
+                ${sale.notes ? `
+                    <div class="mobile-card-field">
+                        <span class="mobile-card-label">Notes:</span>
+                        <span class="mobile-card-value">${sale.notes}</span>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="mobile-card-actions">
+                <button class="btn btn-secondary" onclick="editSale(${index})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-danger" onclick="deleteSale(${index})">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
 // Mobile-only function for toggling customer groups
 function toggleMobileCustomerGroup(customer) {
     const projectsId = `mobile-projects-${customer.replace(/\s+/g, '-').toLowerCase()}`;
@@ -2448,6 +2530,9 @@ function loadCustomersTable() {
         `;
         tbody.appendChild(row);
     });
+    
+    // Load mobile cards for mobile devices
+    loadMobileCustomerCards();
 }
 
 function openAddCustomerModal() {
@@ -2639,6 +2724,9 @@ function loadSalesTable() {
         `;
         tbody.appendChild(row);
     });
+    
+    // Load mobile cards for mobile devices
+    loadMobileSalesCards();
 }
 
 function openAddSaleModal() {
@@ -4352,6 +4440,9 @@ function loadWIPTab() {
     
     updateWIPStats(wipItems);
     loadWIPGrid(wipItems);
+    
+    // Load mobile cards for mobile devices
+    loadMobileWIPCards();
 }
 
 function updateWIPStats(wipItems) {
@@ -4560,6 +4651,9 @@ function loadGallery() {
                 <p>Start building your portfolio by adding photos of your completed work!</p>
             </div>
         `;
+        
+        // Load mobile cards for mobile devices (even if empty)
+        loadMobileGalleryCards();
         return;
     }
     
@@ -4587,6 +4681,9 @@ function loadGallery() {
         `;
         galleryGrid.appendChild(photoElement);
     });
+    
+    // Load mobile cards for mobile devices
+    loadMobileGalleryCards();
 }
 
 function openAddPhotoModal() {
@@ -4863,6 +4960,9 @@ function loadIdeasGrid() {
                 </button>
             </div>
         `;
+        
+        // Load mobile cards for mobile devices (even if empty)
+        loadMobileIdeasCards();
         return;
     }
     
@@ -4890,6 +4990,9 @@ function loadIdeasGrid() {
             </div>
         </div>
     `).join('');
+    
+    // Load mobile cards for mobile devices
+    loadMobileIdeasCards();
 }
 
 function filterIdeas() {
