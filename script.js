@@ -895,6 +895,11 @@ function editWIPItem(index) {
     editProject(index);
 }
 
+// Edit inventory item (same as editItem but with specific naming for clarity)
+function editInventoryItem(index) {
+    editItem(index);
+}
+
 function editProject(index) {
     console.log('🎯 editProject called with index:', index); // Debug log
     console.log('📊 Total inventory items:', inventory.length);
@@ -1719,6 +1724,91 @@ function loadMobileInventoryCards() {
     });
 }
 
+// Mobile inventory items cards
+function loadMobileInventoryItemsCards() {
+    const container = document.getElementById('mobileInventoryItemsCards');
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    // Filter for inventory items only
+    const inventoryItems = inventory.filter(item => item.type === 'inventory');
+
+    if (inventoryItems.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-boxes"></i>
+                <h3>No Inventory Items</h3>
+                <p>Start building your inventory by adding supplies and materials.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Sort by name
+    inventoryItems.sort((a, b) => a.name.localeCompare(b.name));
+
+    inventoryItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
+        
+        // Find the original inventory index
+        let originalIndex = inventory.findIndex(invItem => invItem === item);
+        if (originalIndex === -1) {
+            originalIndex = inventory.findIndex(invItem =>
+                (invItem._id && item._id && invItem._id === item._id) ||
+                (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
+            );
+        }
+
+        // Format status with proper styling
+        const statusClass = item.status ? `status-${item.status}` : 'status-available';
+        const statusText = item.status || 'Available';
+
+        // Truncate notes for display
+        const notes = item.notes || '';
+        const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
+
+        card.innerHTML = `
+            <div class="mobile-card-header">
+                <h4 class="mobile-card-title">${item.name}</h4>
+                <span class="mobile-card-status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="mobile-card-content">
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Quantity</div>
+                    <div class="mobile-card-value">${item.quantity || 1}</div>
+                </div>
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Category</div>
+                    <div class="mobile-card-value">${item.category || 'No category'}</div>
+                </div>
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Location</div>
+                    <div class="mobile-card-value">${item.location || 'No location'}</div>
+                </div>
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Notes</div>
+                    <div class="mobile-card-value">${truncatedNotes || 'No notes'}</div>
+                </div>
+            </div>
+            <div class="mobile-card-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editInventoryItem(${originalIndex})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-info btn-sm" onclick="copyItem(${originalIndex})" title="Copy">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteItem(${originalIndex})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
 // Mobile card layouts for other tabs
 function loadMobileWIPCards() {
     const container = document.getElementById('mobileWIPCards');
@@ -2292,6 +2382,9 @@ function loadInventoryItemsTable() {
         
         tbody.appendChild(row);
     });
+    
+    // Load mobile cards for inventory items
+    loadMobileInventoryItemsCards();
 }
 
 // Filter inventory items
