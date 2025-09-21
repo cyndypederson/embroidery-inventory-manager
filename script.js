@@ -5878,14 +5878,14 @@ function extractFieldsFromText(text, context) {
             /count[:\s]*(\d+)/gi
         ],
         
-        // Supplier patterns (enhanced for craft supplies)
-        supplier: [
-            /supplier[:\s]*([^\n]+)/gi,
-            /vendor[:\s]*([^\n]+)/gi,
-            /from[:\s]*([^\n]+)/gi,
-            /(craftsonline|joann|michaels|hobby lobby|embroidery|dmc|brother|janome|simplified)/gi,
-            /(amazon|etsy|ebay|aliexpress)/gi
-        ],
+                    // Supplier patterns (enhanced for craft supplies)
+                    supplier: [
+                        /supplier[:\s]*([^\n]+)/gi,
+                        /vendor[:\s]*([^\n]+)/gi,
+                        /from[:\s]*([^\n]+)/gi,
+                        /(selleronlinecraft|craftsonline|joann|michaels|hobby lobby|embroidery|dmc|brother|janome|simplified)/gi,
+                        /(amazon|etsy|ebay|aliexpress)/gi
+                    ],
         
         // Size patterns
         size: [
@@ -5908,22 +5908,30 @@ function extractFieldsFromText(text, context) {
             /order[:\s]*for[:\s]*([^\n]+)/gi
         ],
         
-        // Status patterns
-        status: [
-            /status[:\s]*([^\s\n]+)/gi,
-            /(pending|in progress|completed|delivered|ready|urgent)/gi
-        ],
+                    // Status patterns
+                    status: [
+                        /status[:\s]*([^\s\n]+)/gi,
+                        /(pending|in progress|completed|delivered|ready|urgent)/gi
+                    ],
+
+                    // Difficulty/Level patterns
+                    difficulty: [
+                        /difficulty[:\s]*([^\s\n]+)/gi,
+                        /level[:\s]*([^\s\n]+)/gi,
+                        /(beginner|easy|medium|hard|advanced|expert)/gi
+                    ],
         
-        // Description/Name patterns (enhanced for craft products)
-        description: [
-            /description[:\s]*([^\n]+)/gi,
-            /item[:\s]*([^\n]+)/gi,
-            /product[:\s]*([^\n]+)/gi,
-            /name[:\s]*([^\n]+)/gi,
-            /(stag beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design)/gi,
-            /(embroidered|custom|handmade|vintage|classic|modern)/gi,
-            /([A-Z][a-z]+\s+[A-Z][a-z]+)/g // Title Case patterns like "Stag Beetle"
-        ],
+                    // Description/Name patterns (enhanced for craft products)
+                    description: [
+                        /description[:\s]*([^\n]+)/gi,
+                        /item[:\s]*([^\n]+)/gi,
+                        /product[:\s]*([^\n]+)/gi,
+                        /name[:\s]*([^\n]+)/gi,
+                        /(black widow spider|spider|stag beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design)/gi,
+                        /(bead embroidery kit|embroidery kit)/gi,
+                        /(embroidered|custom|handmade|vintage|classic|modern)/gi,
+                        /([A-Z][a-z]+\s+[A-Z][a-z]+)/g // Title Case patterns like "Black Widow Spider"
+                    ],
         
         // Category patterns
         category: [
@@ -5972,11 +5980,11 @@ function extractFieldsFromText(text, context) {
                 break;
             }
             
-            // Look for craft/embroidery related terms
-            if (line.match(/(beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design|embroidered|custom)/i)) {
-                productName = line;
-                break;
-            }
+                        // Look for craft/embroidery related terms
+                        if (line.match(/(black widow spider|spider|beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design|embroidered|custom)/i)) {
+                            productName = line;
+                            break;
+                        }
             
             // Use the first substantial line as fallback
             if (!productName && line.length > 3) {
@@ -6042,6 +6050,7 @@ function populateFormFields(data, context, confidence) {
             location: 'itemLocation',
             status: 'itemStatus',
             supplier: 'itemSupplier',
+            difficulty: 'itemNotes', // Map difficulty to notes field
             notes: 'itemNotes'
         },
         gallery: {
