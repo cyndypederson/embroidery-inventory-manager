@@ -2360,9 +2360,12 @@ function openAddItemModal() {
 
 function handleAddItem(e) {
     e.preventDefault();
+    console.log('🔘 Add Item button clicked!');
     
     // Basic validation
     const description = document.getElementById('itemDescription').value.trim();
+    console.log('📝 Description:', description);
+    
     if (!description) {
         showNotification('Please enter a description', 'error');
         return;
@@ -2378,30 +2381,7 @@ function handleAddItem(e) {
         return element ? element.value : '';
     };
     
-    // Handle photo if present
-    const photoFile = document.getElementById('itemPhoto').files[0];
-    let photoData = null;
-    
-    if (photoFile) {
-        photoData = {
-            name: photoFile.name,
-            size: photoFile.size,
-            type: photoFile.type,
-            lastModified: photoFile.lastModified,
-            dataUrl: null // Will be populated after reading
-        };
-        
-        // Convert to base64 for storage
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            photoData.dataUrl = e.target.result;
-            saveItemWithPhoto(newItem);
-        };
-        reader.readAsDataURL(photoFile);
-    } else {
-        saveItemWithPhoto(null);
-    }
-    
+    // Create the new item first
     const newItem = {
         name: document.getElementById('itemDescription').value, // Use description as name
         customer: getElementValue('itemCustomer'),
@@ -2421,15 +2401,37 @@ function handleAddItem(e) {
         tags: '', // Default empty
         patternLink: getElementValue('itemPatternLink'),
         dateAdded: new Date().toISOString(),
-        photo: photoData
+        photo: null // Will be set after photo processing
     };
     
-    if (!photoFile) {
+    // Handle photo if present
+    const photoFile = document.getElementById('itemPhoto').files[0];
+    let photoData = null;
+    
+    if (photoFile) {
+        photoData = {
+            name: photoFile.name,
+            size: photoFile.size,
+            type: photoFile.type,
+            lastModified: photoFile.lastModified,
+            dataUrl: null // Will be populated after reading
+        };
+        
+        // Convert to base64 for storage
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            photoData.dataUrl = e.target.result;
+            newItem.photo = photoData;
+            saveItemWithPhoto(newItem);
+        };
+        reader.readAsDataURL(photoFile);
+    } else {
         saveItemWithPhoto(newItem);
     }
 }
 
 function saveItemWithPhoto(item) {
+    console.log('💾 Saving item:', item);
     if (item) {
         inventory.push(item);
         saveData();
