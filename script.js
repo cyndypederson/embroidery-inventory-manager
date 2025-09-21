@@ -1755,18 +1755,61 @@ function setupMobileModalEnhancements() {
     // Only apply on mobile devices
     if (window.innerWidth > 768) return;
     
-    // Add mobile-specific modal behavior
-    const modals = document.querySelectorAll('.modal');
+    // Override modal display functions for mobile
+    const originalCloseModal = window.closeModal;
+    window.closeModal = function(modalId) {
+        if (originalCloseModal) {
+            originalCloseModal(modalId);
+        }
+        // Remove mobile class when modal closes
+        document.body.classList.remove('modal-open');
+    };
     
+    // Add mobile class when modals are opened
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const originalDisplay = modal.style.display;
+        Object.defineProperty(modal.style, 'display', {
+            get: function() {
+                return this.getAttribute('data-display') || 'none';
+            },
+            set: function(value) {
+                this.setAttribute('data-display', value);
+                if (value === 'block' || value === 'flex') {
+                    document.body.classList.add('modal-open');
+                } else {
+                    document.body.classList.remove('modal-open');
+                }
+            }
+        });
+    });
+    
+    // Add mobile-specific modal behavior
     modals.forEach(modal => {
         // Prevent body scroll when modal is open
         modal.addEventListener('show', () => {
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
         });
         
         modal.addEventListener('hide', () => {
-            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
         });
+        
+        // Also handle when modal is shown/hidden via JavaScript
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const isVisible = modal.style.display === 'block' || modal.style.display === 'flex';
+                    if (isVisible) {
+                        document.body.classList.add('modal-open');
+                    } else {
+                        document.body.classList.remove('modal-open');
+                    }
+                }
+            });
+        });
+        
+        observer.observe(modal, { attributes: true });
     });
     
     // Enhanced form validation for mobile
