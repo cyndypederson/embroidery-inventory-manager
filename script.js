@@ -3456,18 +3456,37 @@ let pendingConfirmAction = null;
 function showConfirmModal(title, message, onConfirm) {
     console.log('🎯 showConfirmModal called with:', { title, message });
     console.log('🔍 Looking for confirmModal element...');
-    const modal = document.getElementById('confirmModal');
+    
+    // Try to find the modal element, with a small delay if needed
+    let modal = document.getElementById('confirmModal');
     console.log('🔍 confirmModal element found:', modal);
     
     if (!modal) {
-        console.error('❌ confirmModal element not found! Falling back to browser confirm.');
-        const result = confirm(message);
-        if (result && onConfirm) {
-            onConfirm();
-        }
+        console.log('⏳ Modal not found immediately, waiting 100ms...');
+        setTimeout(() => {
+            modal = document.getElementById('confirmModal');
+            console.log('🔍 confirmModal element found after delay:', modal);
+            
+            if (!modal) {
+                console.error('❌ confirmModal element still not found! Falling back to browser confirm.');
+                const result = confirm(message);
+                if (result && onConfirm) {
+                    onConfirm();
+                }
+                return;
+            }
+            
+            // Modal found after delay, proceed with showing it
+            displayConfirmModal(modal, title, message, onConfirm);
+        }, 100);
         return;
     }
     
+    // Modal found immediately, proceed with showing it
+    displayConfirmModal(modal, title, message, onConfirm);
+}
+
+function displayConfirmModal(modal, title, message, onConfirm) {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     pendingConfirmAction = onConfirm;
