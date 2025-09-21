@@ -659,8 +659,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     initializeApp();
     loadDataFromAPI().then(() => {
-        // Update existing sales with commission fields after data is loaded
-        updateExistingSalesWithCommission();
+        // Update existing sales with commission fields after data is loaded (notifications disabled)
+        // updateExistingSalesWithCommission();
     });
     updateLocationFilters();
     updateCustomerFilters();
@@ -5871,7 +5871,10 @@ function setupMobileFeatures() {
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        showInstallPrompt();
+        // Only show install prompt on mobile devices
+        if (window.innerWidth <= 768) {
+            showInstallPrompt();
+        }
     });
     
     // Handle app installed
