@@ -3246,6 +3246,24 @@ function quickStatusChange(index, newStatus) {
     showNotification(`Item status changed to ${statusNames[newStatus]}!`, 'success');
 }
 
+function markAsCompleted(index) {
+    if (confirm('Mark this item as completed?')) {
+        // Store expanded customer groups before updating
+        const expandedCustomers = getExpandedCustomerGroups();
+        
+        inventory[index].status = 'completed';
+        inventory[index].dateCompleted = new Date().toISOString();
+        saveData();
+        loadInventoryTable();
+        loadWIPTab();
+        
+        // Restore expanded customer groups after reload
+        restoreExpandedCustomerGroups(expandedCustomers);
+        
+        showNotification('Item marked as completed!', 'success');
+    }
+}
+
 function markAsSold(index) {
     if (confirm('Mark this item as sold?')) {
         // Store expanded customer groups before updating
@@ -4888,6 +4906,38 @@ function filterGallery() {
     });
 }
 
+function viewGalleryItem(index) {
+    const photo = gallery[index];
+    if (!photo) return;
+    
+    // Create a simple modal to view the gallery item
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+            <h3>${photo.title || 'Gallery Item'}</h3>
+            ${photo.imageData ? `<img src="${photo.imageData}" alt="${photo.title}" style="width: 100%; max-height: 70vh; object-fit: contain;">` : ''}
+            <div style="margin-top: 1rem;">
+                <p><strong>Category:</strong> ${photo.category || 'No category'}</p>
+                <p><strong>Status:</strong> ${photo.status || 'No status'}</p>
+                ${photo.description ? `<p><strong>Description:</strong> ${photo.description}</p>` : ''}
+                <p><strong>Date Added:</strong> ${new Date(photo.dateAdded).toLocaleDateString()}</p>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function editGalleryItem(index) {
+    editPhoto(index); // Use the existing editPhoto function
+}
+
+function deleteGalleryItem(index) {
+    deletePhoto(index); // Use the existing deletePhoto function
+}
+
 function deletePhoto(index) {
     if (confirm('Are you sure you want to delete this photo from the gallery?')) {
         gallery.splice(index, 1);
@@ -5146,6 +5196,68 @@ function editIdea(ideaId) {
     // Store the idea ID for updating
     document.getElementById('addIdeaForm').dataset.editingId = ideaId;
     document.getElementById('addIdeaModal').style.display = 'block';
+}
+
+function viewIdea(index) {
+    const idea = ideas[index];
+    if (!idea) return;
+    
+    // Create a modal to view the idea details
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+            <h3>${idea.title || 'Idea'}</h3>
+            <div style="margin-bottom: 1rem;">
+                <p><strong>Category:</strong> ${idea.category || 'No category'}</p>
+                <p><strong>Status:</strong> ${idea.status || 'No status'}</p>
+                <p><strong>Priority:</strong> ${idea.priority || 'No priority'}</p>
+                ${idea.webLink ? `<p><strong>Source:</strong> <a href="${idea.webLink}" target="_blank">${idea.webLink}</a></p>` : ''}
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <strong>Description:</strong>
+                <p>${idea.description || 'No description available'}</p>
+            </div>
+            ${idea.imageUrl ? `<img src="${idea.imageUrl}" alt="${idea.title}" style="width: 100%; max-height: 300px; object-fit: contain;">` : ''}
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function convertIdeaToProject(index) {
+    const idea = ideas[index];
+    if (!idea) return;
+    
+    if (confirm(`Convert "${idea.title}" to a project?`)) {
+        // Switch to inventory tab
+        switchTab('inventory');
+        
+        // Open the add project modal
+        openAddItemModal();
+        
+        // Pre-populate the form with idea data
+        setTimeout(() => {
+            const nameField = document.getElementById('itemName');
+            const categoryField = document.getElementById('itemCategory');
+            const notesField = document.getElementById('itemNotes');
+            const priorityField = document.getElementById('itemPriority');
+            
+            if (nameField) nameField.value = idea.title || '';
+            if (categoryField) categoryField.value = idea.category || '';
+            if (notesField) notesField.value = idea.description || '';
+            if (priorityField) priorityField.value = idea.priority || 'medium';
+            
+            // If there's a pattern link, add it to notes
+            if (idea.webLink && notesField) {
+                const existingNotes = notesField.value;
+                notesField.value = existingNotes + (existingNotes ? '\n\n' : '') + `Source: ${idea.webLink}`;
+            }
+        }, 100);
+        
+        showNotification(`Converting "${idea.title}" to project...`, 'success');
+    }
 }
 
 function deleteIdea(ideaId) {
