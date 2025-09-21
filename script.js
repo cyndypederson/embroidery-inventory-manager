@@ -654,7 +654,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const existingBanner = document.querySelector('.install-banner');
         if (existingBanner) {
             existingBanner.remove();
-            console.log('Removed install banner from desktop on page load');
         }
     }
     
@@ -5891,12 +5890,10 @@ function setupMobileFeatures() {
 function showInstallPrompt() {
     // Only show install banner on mobile devices (screen width <= 768px)
     if (window.innerWidth > 768) {
-        console.log('Install banner skipped on desktop');
         // Remove any existing install banner if we're on desktop
         const existingBanner = document.querySelector('.install-banner');
         if (existingBanner) {
             existingBanner.remove();
-            console.log('Removed existing install banner from desktop');
         }
         return;
     }
