@@ -651,6 +651,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🔍 Checking for edit form elements...');
     console.log('📋 editItemForm element:', document.getElementById('editItemForm'));
     console.log('📋 editItemSubmitButton element:', document.getElementById('editItemSubmitButton'));
+    console.log('🔍 Checking for confirmModal element...');
+    console.log('📋 confirmModal element:', document.getElementById('confirmModal'));
     initializeApp();
     loadDataFromAPI().then(() => {
         // Update existing sales with commission fields after data is loaded
