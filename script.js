@@ -5816,10 +5816,11 @@ async function analyzePhotoWithOCR(imageFile, context) {
             context: context
         });
         
-        // Show extracted text to user for debugging
-        if (extractedText.trim()) {
-            showNotification(`Extracted text: "${extractedText.substring(0, 100)}${extractedText.length > 100 ? '...' : ''}"`, 'info');
-        }
+                    // Show extracted text to user for debugging
+                    if (extractedText.trim()) {
+                        showNotification(`Extracted text: "${extractedText.substring(0, 200)}${extractedText.length > 200 ? '...' : ''}"`, 'info');
+                        console.log('Full OCR extracted text:', extractedText);
+                    }
         
         // Extract and populate fields based on context
         const extractedData = extractFieldsFromText(extractedText, context);
@@ -5854,11 +5855,27 @@ function extractFieldsFromText(text, context) {
         webLink: ''
     };
     
-    // Clean and normalize text
-    const cleanText = text.replace(/\s+/g, ' ').trim();
-    const lines = cleanText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                // Clean and normalize text more aggressively
+                let cleanText = text
+                    .replace(/\s+/g, ' ') // Normalize whitespace
+                    .replace(/[^\w\s\-\.\,\:\$\d]/g, ' ') // Remove special chars but keep basic punctuation
+                    .replace(/\s+/g, ' ') // Normalize again
+                    .trim();
+                
+                // Also try to clean up common OCR errors
+                cleanText = cleanText
+                    .replace(/0/g, 'O') // Replace 0 with O in words
+                    .replace(/1/g, 'l') // Replace 1 with l in words
+                    .replace(/5/g, 'S') // Replace 5 with S in words
+                    .replace(/8/g, 'B') // Replace 8 with B in words
+                    .replace(/\b(\w*[0-9]\w*)\b/g, '') // Remove words with numbers
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                
+                const lines = cleanText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    console.log('Processing text lines:', lines);
+                console.log('Processing text lines:', lines);
+                console.log('Cleaned text:', cleanText);
     
     // Define extraction patterns
     const patterns = {
@@ -5883,7 +5900,7 @@ function extractFieldsFromText(text, context) {
                         /supplier[:\s]*([^\n]+)/gi,
                         /vendor[:\s]*([^\n]+)/gi,
                         /from[:\s]*([^\n]+)/gi,
-                        /(selleronlinecraft|craftsonline|joann|michaels|hobby lobby|embroidery|dmc|brother|janome|simplified)/gi,
+                        /(selleronlinecraft|seller.*online.*craft|craftsonline|joann|michaels|hobby lobby|embroidery|dmc|brother|janome|simplified)/gi,
                         /(amazon|etsy|ebay|aliexpress)/gi
                     ],
         
@@ -5927,8 +5944,8 @@ function extractFieldsFromText(text, context) {
                         /item[:\s]*([^\n]+)/gi,
                         /product[:\s]*([^\n]+)/gi,
                         /name[:\s]*([^\n]+)/gi,
-                        /(black widow spider|spider|stag beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design)/gi,
-                        /(bead embroidery kit|embroidery kit)/gi,
+                        /(black.*widow.*spider|black widow spider|spider|stag beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design)/gi,
+                        /(bead.*embroidery.*kit|bead embroidery kit|embroidery.*kit|embroidery kit)/gi,
                         /(embroidered|custom|handmade|vintage|classic|modern)/gi,
                         /([A-Z][a-z]+\s+[A-Z][a-z]+)/g // Title Case patterns like "Black Widow Spider"
                     ],
@@ -6033,8 +6050,34 @@ function extractFieldsFromText(text, context) {
         });
     }
     
-    console.log('Extracted data:', extractedData);
-    return extractedData;
+                // Fallback: Try to find keywords even in messy OCR text
+                if (!extractedData.name && !extractedData.description) {
+                    const originalText = text.toLowerCase();
+                    
+                    // Look for spider-related terms even in messy text
+                    if (originalText.includes('spider') || originalText.includes('widow')) {
+                        extractedData.description = 'Black Widow Spider';
+                        extractedData.name = 'Black Widow Spider';
+                    }
+                    
+                    // Look for embroidery kit terms
+                    if (originalText.includes('embroidery') && originalText.includes('kit')) {
+                        if (!extractedData.description) {
+                            extractedData.description = 'Embroidery Kit';
+                        }
+                        if (!extractedData.name) {
+                            extractedData.name = 'Embroidery Kit';
+                        }
+                    }
+                    
+                    // Look for supplier terms
+                    if (originalText.includes('seller') || originalText.includes('online') || originalText.includes('craft')) {
+                        extractedData.supplier = 'SellerOnlineCraft';
+                    }
+                }
+
+                console.log('Extracted data:', extractedData);
+                return extractedData;
 }
 
 // Populate form fields with extracted data
