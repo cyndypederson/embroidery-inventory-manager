@@ -2618,7 +2618,7 @@ function loadInventoryItemsTable() {
                     <button class="btn btn-info" onclick="console.log('Copy button clicked for index:', ${originalIndex}); copyItem(${originalIndex})" title="Copy Item">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="btn btn-danger" onclick="deleteItem(${originalIndex})" title="Delete Item">
+                    <button class="btn btn-danger" onclick="console.log('🔴 Delete button clicked for originalIndex:', ${originalIndex}); testDeleteClick(${originalIndex}); deleteItem(${originalIndex})" title="Delete Item">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -3442,12 +3442,30 @@ function markAsSold(index) {
     }
 }
 
+function testDeleteClick(index) {
+    console.log('🧪 TEST: Delete button click detected!');
+    console.log('🧪 TEST: Index received:', index);
+    console.log('🧪 TEST: About to call deleteItem function...');
+}
+
 function deleteItem(index) {
-    console.log('🗑️ Delete item clicked with index:', index);
+    console.log('🗑️ Delete item function called with index:', index);
     console.log('📋 Total inventory items:', inventory.length);
     console.log('📋 Item to delete:', inventory[index]);
+    console.log('📋 Index type:', typeof index, 'Index value:', index);
     
-    if (confirm('Are you sure you want to delete this item?')) {
+    // Check if index is valid
+    if (index === undefined || index === null || isNaN(index)) {
+        console.error('❌ Invalid index provided to deleteItem:', index);
+        showNotification('Error: Invalid item index', 'error');
+        return;
+    }
+    
+    console.log('✅ Index is valid, showing confirmation dialog...');
+    const userConfirmed = confirm('Are you sure you want to delete this item?');
+    console.log('👤 User confirmation result:', userConfirmed);
+    
+    if (userConfirmed) {
         // Store expanded customer groups before deleting
         const expandedCustomers = getExpandedCustomerGroups();
         
