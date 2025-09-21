@@ -5816,6 +5816,11 @@ async function analyzePhotoWithOCR(imageFile, context) {
             context: context
         });
         
+        // Show extracted text to user for debugging
+        if (extractedText.trim()) {
+            showNotification(`Extracted text: "${extractedText.substring(0, 100)}${extractedText.length > 100 ? '...' : ''}"`, 'info');
+        }
+        
         // Extract and populate fields based on context
         const extractedData = extractFieldsFromText(extractedText, context);
         populateFormFields(extractedData, context, confidence);
@@ -5873,6 +5878,15 @@ function extractFieldsFromText(text, context) {
             /count[:\s]*(\d+)/gi
         ],
         
+        // Supplier patterns (enhanced for craft supplies)
+        supplier: [
+            /supplier[:\s]*([^\n]+)/gi,
+            /vendor[:\s]*([^\n]+)/gi,
+            /from[:\s]*([^\n]+)/gi,
+            /(craftsonline|joann|michaels|hobby lobby|embroidery|dmc|brother|janome|simplified)/gi,
+            /(amazon|etsy|ebay|aliexpress)/gi
+        ],
+        
         // Size patterns
         size: [
             /size[:\s]*([^\s\n]+)/gi,
@@ -5900,12 +5914,15 @@ function extractFieldsFromText(text, context) {
             /(pending|in progress|completed|delivered|ready|urgent)/gi
         ],
         
-        // Description/Name patterns
+        // Description/Name patterns (enhanced for craft products)
         description: [
             /description[:\s]*([^\n]+)/gi,
             /item[:\s]*([^\n]+)/gi,
             /product[:\s]*([^\n]+)/gi,
-            /name[:\s]*([^\n]+)/gi
+            /name[:\s]*([^\n]+)/gi,
+            /(stag beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design)/gi,
+            /(embroidered|custom|handmade|vintage|classic|modern)/gi,
+            /([A-Z][a-z]+\s+[A-Z][a-z]+)/g // Title Case patterns like "Stag Beetle"
         ],
         
         // Category patterns
@@ -5935,13 +5952,41 @@ function extractFieldsFromText(text, context) {
         });
     });
     
-    // Special logic for name/description
+    // Enhanced logic for name/description detection
     if (!extractedData.name && !extractedData.description && lines.length > 0) {
-        // Use the first significant line as name/description
-        const firstLine = lines.find(line => line.length > 3 && !line.match(/^\d+$/));
-        if (firstLine) {
-            extractedData.name = firstLine;
-            extractedData.description = firstLine;
+        // Look for product names in various formats
+        let productName = '';
+        
+        // Try to find a line that looks like a product name
+        for (let line of lines) {
+            // Skip lines that are just numbers, prices, or common non-product text
+            if (line.match(/^\$?\d+\.?\d*$/) || 
+                line.match(/^(price|cost|total|quantity|qty|count|size|color)/i) ||
+                line.length < 3) {
+                continue;
+            }
+            
+            // Prefer lines with title case (like "Stag Beetle")
+            if (line.match(/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/)) {
+                productName = line;
+                break;
+            }
+            
+            // Look for craft/embroidery related terms
+            if (line.match(/(beetle|dragonfly|butterfly|flower|tree|bird|animal|nature|pattern|design|embroidered|custom)/i)) {
+                productName = line;
+                break;
+            }
+            
+            // Use the first substantial line as fallback
+            if (!productName && line.length > 3) {
+                productName = line;
+            }
+        }
+        
+        if (productName) {
+            extractedData.name = productName;
+            extractedData.description = productName;
         }
     }
     
@@ -5996,6 +6041,7 @@ function populateFormFields(data, context, confidence) {
             customer: 'itemCustomer',
             location: 'itemLocation',
             status: 'itemStatus',
+            supplier: 'itemSupplier',
             notes: 'itemNotes'
         },
         gallery: {
