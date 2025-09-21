@@ -1272,14 +1272,90 @@ async function saveDataToAPI() {
 }
 
 function saveDataToLocalStorage() {
-    localStorage.setItem('embroideryInventory', JSON.stringify(inventory));
-    localStorage.setItem('embroideryCustomers', JSON.stringify(customers));
-    localStorage.setItem('embroiderySales', JSON.stringify(sales));
-    localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
-    localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
-    
-    // Add timestamp for synchronization tracking
-    localStorage.setItem('lastDataSave', Date.now().toString());
+    try {
+        localStorage.setItem('embroideryInventory', JSON.stringify(inventory));
+        localStorage.setItem('embroideryCustomers', JSON.stringify(customers));
+        localStorage.setItem('embroiderySales', JSON.stringify(sales));
+        localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
+        localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
+        
+        // Add timestamp for synchronization tracking
+        localStorage.setItem('lastDataSave', Date.now().toString());
+        console.log('Data saved to localStorage successfully');
+    } catch (error) {
+        console.error('Failed to save to localStorage:', error);
+        
+        // If quota exceeded, try to clean up and retry
+        if (error.name === 'QuotaExceededError') {
+            console.log('LocalStorage quota exceeded, attempting cleanup...');
+            cleanupLocalStorage();
+            
+            try {
+                // Retry saving after cleanup
+                localStorage.setItem('embroideryInventory', JSON.stringify(inventory));
+                localStorage.setItem('embroideryCustomers', JSON.stringify(customers));
+                localStorage.setItem('embroiderySales', JSON.stringify(sales));
+                localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
+                localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
+                localStorage.setItem('lastDataSave', Date.now().toString());
+                console.log('Data saved to localStorage after cleanup');
+                showNotification('Data saved after cleanup', 'success');
+            } catch (retryError) {
+                console.error('Still failed after cleanup:', retryError);
+                showNotification('Storage full - some data may not be saved', 'error');
+            }
+        } else {
+            showNotification('Failed to save data locally', 'error');
+        }
+    }
+}
+
+function cleanupLocalStorage() {
+    try {
+        console.log('🧹 Cleaning up localStorage...');
+        
+        // Remove old backup data
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('backup') || key.includes('temp') || key.includes('old'))) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            console.log(`Removed old data: ${key}`);
+        });
+        
+        // Clear any large photo data that might be taking up space
+        const inventoryData = localStorage.getItem('embroideryInventory');
+        if (inventoryData) {
+            try {
+                const inventory = JSON.parse(inventoryData);
+                let hasLargePhotos = false;
+                
+                inventory.forEach(item => {
+                    if (item.photo && item.photo.dataUrl && item.photo.dataUrl.length > 100000) {
+                        // Remove large photo data
+                        item.photo = { ...item.photo, dataUrl: null };
+                        hasLargePhotos = true;
+                    }
+                });
+                
+                if (hasLargePhotos) {
+                    localStorage.setItem('embroideryInventory', JSON.stringify(inventory));
+                    console.log('Removed large photo data to free up space');
+                }
+            } catch (e) {
+                console.log('Could not clean inventory data');
+            }
+        }
+        
+        console.log('✅ LocalStorage cleanup completed');
+    } catch (error) {
+        console.error('❌ Cleanup failed:', error);
+    }
 }
 
 function saveData() {
@@ -3377,7 +3453,19 @@ function deleteItem(index) {
         
         if (index >= 0 && index < inventory.length) {
             inventory.splice(index, 1);
-            saveData();
+            
+            // Try to save data, but don't let localStorage errors prevent deletion
+            try {
+                saveData();
+            } catch (error) {
+                console.error('Save failed but item deleted:', error);
+                // Still reload the tables even if save failed
+                loadInventoryTable();
+                loadInventoryItemsTable();
+                showNotification('Item deleted but save failed - may need to refresh', 'warning');
+                return;
+            }
+            
             loadInventoryTable();
             loadInventoryItemsTable(); // Also reload inventory items table
             
