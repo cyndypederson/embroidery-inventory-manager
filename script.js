@@ -1750,6 +1750,83 @@ function toggleMobileCustomerGroup(customer) {
     }
 }
 
+// Mobile modal enhancements
+function setupMobileModalEnhancements() {
+    // Only apply on mobile devices
+    if (window.innerWidth > 768) return;
+    
+    // Add mobile-specific modal behavior
+    const modals = document.querySelectorAll('.modal');
+    
+    modals.forEach(modal => {
+        // Prevent body scroll when modal is open
+        modal.addEventListener('show', () => {
+            document.body.style.overflow = 'hidden';
+        });
+        
+        modal.addEventListener('hide', () => {
+            document.body.style.overflow = '';
+        });
+    });
+    
+    // Enhanced form validation for mobile
+    const forms = document.querySelectorAll('.modal-form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            // Add mobile-specific validation feedback
+            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+            let isValid = true;
+            
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    input.style.borderColor = '#dc3545';
+                    input.style.backgroundColor = '#fff5f5';
+                    isValid = false;
+                } else {
+                    input.style.borderColor = '#28a745';
+                    input.style.backgroundColor = '#f8fff8';
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                // Show mobile-friendly error message
+                showMobileNotification('Please fill in all required fields', 'error');
+            }
+        });
+    });
+}
+
+// Mobile notification system
+function showMobileNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotification = document.querySelector('.mobile-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `mobile-notification mobile-notification-${type}`;
+    notification.innerHTML = `
+        <div class="mobile-notification-content">
+            <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }
+    }, 3000);
+}
+
 function toggleCustomerGroup(customer) {
     const groupId = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
     const groupRow = document.getElementById(groupId);
@@ -4824,6 +4901,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupPhotoPreviews();
     registerServiceWorker();
     setupMobileFeatures();
+    setupMobileModalEnhancements();
 });
 
 // ===== PWA & MOBILE FEATURES =====
