@@ -5748,3 +5748,333 @@ function setupMobilePhotoGestures() {
 }
 
 // ===== ENHANCED DATA STRUCTURES =====
+
+// ===== OCR PHOTO ANALYSIS SYSTEM =====
+
+// OCR Analysis Functions
+function analyzePhotoForInventory() {
+    const fileInput = document.getElementById('itemPhoto');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showNotification('Please select a photo first', 'error');
+        return;
+    }
+    
+    analyzePhotoWithOCR(file, 'inventory');
+}
+
+function analyzePhotoForGallery() {
+    const fileInput = document.getElementById('photoFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showNotification('Please select a photo first', 'error');
+        return;
+    }
+    
+    analyzePhotoWithOCR(file, 'gallery');
+}
+
+function analyzePhotoForIdeas() {
+    const fileInput = document.getElementById('ideaImage');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showNotification('Please select a photo first', 'error');
+        return;
+    }
+    
+    analyzePhotoWithOCR(file, 'ideas');
+}
+
+// Main OCR Analysis Function
+async function analyzePhotoWithOCR(imageFile, context) {
+    const analyzeBtn = document.getElementById(`analyze${context.charAt(0).toUpperCase() + context.slice(1)}Btn`);
+    
+    try {
+        // Show loading state
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        showNotification('Analyzing photo... This may take a few seconds.', 'info');
+        
+        // Perform OCR
+        const result = await Tesseract.recognize(imageFile, 'eng', {
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+                }
+            }
+        });
+        
+        const extractedText = result.data.text;
+        const confidence = result.data.confidence;
+        
+        console.log('OCR Result:', {
+            text: extractedText,
+            confidence: confidence,
+            context: context
+        });
+        
+        // Extract and populate fields based on context
+        const extractedData = extractFieldsFromText(extractedText, context);
+        populateFormFields(extractedData, context, confidence);
+        
+        // Show success message with confidence
+        const confidenceText = confidence > 70 ? 'high' : confidence > 40 ? 'medium' : 'low';
+        showNotification(`Photo analyzed successfully! Confidence: ${confidenceText} (${Math.round(confidence)}%)`, 'success');
+        
+    } catch (error) {
+        console.error('OCR Error:', error);
+        showNotification('Failed to analyze photo. Please try again or enter details manually.', 'error');
+    } finally {
+        // Reset button state
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Photo';
+    }
+}
+
+// Extract structured data from OCR text
+function extractFieldsFromText(text, context) {
+    const extractedData = {
+        name: '',
+        description: '',
+        price: '',
+        quantity: '',
+        category: '',
+        customer: '',
+        location: '',
+        status: '',
+        notes: '',
+        webLink: ''
+    };
+    
+    // Clean and normalize text
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    const lines = cleanText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    console.log('Processing text lines:', lines);
+    
+    // Define extraction patterns
+    const patterns = {
+        // Price patterns
+        price: [
+            /\$(\d+\.?\d*)/g,
+            /price[:\s]*\$?(\d+\.?\d*)/gi,
+            /cost[:\s]*\$?(\d+\.?\d*)/gi,
+            /(\d+\.?\d*)\s*dollars?/gi
+        ],
+        
+        // Quantity patterns
+        quantity: [
+            /(\d+)\s*(?:pcs|pieces|qty|quantity|count)/gi,
+            /quantity[:\s]*(\d+)/gi,
+            /qty[:\s]*(\d+)/gi,
+            /count[:\s]*(\d+)/gi
+        ],
+        
+        // Size patterns
+        size: [
+            /size[:\s]*([^\s\n]+)/gi,
+            /(xs|small|medium|large|xl|xxl|xxxl)/gi,
+            /(\d+[x\s]*\d+)/g // Dimensions like "12x8"
+        ],
+        
+        // Color patterns
+        color: [
+            /color[:\s]*([^\s\n]+)/gi,
+            /(red|blue|green|black|white|pink|purple|yellow|orange|brown|gray|grey|navy|maroon)/gi
+        ],
+        
+        // Customer patterns
+        customer: [
+            /customer[:\s]*([^\n]+)/gi,
+            /for[:\s]*([^\n]+)/gi,
+            /client[:\s]*([^\n]+)/gi,
+            /order[:\s]*for[:\s]*([^\n]+)/gi
+        ],
+        
+        // Status patterns
+        status: [
+            /status[:\s]*([^\s\n]+)/gi,
+            /(pending|in progress|completed|delivered|ready|urgent)/gi
+        ],
+        
+        // Description/Name patterns
+        description: [
+            /description[:\s]*([^\n]+)/gi,
+            /item[:\s]*([^\n]+)/gi,
+            /product[:\s]*([^\n]+)/gi,
+            /name[:\s]*([^\n]+)/gi
+        ],
+        
+        // Category patterns
+        category: [
+            /category[:\s]*([^\s\n]+)/gi,
+            /type[:\s]*([^\s\n]+)/gi,
+            /(shirt|hat|towel|bag|jacket|hoodie|apron|embroidery|custom)/gi
+        ],
+        
+        // Web link patterns
+        webLink: [
+            /(https?:\/\/[^\s\n]+)/gi,
+            /(www\.[^\s\n]+)/gi
+        ]
+    };
+    
+    // Extract data using patterns
+    Object.keys(patterns).forEach(field => {
+        patterns[field].forEach(pattern => {
+            const matches = cleanText.match(pattern);
+            if (matches && matches.length > 0) {
+                const value = matches[matches.length - 1]; // Take the last match
+                if (value && !extractedData[field]) {
+                    extractedData[field] = value.trim();
+                }
+            }
+        });
+    });
+    
+    // Special logic for name/description
+    if (!extractedData.name && !extractedData.description && lines.length > 0) {
+        // Use the first significant line as name/description
+        const firstLine = lines.find(line => line.length > 3 && !line.match(/^\d+$/));
+        if (firstLine) {
+            extractedData.name = firstLine;
+            extractedData.description = firstLine;
+        }
+    }
+    
+    // Smart category detection
+    if (!extractedData.category) {
+        const categoryKeywords = {
+            'Apparel': ['shirt', 't-shirt', 'tshirt', 'hat', 'cap', 'jacket', 'hoodie'],
+            'Accessories': ['bag', 'tote', 'backpack', 'apron'],
+            'Home Goods': ['towel', 'blanket', 'pillow', 'curtain'],
+            'Sports': ['jersey', 'uniform', 'team'],
+            'Custom': ['custom', 'personalized', 'embroidered']
+        };
+        
+        Object.keys(categoryKeywords).forEach(category => {
+            if (!extractedData.category && categoryKeywords[category].some(keyword => 
+                cleanText.toLowerCase().includes(keyword))) {
+                extractedData.category = category;
+            }
+        });
+    }
+    
+    // Smart status detection
+    if (!extractedData.status) {
+        const statusKeywords = {
+            'pending': ['pending', 'new', 'order'],
+            'in-progress': ['progress', 'working', 'production'],
+            'completed': ['done', 'finished', 'complete', 'ready'],
+            'delivered': ['delivered', 'shipped', 'sent']
+        };
+        
+        Object.keys(statusKeywords).forEach(status => {
+            if (!extractedData.status && statusKeywords[status].some(keyword => 
+                cleanText.toLowerCase().includes(keyword))) {
+                extractedData.status = status;
+            }
+        });
+    }
+    
+    console.log('Extracted data:', extractedData);
+    return extractedData;
+}
+
+// Populate form fields with extracted data
+function populateFormFields(data, context, confidence) {
+    const fieldMappings = {
+        inventory: {
+            name: 'itemDescription',
+            description: 'itemDescription', 
+            price: 'itemPrice',
+            quantity: 'itemQuantity',
+            category: 'itemCategory',
+            customer: 'itemCustomer',
+            location: 'itemLocation',
+            status: 'itemStatus',
+            notes: 'itemNotes'
+        },
+        gallery: {
+            name: 'photoTitle',
+            description: 'photoDescription',
+            category: 'photoCategory',
+            status: 'photoStatus',
+            notes: 'photoDescription'
+        },
+        ideas: {
+            name: 'ideaTitle',
+            description: 'ideaDescription',
+            category: 'ideaCategory',
+            status: 'ideaStatus',
+            webLink: 'ideaWebLink',
+            notes: 'ideaDescription'
+        }
+    };
+    
+    const mappings = fieldMappings[context];
+    if (!mappings) return;
+    
+    let fieldsPopulated = 0;
+    
+    Object.keys(mappings).forEach(dataKey => {
+        if (data[dataKey] && mappings[dataKey]) {
+            const element = document.getElementById(mappings[dataKey]);
+            if (element) {
+                element.value = data[dataKey];
+                fieldsPopulated++;
+                
+                // Add visual feedback for auto-populated fields
+                element.style.backgroundColor = '#e8f5e8';
+                element.style.borderColor = '#4CAF50';
+                element.title = `Auto-populated from photo analysis (${Math.round(confidence)}% confidence)`;
+                
+                // Remove visual feedback after 3 seconds
+                setTimeout(() => {
+                    element.style.backgroundColor = '';
+                    element.style.borderColor = '';
+                    element.title = '';
+                }, 3000);
+            }
+        }
+    });
+    
+    // Show summary of populated fields
+    if (fieldsPopulated > 0) {
+        showNotification(`Auto-populated ${fieldsPopulated} field(s) from photo analysis`, 'info');
+    } else {
+        showNotification('No recognizable data found in photo. Please enter details manually.', 'warning');
+    }
+}
+
+// Setup OCR functionality when DOM is loaded
+function setupOCRFunctionality() {
+    // Enable analyze buttons when photos are selected
+    const photoInputs = [
+        { input: 'itemPhoto', button: 'analyzeInventoryBtn' },
+        { input: 'photoFile', button: 'analyzeGalleryBtn' },
+        { input: 'ideaImage', button: 'analyzeIdeasBtn' }
+    ];
+    
+    photoInputs.forEach(({ input, button }) => {
+        const inputElement = document.getElementById(input);
+        const buttonElement = document.getElementById(button);
+        
+        if (inputElement && buttonElement) {
+            inputElement.addEventListener('change', function(e) {
+                buttonElement.disabled = !e.target.files.length;
+            });
+        }
+    });
+    
+    console.log('OCR functionality initialized');
+}
+
+// Initialize OCR when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Add OCR setup to existing DOMContentLoaded handler
+    setTimeout(setupOCRFunctionality, 100);
+});
