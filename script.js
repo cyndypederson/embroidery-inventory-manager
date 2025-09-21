@@ -5879,7 +5879,13 @@ function setupMobileFeatures() {
 }
 
 function showInstallPrompt() {
-    // Create install banner
+    // Only show install banner on mobile devices (screen width <= 768px)
+    if (window.innerWidth > 768) {
+        console.log('Install banner skipped on desktop');
+        return;
+    }
+    
+    // Create install banner for mobile only
     const installBanner = document.createElement('div');
     installBanner.className = 'install-banner';
     installBanner.innerHTML = `
