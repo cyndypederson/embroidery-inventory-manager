@@ -3728,20 +3728,20 @@ function handleAddIdea(event) {
     const form = document.getElementById('addIdeaForm');
     const isEditing = form.dataset.editingId;
     
-    if (!title || !category) {
-        showNotification('Please fill in required fields', 'error');
+    if (!title) {
+        showNotification('Please enter an idea title', 'error');
         return;
     }
     
     const ideaData = {
         title: title,
-        description: description,
-        category: category,
-        status: status,
-        webLink: webLink,
-        source: source,
-        priority: priority,
-        notes: notes,
+        description: description || '',
+        category: category || 'other',
+        status: status || 'new',
+        webLink: webLink || '',
+        source: source || '',
+        priority: priority || 'medium',
+        notes: notes || '',
         imageUrl: null
     };
     
