@@ -1362,6 +1362,22 @@
         </div>
     </div>
 
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content confirm-modal">
+            <div class="confirm-header">
+                <h3 id="confirmTitle">Confirm Action</h3>
+            </div>
+            <div class="confirm-body">
+                <p id="confirmMessage">Are you sure you want to proceed?</p>
+            </div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="cancelConfirm()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

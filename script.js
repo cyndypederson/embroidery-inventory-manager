@@ -3448,6 +3448,37 @@ function testDeleteClick(index) {
     console.log('🧪 TEST: About to call deleteItem function...');
 }
 
+// Custom confirmation modal functions
+let pendingConfirmAction = null;
+
+function showConfirmModal(title, message, onConfirm) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    pendingConfirmAction = onConfirm;
+    document.getElementById('confirmModal').style.display = 'block';
+    
+    // Add body class for modal styling
+    document.body.classList.add('modal-open');
+}
+
+function confirmAction() {
+    if (pendingConfirmAction) {
+        pendingConfirmAction();
+        pendingConfirmAction = null;
+    }
+    closeConfirmModal();
+}
+
+function cancelConfirm() {
+    pendingConfirmAction = null;
+    closeConfirmModal();
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
 function deleteItem(index) {
     console.log('🗑️ Delete item function called with index:', index);
     console.log('📋 Total inventory items:', inventory.length);
@@ -3461,41 +3492,49 @@ function deleteItem(index) {
         return;
     }
     
-    console.log('✅ Index is valid, showing confirmation dialog...');
-    const userConfirmed = confirm('Are you sure you want to delete this item?');
-    console.log('👤 User confirmation result:', userConfirmed);
+    console.log('✅ Index is valid, showing confirmation modal...');
     
-    if (userConfirmed) {
-        // Store expanded customer groups before deleting
-        const expandedCustomers = getExpandedCustomerGroups();
-        
-        if (index >= 0 && index < inventory.length) {
-            inventory.splice(index, 1);
-            
-            // Try to save data, but don't let localStorage errors prevent deletion
-            try {
-                saveData();
-            } catch (error) {
-                console.error('Save failed but item deleted:', error);
-                // Still reload the tables even if save failed
-                loadInventoryTable();
-                loadInventoryItemsTable();
-                showNotification('Item deleted but save failed - may need to refresh', 'warning');
-                return;
-            }
-            
-            loadInventoryTable();
-            loadInventoryItemsTable(); // Also reload inventory items table
-            
-            // Restore expanded customer groups after reload
-            restoreExpandedCustomerGroups(expandedCustomers);
-            
-            showNotification('Item deleted successfully!', 'success');
-            console.log('✅ Item deleted successfully');
-        } else {
-            console.error('❌ Invalid index for deletion:', index);
-            showNotification('Error: Invalid item index', 'error');
+    // Use custom confirmation modal instead of browser confirm
+    showConfirmModal(
+        'Delete Item',
+        'Are you sure you want to delete this item? This action cannot be undone.',
+        () => {
+            console.log('👤 User confirmed deletion');
+            proceedWithDeletion(index);
         }
+    );
+}
+
+function proceedWithDeletion(index) {
+    // Store expanded customer groups before deleting
+    const expandedCustomers = getExpandedCustomerGroups();
+    
+    if (index >= 0 && index < inventory.length) {
+        inventory.splice(index, 1);
+        
+        // Try to save data, but don't let localStorage errors prevent deletion
+        try {
+            saveData();
+        } catch (error) {
+            console.error('Save failed but item deleted:', error);
+            // Still reload the tables even if save failed
+            loadInventoryTable();
+            loadInventoryItemsTable();
+            showNotification('Item deleted but save failed - may need to refresh', 'warning');
+            return;
+        }
+        
+        loadInventoryTable();
+        loadInventoryItemsTable(); // Also reload inventory items table
+        
+        // Restore expanded customer groups after reload
+        restoreExpandedCustomerGroups(expandedCustomers);
+        
+        showNotification('Item deleted successfully!', 'success');
+        console.log('✅ Item deleted successfully');
+    } else {
+        console.error('❌ Invalid index for deletion:', index);
+        showNotification('Error: Invalid item index', 'error');
     }
 }
 
