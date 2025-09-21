@@ -3453,10 +3453,23 @@ let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
     console.log('🎯 showConfirmModal called with:', { title, message });
+    console.log('🔍 Looking for confirmModal element...');
+    const modal = document.getElementById('confirmModal');
+    console.log('🔍 confirmModal element found:', modal);
+    
+    if (!modal) {
+        console.error('❌ confirmModal element not found! Falling back to browser confirm.');
+        const result = confirm(message);
+        if (result && onConfirm) {
+            onConfirm();
+        }
+        return;
+    }
+    
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     pendingConfirmAction = onConfirm;
-    document.getElementById('confirmModal').style.display = 'block';
+    modal.style.display = 'block';
     
     // Add body class for modal styling
     document.body.classList.add('modal-open');
@@ -3487,6 +3500,7 @@ function deleteItem(index) {
     console.log('📋 Item to delete:', inventory[index]);
     console.log('🎯 About to show custom confirmation modal...');
     console.log('📋 Index type:', typeof index, 'Index value:', index);
+    console.log('🔍 Checking if showConfirmModal function exists:', typeof showConfirmModal);
     
     // Check if index is valid
     if (index === undefined || index === null || isNaN(index)) {
