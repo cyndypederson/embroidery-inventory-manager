@@ -649,13 +649,19 @@ function requireAuth(tabName) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Embroidery Inventory Manager Initialized');
     
-    // Remove install banner if we're on desktop
-    if (window.innerWidth > 768) {
-        const existingBanner = document.querySelector('.install-banner');
-        if (existingBanner) {
-            existingBanner.remove();
-        }
+    // Remove any existing install banners or sales notifications
+    const existingBanner = document.querySelector('.install-banner');
+    if (existingBanner) {
+        existingBanner.remove();
     }
+    
+    // Remove any existing sales notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => {
+        if (notification.textContent.includes('All sales already have commission data')) {
+            notification.remove();
+        }
+    });
     
     initializeApp();
     loadDataFromAPI().then(() => {
