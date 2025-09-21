@@ -1442,7 +1442,7 @@ function loadInventoryTable() {
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
         headerRow.innerHTML = `
-            <td colspan="9">
+            <td colspan="8">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -1530,13 +1530,7 @@ function loadInventoryTable() {
             const typeDisplay = item.type === 'inventory' ? 'Inventory' : 'Project';
             const typeClass = item.type === 'inventory' ? 'type-inventory' : 'type-project';
             
-            // Create photo display
-            const photoDisplay = item.photo && item.photo.dataUrl ? 
-                `<img src="${item.photo.dataUrl}" class="item-photo" onclick="viewPhoto('${item.photo.dataUrl}', '${item.name}')" title="Click to view full size">` : 
-                '<span class="text-muted">No photo</span>';
-
             projectRow.innerHTML = `
-                <div class="project-cell project-photo">${photoDisplay}</div>
                 <div class="project-cell project-name"><strong>${item.name}</strong></div>
                 <div class="project-cell project-category">${categoryDisplay}</div>
                 <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
