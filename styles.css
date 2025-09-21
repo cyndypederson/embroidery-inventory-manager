@@ -3158,22 +3158,6 @@ td:nth-child(4) {
     transform: scale(1.1);
 }
 
-/* Project table photo column */
-.project-photo {
-    width: 80px;
-    min-width: 80px;
-    text-align: center;
-}
-
-.project-photo .item-photo {
-    width: 50px;
-    height: 50px;
-}
-
-.project-photo .text-muted {
-    font-size: 0.8rem;
-    color: #999;
-}
 
 /* Photo Modal for Full View */
 #photoViewModal .modal-content {
@@ -3345,10 +3329,6 @@ body {
         max-width: 100px;
     }
     
-    .project-photo .item-photo {
-        width: 40px;
-        height: 40px;
-    }
     
     /* Hide some columns on very small screens */
     @media (max-width: 480px) {
