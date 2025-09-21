@@ -3741,6 +3741,13 @@ body {
     .mobile-customer-card {
         background: linear-gradient(135deg, #F0F8FF 0%, #E6F3FF 100%);
         border-left: 4px solid #4A90A4;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .mobile-customer-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(74, 144, 164, 0.2);
     }
     
     .mobile-customer-header {
@@ -3748,12 +3755,26 @@ body {
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
+        padding: 0.5rem 0;
     }
     
     .mobile-customer-name {
         font-size: 1.2rem;
         font-weight: 600;
         color: #2C5F7C;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .mobile-customer-toggle {
+        font-size: 1rem;
+        color: #4A90A4;
+        transition: transform 0.3s ease;
+    }
+    
+    .mobile-customer-toggle.expanded {
+        transform: rotate(90deg);
     }
     
     .mobile-customer-stats {
@@ -3781,6 +3802,30 @@ body {
         color: #666;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }
+    
+    /* Mobile customer project cards container */
+    .mobile-customer-projects {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(74, 144, 164, 0.2);
+    }
+    
+    .mobile-customer-projects.expanded {
+        display: block;
+    }
+    
+    /* Individual project cards within customer groups */
+    .mobile-project-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(74, 144, 164, 0.2);
+        border-left: 3px solid #4A90A4;
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-project-card:last-child {
+        margin-bottom: 0;
     }
 }
 

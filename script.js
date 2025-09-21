@@ -1616,8 +1616,11 @@ function loadMobileInventoryCards() {
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
         customerHeaderCard.innerHTML = `
-            <div class="mobile-customer-header">
-                <h3 class="mobile-customer-name">${customer}</h3>
+            <div class="mobile-customer-header" onclick="toggleMobileCustomerGroup('${customer.replace(/'/g, "\\'")}')">
+                <h3 class="mobile-customer-name">
+                    <i class="fas fa-chevron-right mobile-customer-toggle" id="toggle-${customer.replace(/\s+/g, '-').toLowerCase()}"></i>
+                    ${customer}
+                </h3>
                 <span class="mobile-card-status status-customer">${totalProjects} Projects</span>
             </div>
             <div class="mobile-customer-stats">
@@ -1634,13 +1637,19 @@ function loadMobileInventoryCards() {
                     <div class="mobile-stat-label">Pending</div>
                 </div>
             </div>
+            <div class="mobile-customer-projects" id="mobile-projects-${customer.replace(/\s+/g, '-').toLowerCase()}">
+                <!-- Individual project cards will be added here -->
+            </div>
         `;
         container.appendChild(customerHeaderCard);
         
-        // Add individual item cards
+        // Create projects container
+        const projectsContainer = customerHeaderCard.querySelector('.mobile-customer-projects');
+        
+        // Add individual item cards to the projects container
         customerItems.forEach(({ item, index }) => {
             const card = document.createElement('div');
-            card.className = 'mobile-card';
+            card.className = 'mobile-card mobile-project-card';
             
             // Format due date
             let dueDate = 'No due date';
@@ -1705,9 +1714,40 @@ function loadMobileInventoryCards() {
                 </div>
             `;
             
-            container.appendChild(card);
+            projectsContainer.appendChild(card);
         });
     });
+}
+
+// Mobile-only function for toggling customer groups
+function toggleMobileCustomerGroup(customer) {
+    const projectsId = `mobile-projects-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+    const toggleId = `toggle-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+    
+    const projectsContainer = document.getElementById(projectsId);
+    const toggleIcon = document.getElementById(toggleId);
+    
+    if (projectsContainer && toggleIcon) {
+        const isExpanded = projectsContainer.classList.contains('expanded');
+        
+        if (isExpanded) {
+            // Collapse
+            projectsContainer.classList.remove('expanded');
+            toggleIcon.classList.remove('expanded');
+        } else {
+            // Expand - collapse all other groups first
+            document.querySelectorAll('.mobile-customer-projects.expanded').forEach(container => {
+                container.classList.remove('expanded');
+            });
+            document.querySelectorAll('.mobile-customer-toggle.expanded').forEach(icon => {
+                icon.classList.remove('expanded');
+            });
+            
+            // Expand this group
+            projectsContainer.classList.add('expanded');
+            toggleIcon.classList.add('expanded');
+        }
+    }
 }
 
 function toggleCustomerGroup(customer) {
