@@ -1719,6 +1719,237 @@ function loadMobileInventoryCards() {
     });
 }
 
+// Mobile card layouts for other tabs
+function loadMobileWIPCards() {
+    const container = document.getElementById('mobileWIPCards');
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    const wipItems = inventory.filter(item => 
+        item.status === 'in-progress' || 
+        item.status === 'work-in-progress' || 
+        item.status === 'pending'
+    );
+
+    if (wipItems.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-tools"></i>
+                <h3>No Work in Progress</h3>
+                <p>All caught up! No items currently in progress.</p>
+            </div>
+        `;
+        return;
+    }
+
+    wipItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'wip-item';
+        
+        const originalIndex = inventory.findIndex(invItem => invItem === item);
+        
+        // Format due date
+        let dueDate = 'No due date';
+        if (item.dueDate) {
+            const dueDateObj = new Date(item.dueDate);
+            const today = new Date();
+            const diffTime = dueDateObj - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            dueDate = dueDateObj.toLocaleDateString();
+            
+            if (diffDays < 0) {
+                dueDate += ' (Overdue)';
+            } else if (diffDays <= 3) {
+                dueDate += ` (${diffDays} day${diffDays !== 1 ? 's' : ''} left)`;
+            }
+        }
+
+        card.innerHTML = `
+            <div class="wip-item-header">
+                <h4 class="wip-item-title">${item.name}</h4>
+                <span class="wip-item-status status-${item.status}">${item.status}</span>
+            </div>
+            <div class="wip-item-details">
+                <div><strong>Customer:</strong> ${item.customer || 'No Customer'}</div>
+                <div><strong>Category:</strong> ${item.category || 'No Category'}</div>
+                <div><strong>Due Date:</strong> ${dueDate}</div>
+                <div><strong>Priority:</strong> ${item.priority || 'Medium'}</div>
+            </div>
+            <div class="wip-item-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editProject(${originalIndex})" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-success btn-sm" onclick="markAsCompleted(${originalIndex})" title="Mark Complete">
+                    <i class="fas fa-check"></i> Complete
+                </button>
+                <button class="btn btn-info btn-sm" onclick="copyItem(${originalIndex})" title="Copy">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+function loadMobileGalleryCards() {
+    const container = document.getElementById('mobileGalleryCards');
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    const galleryItems = gallery || [];
+
+    if (galleryItems.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-images"></i>
+                <h3>No Gallery Items</h3>
+                <p>Start building your gallery by adding photos of completed projects.</p>
+            </div>
+        `;
+        return;
+    }
+
+    galleryItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'gallery-item';
+        
+        const imageDisplay = item.photo ? 
+            `<img src="${item.photo}" alt="${item.name}" class="gallery-item-image">` :
+            `<div class="gallery-item-image" style="display: flex; align-items: center; justify-content: center; color: #999;">
+                <i class="fas fa-image" style="font-size: 2rem;"></i>
+            </div>`;
+
+        card.innerHTML = `
+            ${imageDisplay}
+            <div class="gallery-item-content">
+                <h4 class="gallery-item-title">${item.name}</h4>
+                <div class="gallery-item-category">${item.category || 'No Category'}</div>
+                <div class="gallery-item-actions">
+                    <button class="btn btn-info btn-sm" onclick="viewGalleryItem(${index})" title="View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="editGalleryItem(${index})" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteGalleryItem(${index})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+function loadMobileIdeasCards() {
+    const container = document.getElementById('mobileIdeasCards');
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    const ideasItems = ideas || [];
+
+    if (ideasItems.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-lightbulb"></i>
+                <h3>No Ideas Yet</h3>
+                <p>Start capturing your creative ideas and inspiration.</p>
+            </div>
+        `;
+        return;
+    }
+
+    ideasItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'idea-card';
+        
+        const description = item.description || 'No description available';
+        const truncatedDescription = description.length > 100 ? description.substring(0, 100) + '...' : description;
+
+        card.innerHTML = `
+            <div class="idea-card-header">
+                <h4 class="idea-card-title">${item.title}</h4>
+                <span class="idea-card-status status-${item.status}">${item.status}</span>
+            </div>
+            <div class="idea-card-description">${truncatedDescription}</div>
+            <div class="idea-card-actions">
+                <button class="btn btn-info btn-sm" onclick="viewIdea(${index})" title="View">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="editIdea(${index})" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-success btn-sm" onclick="convertIdeaToProject(${index})" title="Convert to Project">
+                    <i class="fas fa-plus"></i> Convert
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+function loadMobileCustomerCards() {
+    const container = document.getElementById('mobileCustomerCards');
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    const customerItems = customers || [];
+
+    if (customerItems.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <h3>No Customers Yet</h3>
+                <p>Start building your customer base by adding new customers.</p>
+            </div>
+        `;
+        return;
+    }
+
+    customerItems.forEach((customer, index) => {
+        const card = document.createElement('div');
+        card.className = 'customer-card';
+        
+        // Calculate customer stats
+        const customerProjects = inventory.filter(item => item.customer === customer.name);
+        const totalSpent = customerProjects.reduce((sum, project) => sum + (parseFloat(project.price) || 0), 0);
+
+        card.innerHTML = `
+            <div class="customer-card-header">
+                <h4 class="customer-card-name">${customer.name}</h4>
+                <span class="customer-card-location">${customer.location || 'No Location'}</span>
+            </div>
+            <div class="customer-card-details">
+                <div><strong>Contact:</strong> ${customer.contact || 'No Contact'}</div>
+                <div><strong>Projects:</strong> ${customerProjects.length}</div>
+                <div><strong>Total Spent:</strong> $${totalSpent.toFixed(2)}</div>
+                <div><strong>Status:</strong> ${customer.status || 'Active'}</div>
+            </div>
+            <div class="customer-card-actions">
+                <button class="btn btn-info btn-sm" onclick="viewCustomerProjects('${customer.name}')" title="View Projects">
+                    <i class="fas fa-eye"></i> Projects
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="editCustomer(${index})" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="createProjectForCustomer('${customer.name}')" title="New Project">
+                    <i class="fas fa-plus"></i> Project
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
 // Mobile-only function for toggling customer groups
 function toggleMobileCustomerGroup(customer) {
     const projectsId = `mobile-projects-${customer.replace(/\s+/g, '-').toLowerCase()}`;
