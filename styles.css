@@ -3763,6 +3763,11 @@ body {
         display: none !important;
     }
     
+    /* Hide Inspiration & Ideas header on mobile */
+    #ideas .section-header h2 {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
