@@ -8876,8 +8876,9 @@ function handleAddIdea(event) {
         console.log('🎯 Total ideas count:', ideas.length); // Debug log
     }
     
-    // Handle image upload
-    if (imageFile) {
+    // Handle image upload - mobile-friendly
+    if (imageFile && imageFile.size > 0) {
+        console.log('🎯 Processing image file:', imageFile.name, imageFile.size); // Debug log
         const reader = new FileReader();
         reader.onload = function(e) {
             if (isEditing) {
@@ -8885,6 +8886,14 @@ function handleAddIdea(event) {
             } else {
                 ideas[ideas.length - 1].imageUrl = e.target.result;
             }
+            console.log('🎯 Image processed, saving data...'); // Debug log
+            saveData();
+            loadIdeasGrid();
+            closeModal('addIdeaModal');
+            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+        };
+        reader.onerror = function() {
+            console.log('🎯 Image processing failed, saving without image...'); // Debug log
             saveData();
             loadIdeasGrid();
             closeModal('addIdeaModal');
@@ -8892,7 +8901,8 @@ function handleAddIdea(event) {
         };
         reader.readAsDataURL(imageFile);
     } else {
-        console.log('🎯 Saving data without image...'); // Debug log
+        console.log('🎯 No image file or empty file, saving data directly...'); // Debug log
+        console.log('🎯 Image file detected:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null'); // Debug log
         saveData();
         console.log('🎯 Data saved, loading ideas grid...'); // Debug log
         loadIdeasGrid();
