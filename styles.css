@@ -3764,6 +3764,12 @@ body {
         display: none !important;
     }
     
+    /* Hide print and export buttons on mobile */
+    .customer-actions .btn-info,
+    .customer-actions .btn-success {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
