@@ -5246,7 +5246,7 @@ function loadMobileInventoryCards() {
         const safeCustomerId = customer ? customer.replace(/\s+/g, '-').replace(/['"]/g, '').toLowerCase() : 'no-customer';
         
         customerHeaderCard.innerHTML = `
-            <div class="mobile-customer-header" data-customer="${safeCustomerName}">
+            <div class="mobile-customer-header" data-customer="${customer}">
                 <h3 class="mobile-customer-name">
                     <i class="fas fa-chevron-right mobile-customer-toggle" id="toggle-${safeCustomerId}"></i>
                     ${customer || 'No Customer'}
