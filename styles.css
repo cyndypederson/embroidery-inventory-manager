@@ -435,7 +435,7 @@ tbody tr {
     align-items: center;
 }
 
-/* Ensure desktop filters maintain proper layout */
+/* Ensure desktop filters maintain proper layout - FORCE REFRESH */
 @media (min-width: 769px) {
     .filters {
         display: flex !important;
