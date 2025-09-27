@@ -74,31 +74,86 @@
                 <button class="nav-btn" data-tab="reports">
                     <i class="fas fa-file-alt"></i> Reports
                 </button>
+                <button class="nav-btn" data-tab="data">
+                    <i class="fas fa-database"></i> Data Management
+                </button>
             </nav>
         </header>
 
         <main>
             <!-- Projects Tab -->
             <div id="projects" class="tab-content active">
-                <div class="filters">
-                    <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="filterItems()">
-                    <select id="statusFilter" onchange="filterItems()">
-                        <option value="">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                    </select>
-                    <select id="customerFilter" onchange="filterItems()">
-                        <option value="">All Customers</option>
-                    </select>
-                    <select id="locationFilter" onchange="filterItems()">
-                        <option value="">All Locations</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="openAddItemModal()">
-                        <i class="fas fa-plus"></i> Add New Project
+                <!-- Mobile Filter Toggle Button -->
+                <div class="mobile-filter-toggle">
+                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('projects')">
+                        <i class="fas fa-filter"></i> Filters
                     </button>
+                </div>
+                
+                <div class="filters">
+                    <!-- Mobile Filter Chips -->
+                    <div class="mobile-filter-chips mobile-only">
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'pending')">Pending</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'in-progress')">In Progress</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'completed')">Completed</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'sold')">Sold</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'priority', 'high')">High Priority</button>
+                        <button class="mobile-filter-chip" onclick="clearMobileFilters('projects')">Clear All</button>
+                    </div>
+                    
+                    <div class="search-container">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="debouncedFilterItems()">
+                            <div class="search-suggestions" id="searchSuggestions"></div>
+                        </div>
+                        <button class="btn btn-outline" onclick="openAdvancedSearch('projects')" title="Advanced Search">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="btn btn-outline" onclick="saveCurrentSearch('projects')" title="Save Search">
+                            <i class="fas fa-bookmark"></i>
+                        </button>
+                        <button class="btn btn-outline" onclick="loadSavedSearches('projects')" title="Load Saved Searches">
+                            <i class="fas fa-history"></i>
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <select id="statusFilter" onchange="filterItems()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="work-in-progress">Work in Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="sold">Sold</option>
+                        </select>
+                        <select id="customerFilter" onchange="filterItems()">
+                            <option value="">All Customers</option>
+                        </select>
+                        <select id="locationFilter" onchange="filterItems()">
+                            <option value="">All Locations</option>
+                        </select>
+                        <select id="priorityFilter" onchange="filterItems()">
+                            <option value="">All Priority</option>
+                            <option value="high">High Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="low">Low Priority</option>
+                        </select>
+                        <select id="dateRangeFilter" onchange="filterItems()">
+                            <option value="">All Dates</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                        </select>
+                        <button class="btn btn-outline" onclick="clearAllFilters('projects')" title="Clear All Filters">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" onclick="openAddItemModal()">
+                            <i class="fas fa-plus"></i> Add New Project
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-container">
@@ -120,6 +175,34 @@
                     </table>
                 </div>
                 
+                <!-- Pagination Controls -->
+                <div class="pagination-container" id="projectsPagination">
+                    <div class="pagination-info">
+                        <span id="projectsPaginationInfo">Showing 1-50 of 0 items</span>
+                        <select id="projectsPageSize" onchange="changePageSize('projects', this.value)">
+                            <option value="25">25 per page</option>
+                            <option value="50" selected>50 per page</option>
+                            <option value="100">100 per page</option>
+                            <option value="200">200 per page</option>
+                        </select>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline" id="projectsFirstPage" onclick="goToPage('projects', 1)" disabled>
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button class="btn btn-outline" id="projectsPrevPage" onclick="goToPage('projects', currentPage - 1)" disabled>
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        <span class="pagination-numbers" id="projectsPageNumbers"></span>
+                        <button class="btn btn-outline" id="projectsNextPage" onclick="goToPage('projects', currentPage + 1)" disabled>
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button class="btn btn-outline" id="projectsLastPage" onclick="goToPage('projects', totalPages)" disabled>
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Mobile Cards Container (hidden on desktop) -->
                 <div class="mobile-cards-container">
                     <div class="mobile-cards-grid" id="mobileInventoryCards">
@@ -130,7 +213,24 @@
 
             <!-- Inventory Tab -->
             <div id="inventory" class="tab-content">
+                <!-- Mobile Filter Toggle Button -->
+                <div class="mobile-filter-toggle">
+                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('inventory')">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
+                </div>
+                
                 <div class="filters">
+                    <!-- Mobile Filter Chips -->
+                    <div class="mobile-filter-chips mobile-only">
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'status', 'available')">Available</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'status', 'low-stock')">Low Stock</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'status', 'out-of-stock')">Out of Stock</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'category', 'kits')">Kits</button>
+                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'category', 'hoops')">Hoops</button>
+                        <button class="mobile-filter-chip" onclick="clearMobileFilters('inventory')">Clear All</button>
+                    </div>
+                    
                     <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
                     <select id="inventoryStatusFilter" onchange="filterInventory()">
                         <option value="">All Status</option>
@@ -168,6 +268,34 @@
                         <tbody id="inventoryItemsTableBody">
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Pagination Controls -->
+                <div class="pagination-container" id="inventoryPagination">
+                    <div class="pagination-info">
+                        <span id="inventoryPaginationInfo">Showing 1-50 of 0 items</span>
+                        <select id="inventoryPageSize" onchange="changePageSize('inventory', this.value)">
+                            <option value="25">25 per page</option>
+                            <option value="50" selected>50 per page</option>
+                            <option value="100">100 per page</option>
+                            <option value="200">200 per page</option>
+                        </select>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline" id="inventoryFirstPage" onclick="goToPage('inventory', 1)" disabled>
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button class="btn btn-outline" id="inventoryPrevPage" onclick="goToPage('inventory', currentPage - 1)" disabled>
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        <span class="pagination-numbers" id="inventoryPageNumbers"></span>
+                        <button class="btn btn-outline" id="inventoryNextPage" onclick="goToPage('inventory', currentPage + 1)" disabled>
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button class="btn btn-outline" id="inventoryLastPage" onclick="goToPage('inventory', totalPages)" disabled>
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Mobile Cards Container for Inventory Items -->
@@ -227,6 +355,13 @@
                             <i class="fas fa-check-double"></i> Mark All Complete
                         </button>
                     </div>
+                </div>
+                
+                <!-- Mobile Filter Toggle Button -->
+                <div class="mobile-filter-toggle">
+                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('wip')">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
                 </div>
 
                 <div class="wip-stats">
@@ -361,6 +496,13 @@
                             <i class="fas fa-download"></i> Export Ideas
                         </button>
                     </div>
+                </div>
+                
+                <!-- Mobile Filter Toggle Button -->
+                <div class="mobile-filter-toggle">
+                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('ideas')">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
                 </div>
 
                 <div class="ideas-filters">
@@ -497,6 +639,106 @@
                         <i class="fas fa-chart-line"></i>
                         <h3>Welcome to Reports & Analytics</h3>
                         <p>Select a quick report above or use the filters to generate custom reports. View your business insights and track your embroidery business performance.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Management Tab -->
+            <div id="data" class="tab-content">
+                <div class="section-header">
+                    <h2>Data Management & Backup</h2>
+                    <div class="data-actions">
+                        <button class="btn btn-primary" onclick="dataManager.createBackup('manual')">
+                            <i class="fas fa-save"></i> Create Backup
+                        </button>
+                        <button class="btn btn-info" onclick="dataManager.exportAllData()">
+                            <i class="fas fa-download"></i> Export All Data
+                        </button>
+                        <button class="btn btn-warning" onclick="openImportModal()">
+                            <i class="fas fa-upload"></i> Import Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Statistics -->
+                <div class="data-stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalDataItems">0</div>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="dataSize">0 KB</div>
+                        <div class="stat-label">Data Size</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="lastBackup">Never</div>
+                        <div class="stat-label">Last Backup</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="backupCount">0</div>
+                        <div class="stat-label">Backups</div>
+                    </div>
+                </div>
+
+                <!-- Backup Management -->
+                <div class="data-section">
+                    <h3><i class="fas fa-database"></i> Backup Management</h3>
+                    <div class="backup-controls">
+                        <div class="backup-settings">
+                            <label>
+                                <input type="checkbox" id="autoBackupEnabled" checked onchange="toggleAutoBackup()">
+                                Enable Auto-Backup
+                            </label>
+                            <select id="backupFrequency" onchange="changeBackupFrequency()">
+                                <option value="1">Every Hour</option>
+                                <option value="6">Every 6 Hours</option>
+                                <option value="12">Every 12 Hours</option>
+                                <option value="24" selected>Every 24 Hours</option>
+                                <option value="168">Every Week</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline" onclick="runDataIntegrityCheck()">
+                            <i class="fas fa-check-circle"></i> Check Data Integrity
+                        </button>
+                    </div>
+                    
+                    <div class="backup-list">
+                        <h4>Recent Backups</h4>
+                        <div id="backupList" class="backup-items">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="data-section">
+                    <h3><i class="fas fa-download"></i> Export Options</h3>
+                    <div class="export-options">
+                        <button class="btn btn-outline" onclick="exportInventoryCSV()">
+                            <i class="fas fa-file-csv"></i> Export Inventory (CSV)
+                        </button>
+                        <button class="btn btn-outline" onclick="exportCustomersCSV()">
+                            <i class="fas fa-file-csv"></i> Export Customers (CSV)
+                        </button>
+                        <button class="btn btn-outline" onclick="exportSalesCSV()">
+                            <i class="fas fa-file-csv"></i> Export Sales (CSV)
+                        </button>
+                        <button class="btn btn-outline" onclick="exportAllJSON()">
+                            <i class="fas fa-file-code"></i> Export All (JSON)
+                        </button>
+                        <button class="btn btn-outline" onclick="exportReportPDF()">
+                            <i class="fas fa-file-pdf"></i> Export Report (PDF)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data History -->
+                <div class="data-section">
+                    <h3><i class="fas fa-history"></i> Change History</h3>
+                    <div class="change-history">
+                        <div id="changeHistoryList" class="history-items">
+                            <!-- Populated dynamically -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1374,6 +1616,100 @@
             <div class="confirm-actions">
                 <button class="btn btn-secondary" onclick="cancelConfirm()">Cancel</button>
                 <button class="btn btn-danger" onclick="confirmAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Search Modal -->
+    <div id="advancedSearchModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('advancedSearchModal')">&times;</span>
+            <h3><i class="fas fa-search-plus"></i> Advanced Search</h3>
+            <form id="advancedSearchForm" class="modal-form">
+                <div class="search-criteria">
+                    <div class="form-group full-width">
+                        <label for="advancedSearchText">Search Text</label>
+                        <input type="text" id="advancedSearchText" placeholder="Enter search terms...">
+                        <small>Search in description, notes, customer name, and tags</small>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedStatus">Status</label>
+                        <select id="advancedStatus" multiple>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="work-in-progress">Work in Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="sold">Sold</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedPriority">Priority</label>
+                        <select id="advancedPriority" multiple>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedCustomer">Customer</label>
+                        <select id="advancedCustomer" multiple>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedLocation">Location</label>
+                        <select id="advancedLocation" multiple>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedDateFrom">Date From</label>
+                        <input type="date" id="advancedDateFrom">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedDateTo">Date To</label>
+                        <input type="date" id="advancedDateTo">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedPriceMin">Min Price</label>
+                        <input type="number" id="advancedPriceMin" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="advancedPriceMax">Max Price</label>
+                        <input type="number" id="advancedPriceMax" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="advancedTags">Tags (comma-separated)</label>
+                        <input type="text" id="advancedTags" placeholder="wedding, baby, holiday">
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('advancedSearchModal')">Cancel</button>
+                    <button type="button" class="btn btn-outline" onclick="clearAdvancedSearch()">Clear</button>
+                    <button type="button" class="btn btn-info" onclick="saveAdvancedSearch()">Save Search</button>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Saved Searches Modal -->
+    <div id="savedSearchesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('savedSearchesModal')">&times;</span>
+            <h3><i class="fas fa-history"></i> Saved Searches</h3>
+            <div id="savedSearchesList" class="saved-searches-list">
+                <!-- Populated dynamically -->
             </div>
         </div>
     </div>

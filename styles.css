@@ -3098,6 +3098,38 @@ td:nth-child(4) {
     display: none; /* Hidden on desktop by default */
 }
 
+/* Mobile Filter Toggle Button */
+.mobile-filter-toggle {
+    display: none; /* Hidden on desktop */
+    padding: 1rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.mobile-filter-toggle .btn {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    border-radius: 8px;
+    background: white;
+    border: 2px solid #2C5F7C;
+    color: #2C5F7C;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.mobile-filter-toggle .btn:hover {
+    background: #2C5F7C;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(44, 95, 124, 0.3);
+}
+
+.mobile-filter-toggle .btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(44, 95, 124, 0.3);
+}
+
 .photo-input-container .btn-secondary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: 2px solid #667eea;
@@ -3594,20 +3626,93 @@ body {
         width: 100%;
     }
     
-    /* Mobile filters */
+    /* Show mobile filter toggle */
+    .mobile-filter-toggle {
+        display: block;
+    }
+    
+    /* Hide desktop filters on mobile by default */
     .filters {
+        display: none;
         flex-direction: column;
         gap: 10px;
         padding: 15px;
         background: #f8f9fa;
         border-radius: 8px;
         margin-bottom: 15px;
+        /* Mobile filter panel styles */
+        position: relative;
+        z-index: 100;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    /* Show filters when mobile filter is active */
+    .filters.mobile-active {
+        display: flex;
+        animation: slideDown 0.3s ease-out;
     }
     
     .filters input,
     .filters select {
         width: 100%;
         margin: 0;
+        padding: 12px;
+        font-size: 16px; /* Prevent zoom on iOS */
+        border-radius: 6px;
+        border: 2px solid #e9ecef;
+        background: white;
+    }
+    
+    .filters input:focus,
+    .filters select:focus {
+        border-color: #2C5F7C;
+        box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+        outline: none;
+    }
+    
+    /* Mobile filter chips for quick selection */
+    .mobile-filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .mobile-filter-chip {
+        background: #e9ecef;
+        color: #495057;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    
+    .mobile-filter-chip:hover {
+        background: #2C5F7C;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .mobile-filter-chip.active {
+        background: #2C5F7C;
+        color: white;
+        box-shadow: 0 2px 8px rgba(44, 95, 124, 0.3);
+    }
+    
+    /* Animation for mobile filter panel */
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 }
 
