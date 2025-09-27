@@ -3612,21 +3612,12 @@ body {
         width: 100%;
     }
     
-    /* Mobile filters - only affect mobile layout */
-    .filters {
-        flex-direction: column;
-        gap: 10px;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 15px;
-    }
-    
-    .filters input,
-    .filters select {
-        width: 100%;
-        margin: 0;
-        font-size: 16px; /* Prevent zoom on iOS */
+    /* Hide all filters on mobile - show only mobile cards */
+    .filters,
+    .wip-filters,
+    .ideas-filters,
+    .gallery-filters {
+        display: none !important;
     }
 }
 
