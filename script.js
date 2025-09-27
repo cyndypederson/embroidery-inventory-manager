@@ -8883,42 +8883,53 @@ function handleAddIdea(event) {
         console.log('🎯 Total ideas count:', ideas.length); // Debug log
     }
     
-    // Handle image upload - mobile-friendly with timeout fallback
+    // Handle image upload - mobile-friendly with photo library bypass
     if (imageFile && imageFile.size > 0 && imageFile.size < 10000000) { // Max 10MB
         console.log('🎯 Processing image file:', imageFile.name, imageFile.size); // Debug log
-        const reader = new FileReader();
         
-        // Add timeout to prevent hanging
-        const timeout = setTimeout(() => {
-            console.log('🎯 Image processing timeout, saving without image...'); // Debug log
+        // On mobile, skip FileReader for photo library images to prevent hanging
+        if (window.innerWidth <= 768) {
+            console.log('🎯 Mobile detected - skipping image processing, saving idea without image...'); // Debug log
             saveData();
             loadIdeasGrid();
             closeModal('addIdeaModal');
             showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-        }, 5000); // 5 second timeout
-        
-        reader.onload = function(e) {
-            clearTimeout(timeout);
-            if (isEditing) {
-                ideas[ideas.findIndex(i => i.id === isEditing)].imageUrl = e.target.result;
-            } else {
-                ideas[ideas.length - 1].imageUrl = e.target.result;
-            }
-            console.log('🎯 Image processed, saving data...'); // Debug log
-            saveData();
-            loadIdeasGrid();
-            closeModal('addIdeaModal');
-            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-        };
-        reader.onerror = function() {
-            clearTimeout(timeout);
-            console.log('🎯 Image processing failed, saving without image...'); // Debug log
-            saveData();
-            loadIdeasGrid();
-            closeModal('addIdeaModal');
-            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-        };
-        reader.readAsDataURL(imageFile);
+        } else {
+            // Desktop: use FileReader
+            const reader = new FileReader();
+            
+            // Add timeout to prevent hanging
+            const timeout = setTimeout(() => {
+                console.log('🎯 Image processing timeout, saving without image...'); // Debug log
+                saveData();
+                loadIdeasGrid();
+                closeModal('addIdeaModal');
+                showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+            }, 5000); // 5 second timeout
+            
+            reader.onload = function(e) {
+                clearTimeout(timeout);
+                if (isEditing) {
+                    ideas[ideas.findIndex(i => i.id === isEditing)].imageUrl = e.target.result;
+                } else {
+                    ideas[ideas.length - 1].imageUrl = e.target.result;
+                }
+                console.log('🎯 Image processed, saving data...'); // Debug log
+                saveData();
+                loadIdeasGrid();
+                closeModal('addIdeaModal');
+                showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+            };
+            reader.onerror = function() {
+                clearTimeout(timeout);
+                console.log('🎯 Image processing failed, saving without image...'); // Debug log
+                saveData();
+                loadIdeasGrid();
+                closeModal('addIdeaModal');
+                showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+            };
+            reader.readAsDataURL(imageFile);
+        }
     } else {
         console.log('🎯 No image file, empty file, or file too large - saving data directly...'); // Debug log
         console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null'); // Debug log
