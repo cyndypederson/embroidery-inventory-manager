@@ -83,24 +83,7 @@
         <main>
             <!-- Projects Tab -->
             <div id="projects" class="tab-content active">
-                <!-- Mobile Filter Toggle Button -->
-                <div class="mobile-filter-toggle">
-                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('projects')">
-                        <i class="fas fa-filter"></i> Filters
-                    </button>
-                </div>
-                
                 <div class="filters">
-                    <!-- Mobile Filter Chips -->
-                    <div class="mobile-filter-chips mobile-only">
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'pending')">Pending</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'in-progress')">In Progress</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'completed')">Completed</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'status', 'sold')">Sold</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('projects', 'priority', 'high')">High Priority</button>
-                        <button class="mobile-filter-chip" onclick="clearMobileFilters('projects')">Clear All</button>
-                    </div>
-                    
                     <div class="search-container">
                         <div class="search-input-wrapper">
                             <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="debouncedFilterItems()">
@@ -213,24 +196,7 @@
 
             <!-- Inventory Tab -->
             <div id="inventory" class="tab-content">
-                <!-- Mobile Filter Toggle Button -->
-                <div class="mobile-filter-toggle">
-                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('inventory')">
-                        <i class="fas fa-filter"></i> Filters
-                    </button>
-                </div>
-                
                 <div class="filters">
-                    <!-- Mobile Filter Chips -->
-                    <div class="mobile-filter-chips mobile-only">
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'status', 'available')">Available</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'status', 'low-stock')">Low Stock</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'status', 'out-of-stock')">Out of Stock</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'category', 'kits')">Kits</button>
-                        <button class="mobile-filter-chip" onclick="applyMobileFilter('inventory', 'category', 'hoops')">Hoops</button>
-                        <button class="mobile-filter-chip" onclick="clearMobileFilters('inventory')">Clear All</button>
-                    </div>
-                    
                     <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
                     <select id="inventoryStatusFilter" onchange="filterInventory()">
                         <option value="">All Status</option>
@@ -355,13 +321,6 @@
                             <i class="fas fa-check-double"></i> Mark All Complete
                         </button>
                     </div>
-                </div>
-                
-                <!-- Mobile Filter Toggle Button -->
-                <div class="mobile-filter-toggle">
-                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('wip')">
-                        <i class="fas fa-filter"></i> Filters
-                    </button>
                 </div>
 
                 <div class="wip-stats">
@@ -496,13 +455,6 @@
                             <i class="fas fa-download"></i> Export Ideas
                         </button>
                     </div>
-                </div>
-                
-                <!-- Mobile Filter Toggle Button -->
-                <div class="mobile-filter-toggle">
-                    <button class="btn btn-outline mobile-only" onclick="toggleMobileFilters('ideas')">
-                        <i class="fas fa-filter"></i> Filters
-                    </button>
                 </div>
 
                 <div class="ideas-filters">
