@@ -8828,6 +8828,7 @@ function openAddIdeaModal() {
 
 function handleAddIdea(event) {
     event.preventDefault();
+    console.log('🎯 handleAddIdea called'); // Debug log
     
     const title = document.getElementById('ideaTitle').value.trim();
     const description = document.getElementById('ideaDescription').value.trim();
@@ -8845,6 +8846,8 @@ function handleAddIdea(event) {
         showNotification('Please enter an idea title', 'error');
         return;
     }
+    
+    console.log('🎯 Creating idea data:', { title, description, category }); // Debug log
     
     const ideaData = {
         title: title,
@@ -8869,6 +8872,8 @@ function handleAddIdea(event) {
         ideaData.id = generateIdeaId();
         ideaData.dateAdded = new Date().toISOString();
         ideas.push(ideaData);
+        console.log('🎯 Added new idea to ideas array:', ideaData); // Debug log
+        console.log('🎯 Total ideas count:', ideas.length); // Debug log
     }
     
     // Handle image upload
@@ -8887,7 +8892,9 @@ function handleAddIdea(event) {
         };
         reader.readAsDataURL(imageFile);
     } else {
+        console.log('🎯 Saving data without image...'); // Debug log
         saveData();
+        console.log('🎯 Data saved, loading ideas grid...'); // Debug log
         loadIdeasGrid();
         closeModal('addIdeaModal');
         showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
