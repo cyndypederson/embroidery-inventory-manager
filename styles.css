@@ -3773,6 +3773,12 @@ body {
         display: none !important;
     }
     
+    /* Hide Work In Progress header and Mark All Complete button on mobile */
+    #wip .section-header h2,
+    #wip .wip-actions {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
