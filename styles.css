@@ -3783,10 +3783,15 @@ body {
         display: none !important;
     }
     
-    /* Ensure action buttons are visible on mobile */
+    /* Ensure action buttons are visible and centered on mobile */
     .projects-actions,
-    .inventory-actions {
+    .inventory-actions,
+    .customer-actions,
+    .ideas-actions,
+    .gallery .section-header {
         display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
     
     /* Standardize all Add buttons on mobile */
