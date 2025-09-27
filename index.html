@@ -869,7 +869,7 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="itemNotes">Notes</label>
-                    <input type="text" id="itemNotes" placeholder="Color, size, special instructions, etc.">
+                    <input type="text" id="itemNotes" placeholder="Color, size, special instructions, etc." maxlength="500">
                 </div>
                 <div class="form-group full-width">
                     <label for="itemPhoto">Photo</label>
@@ -974,15 +974,15 @@
             <form id="editCustomerForm" class="modal-form" novalidate>
                 <div class="form-group half-width">
                     <label for="editCustomerName">Customer Name *</label>
-                    <input type="text" id="editCustomerName" required>
+                    <input type="text" id="editCustomerName" required maxlength="100">
                 </div>
                 <div class="form-group half-width">
                     <label for="editCustomerLocation">Location</label>
-                    <input type="text" id="editCustomerLocation">
+                    <input type="text" id="editCustomerLocation" maxlength="100">
                 </div>
                 <div class="form-group full-width">
                     <label for="editCustomerContact">Contact Info</label>
-                    <input type="text" id="editCustomerContact" placeholder="Phone, email, etc.">
+                    <input type="text" id="editCustomerContact" placeholder="Phone, email, etc." maxlength="200">
                 </div>
                 <div class="form-group half-width">
                     <label for="editCustomerStatus">Status</label>
@@ -1035,11 +1035,11 @@
                 <div id="customSaleFields" style="display: none;">
                     <div class="form-group half-width">
                         <label for="customItemName">Item Name</label>
-                        <input type="text" id="customItemName" placeholder="Enter item name">
+                        <input type="text" id="customItemName" placeholder="Enter item name" maxlength="200">
                     </div>
                     <div class="form-group half-width">
                         <label for="customItemDescription">Description</label>
-                        <input type="text" id="customItemDescription" placeholder="Item description">
+                        <input type="text" id="customItemDescription" placeholder="Item description" maxlength="500">
                     </div>
                 </div>
                 
@@ -1068,7 +1068,7 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="saleCustomer">Customer/Location</label>
-                    <input type="text" id="saleCustomer" placeholder="Customer name or store location">
+                    <input type="text" id="saleCustomer" placeholder="Customer name or store location" maxlength="200">
                 </div>
                 <div class="form-group half-width">
                     <label for="saleCommission">Commission %</label>
@@ -1077,7 +1077,7 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="saleNotes">Notes</label>
-                    <input type="text" id="saleNotes" placeholder="Additional notes">
+                    <input type="text" id="saleNotes" placeholder="Additional notes" maxlength="500">
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addSaleModal')">Cancel</button>
