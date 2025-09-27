@@ -5267,7 +5267,7 @@ function loadMobileInventoryCards() {
                     <div class="mobile-stat-label">Pending</div>
                 </div>
             </div>
-            <div class="mobile-customer-projects" id="mobile-projects-${customer.replace(/\s+/g, '-').toLowerCase()}">
+            <div class="mobile-customer-projects" id="mobile-projects-${safeCustomerId}">
                 <!-- Individual project cards will be added here -->
             </div>
         `;
@@ -5301,6 +5301,7 @@ function loadMobileInventoryCards() {
                     // Only trigger toggle if it's a tap (small movement, short duration)
                     if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
                         const customerName = customerHeader.getAttribute('data-customer');
+                        console.log('Mobile toggle triggered for customer:', customerName); // Debug log
                         toggleMobileCustomerGroup(customerName);
                     }
                 }
