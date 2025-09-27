@@ -475,11 +475,18 @@ tbody tr {
         font-size: 1rem !important;
     }
     
-    .filters .btn {
-        margin-left: auto !important;
-        flex-shrink: 0 !important;
+        .filters .btn {
+            margin-left: auto !important;
+            flex-shrink: 0 !important;
+        }
     }
-}
+
+    /* Show desktop-only elements on desktop */
+    @media (min-width: 769px) {
+        .desktop-only {
+            display: inline-block !important;
+        }
+    }
 
 .filters input,
 .filters select {
@@ -3901,11 +3908,10 @@ body {
     }
     
     /* Hide OCR/Analyze buttons on mobile to prevent conflicts */
-    #analyzeIdeasBtn,
-    #analyzeInventoryBtn,
-    #analyzeGalleryBtn {
-        display: none !important;
-    }
+        /* Hide OCR analyze buttons on mobile */
+        .desktop-only {
+            display: none !important;
+        }
     
     /* Show mobile card containers */
     .mobile-cards-container {
