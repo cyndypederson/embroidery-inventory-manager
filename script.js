@@ -5245,6 +5245,10 @@ function loadMobileInventoryCards() {
         const safeCustomerName = customer ? customer.replace(/'/g, "\\'") : 'No Customer';
         const safeCustomerId = customer ? customer.replace(/\s+/g, '-').replace(/['"]/g, '').toLowerCase() : 'no-customer';
         
+        // Debug: log the original customer name
+        console.log('Original customer name:', customer);
+        console.log('Safe customer ID:', safeCustomerId);
+        
         customerHeaderCard.innerHTML = `
             <div class="mobile-customer-header" data-customer="${customer}">
                 <h3 class="mobile-customer-name">
@@ -5311,7 +5315,7 @@ function loadMobileInventoryCards() {
                         console.log('Mobile toggle triggered for customer:', customerName); // Debug log
                         console.log('Customer header element:', customerHeader); // Debug log
                         console.log('Data-customer attribute:', customerHeader.getAttribute('data-customer')); // Debug log
-                        alert('Touch detected for: ' + customerName); // Simple debug alert
+                        alert('Touch detected for: "' + customerName + '" (length: ' + customerName.length + ')'); // Simple debug alert
                         toggleMobileCustomerGroup(customerName);
                     } else {
                         console.log('Touch rejected - too much movement or too long'); // Debug log
