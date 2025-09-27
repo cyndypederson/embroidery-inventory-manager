@@ -3455,7 +3455,7 @@ function handleApiError(operation, error) {
 }
 
 // Authentication
-let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
+let ADMIN_PASSWORD = 'Kobedavis#1'; // Default password - change this to your desired password
 let isAuthenticated = false;
 
 // Check if running on localhost or local network
