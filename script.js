@@ -3458,11 +3458,15 @@ function handleApiError(operation, error) {
 let ADMIN_PASSWORD = 'embroidery2025'; // Default password - change this to your desired password
 let isAuthenticated = false;
 
-// Check if running on localhost
+// Check if running on localhost or local network
 function isLocalhost() {
-    return window.location.hostname === 'localhost' || 
-           window.location.hostname === '127.0.0.1' || 
-           window.location.hostname === '';
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || 
+           hostname === '127.0.0.1' || 
+           hostname === '' ||
+           hostname.startsWith('192.168.') || // Local network IPs
+           hostname.startsWith('10.') || // Private network IPs
+           hostname.startsWith('172.'); // Private network IPs
 }
 
 // Function to change password (you can call this from browser console)
