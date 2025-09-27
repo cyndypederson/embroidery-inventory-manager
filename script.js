@@ -5243,7 +5243,7 @@ function loadMobileInventoryCards() {
         
         // Safely escape customer name for HTML attributes
         const safeCustomerName = customer ? customer.replace(/'/g, "\\'") : 'No Customer';
-        const safeCustomerId = customer ? customer.replace(/\s+/g, '-').toLowerCase() : 'no-customer';
+        const safeCustomerId = customer ? customer.replace(/\s+/g, '-').replace(/['"]/g, '').toLowerCase() : 'no-customer';
         
         customerHeaderCard.innerHTML = `
             <div class="mobile-customer-header" data-customer="${safeCustomerName}">
@@ -5801,7 +5801,7 @@ function toggleMobileCustomerGroup(customer) {
         return;
     }
     
-    const safeCustomerId = customer.replace(/\s+/g, '-').toLowerCase();
+    const safeCustomerId = customer.replace(/\s+/g, '-').replace(/['"]/g, '').toLowerCase();
     const projectsId = `mobile-projects-${safeCustomerId}`;
     const toggleId = `toggle-${safeCustomerId}`;
     
