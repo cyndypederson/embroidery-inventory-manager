@@ -3858,6 +3858,26 @@ body {
         line-height: 1.2 !important;
     }
     
+    /* Specifically target Gallery Add Photo button to ensure exact match */
+    #gallery .section-header .btn-primary {
+        min-width: 140px !important;
+        max-width: 180px !important;
+        width: auto !important;
+        height: 48px !important;
+        padding: 14px 18px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
+        line-height: 1.2 !important;
+    }
+    
     /* Hide Data Management tab on mobile only */
     .nav-btn[data-tab="data"],
     #data.tab-content {
