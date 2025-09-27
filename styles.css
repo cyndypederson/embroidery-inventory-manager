@@ -3770,6 +3770,11 @@ body {
         display: none !important;
     }
     
+    /* Hide Customer Management header on mobile */
+    #customers .section-header h2 {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
