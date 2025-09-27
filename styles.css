@@ -3787,11 +3787,18 @@ body {
     .projects-actions,
     .inventory-actions,
     .customer-actions,
-    .ideas-actions,
-    .gallery .section-header {
+    .ideas-actions {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
+    }
+    
+    /* Special handling for Gallery tab - center the button in section-header */
+    #gallery .section-header {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 1rem !important;
     }
     
     /* Standardize all Add buttons on mobile */
