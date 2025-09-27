@@ -435,7 +435,7 @@ tbody tr {
     align-items: center;
 }
 
-/* Ensure desktop filters maintain proper layout - FORCE REFRESH v2.1 */
+/* CRITICAL FIX: Desktop filters MUST be horizontal - v2.1 */
 @media (min-width: 769px) {
     .filters {
         display: flex !important;
@@ -447,6 +447,22 @@ tbody tr {
         background: white !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
         margin-bottom: 1rem !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+    
+    /* Override ANY mobile styles that might be interfering */
+    .filters input,
+    .filters select {
+        width: auto !important;
+        max-width: 200px !important;
+        margin: 0 !important;
+        padding: 0.75rem !important;
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        font-size: 1rem !important;
+        display: inline-block !important;
+        vertical-align: middle !important;
     }
     
     .filters input,
