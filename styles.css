@@ -3796,6 +3796,9 @@ body {
     .ideas-actions .btn-primary,
     .gallery .btn-primary {
         min-width: 120px !important;
+        max-width: 150px !important;
+        width: auto !important;
+        height: 44px !important;
         padding: 12px 16px !important;
         font-size: 14px !important;
         font-weight: 600 !important;
@@ -3806,6 +3809,26 @@ body {
         justify-content: center !important;
         gap: 8px !important;
         white-space: nowrap !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Specifically target customer button to ensure exact match */
+    #customers .customer-actions .btn-primary {
+        min-width: 120px !important;
+        max-width: 150px !important;
+        width: auto !important;
+        height: 44px !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
     }
     
     /* Hide Data Management tab on mobile only */
