@@ -34,8 +34,7 @@
     <link rel="stylesheet" href="styles.css?v=2.1.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- OCR Library -->
-    <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <!-- OCR Library removed for mobile compatibility -->
 </head>
 <body>
     <div class="container">
@@ -878,11 +877,8 @@
                         <button type="button" class="btn btn-outline" onclick="openCameraForInventory()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary mobile-only" onclick="analyzePhotoForInventory()" title="Analyze Photo to Auto-Fill Fields" id="analyzeInventoryBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
                     </div>
-                    <small>Add a photo of your inventory item or project. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
+                    <small>Add a photo of your inventory item or project.</small>
                 </div>
                 <div class="form-group full-width" id="projectFields" style="display: none;">
                     <div class="form-group half-width">
@@ -1195,11 +1191,8 @@
                         <button type="button" class="btn btn-outline" onclick="openCameraForGallery()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary mobile-only" onclick="analyzePhotoForGallery()" title="Analyze Photo to Auto-Fill Fields" id="analyzeGalleryBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
                     </div>
-                    <small>Upload a photo or take one with your camera. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
+                    <small>Upload a photo or take one with your camera.</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="photoTitle">Photo Title *</label>
@@ -1277,11 +1270,8 @@
                         <button type="button" class="btn btn-outline" onclick="openCameraForIdeas()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary mobile-only" onclick="analyzePhotoForIdeas()" title="Analyze Photo to Auto-Fill Fields" id="analyzeIdeasBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
                     </div>
-                    <small>Upload a photo or take one with your camera. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
+                    <small>Upload a photo or take one with your camera.</small>
                 </div>
                 <div class="form-group full-width">
                     <label for="ideaWebLink">Web Link</label>
