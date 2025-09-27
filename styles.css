@@ -438,17 +438,30 @@ tbody tr {
 /* Ensure desktop filters maintain proper layout */
 @media (min-width: 769px) {
     .filters {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        align-items: center;
-        flex-direction: row;
+        display: flex !important;
+        gap: 1rem !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        flex-direction: row !important;
+        padding: 1rem 2rem !important;
+        background: white !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        margin-bottom: 1rem !important;
     }
     
     .filters input,
     .filters select {
-        width: auto;
-        margin: 0;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0.75rem !important;
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        font-size: 1rem !important;
+    }
+    
+    .filters .btn {
+        margin-left: auto !important;
+        flex-shrink: 0 !important;
     }
 }
 
