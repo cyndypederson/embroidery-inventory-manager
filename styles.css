@@ -435,6 +435,23 @@ tbody tr {
     align-items: center;
 }
 
+/* Ensure desktop filters maintain proper layout */
+@media (min-width: 769px) {
+    .filters {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+        flex-direction: row;
+    }
+    
+    .filters input,
+    .filters select {
+        width: auto;
+        margin: 0;
+    }
+}
+
 .filters input,
 .filters select {
     padding: 0.75rem;
@@ -3595,7 +3612,7 @@ body {
         width: 100%;
     }
     
-    /* Mobile filters */
+    /* Mobile filters - only affect mobile layout */
     .filters {
         flex-direction: column;
         gap: 10px;
@@ -3609,6 +3626,7 @@ body {
     .filters select {
         width: 100%;
         margin: 0;
+        font-size: 16px; /* Prevent zoom on iOS */
     }
 }
 
