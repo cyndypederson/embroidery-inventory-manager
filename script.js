@@ -6,6 +6,3440 @@ let gallery = [];
 let invoices = [];
 let ideas = [];
 
+// Performance optimization settings
+const PERFORMANCE_CONFIG = {
+    PAGINATION_SIZE: 50,
+    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+    LAZY_LOAD_THRESHOLD: 100,
+    VIRTUAL_SCROLL_THRESHOLD: 500
+};
+
+// Caching system
+const cache = new Map();
+const cacheTimestamps = new Map();
+
+// Pagination state
+let currentPage = 1;
+let totalPages = 1;
+let currentPageSize = PERFORMANCE_CONFIG.PAGINATION_SIZE;
+
+// Performance utilities
+class PerformanceManager {
+    static getCachedData(key) {
+        const timestamp = cacheTimestamps.get(key);
+        if (timestamp && Date.now() - timestamp < PERFORMANCE_CONFIG.CACHE_DURATION) {
+            return cache.get(key);
+        }
+        return null;
+    }
+    
+    static setCachedData(key, data) {
+        cache.set(key, data);
+        cacheTimestamps.set(key, Date.now());
+    }
+    
+    static clearCache() {
+        cache.clear();
+        cacheTimestamps.clear();
+    }
+    
+    static paginateData(data, page = 1, pageSize = PERFORMANCE_CONFIG.PAGINATION_SIZE) {
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedData = data.slice(startIndex, endIndex);
+        const totalPages = Math.ceil(data.length / pageSize);
+        
+        return {
+            data: paginatedData,
+            currentPage: page,
+            totalPages,
+            totalItems: data.length,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1
+        };
+    }
+    
+    static debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    static throttle(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+}
+
+// Pagination functions
+function goToPage(tab, page) {
+    if (page < 1 || page > totalPages) return;
+    
+    currentPage = page;
+    
+    // Update the appropriate table based on tab
+    switch(tab) {
+        case 'projects':
+            loadInventoryTable();
+            break;
+        case 'inventory':
+            loadInventoryItemsTable();
+            break;
+        case 'customers':
+            loadCustomersTable();
+            break;
+        case 'sales':
+            loadSalesTable();
+            break;
+    }
+    
+    updatePaginationControls(tab);
+}
+
+function changePageSize(tab, newSize) {
+    currentPageSize = parseInt(newSize);
+    currentPage = 1; // Reset to first page
+    
+    // Update the appropriate table
+    switch(tab) {
+        case 'projects':
+            loadInventoryTable();
+            break;
+        case 'inventory':
+            loadInventoryItemsTable();
+            break;
+        case 'customers':
+            loadCustomersTable();
+            break;
+        case 'sales':
+            loadSalesTable();
+            break;
+    }
+    
+    updatePaginationControls(tab);
+}
+
+function updatePaginationControls(tab) {
+    const paginationInfo = document.getElementById(`${tab}PaginationInfo`);
+    const firstBtn = document.getElementById(`${tab}FirstPage`);
+    const prevBtn = document.getElementById(`${tab}PrevPage`);
+    const nextBtn = document.getElementById(`${tab}NextPage`);
+    const lastBtn = document.getElementById(`${tab}LastPage`);
+    const pageNumbers = document.getElementById(`${tab}PageNumbers`);
+    
+    if (!paginationInfo) return;
+    
+    // Update pagination info
+    const startItem = (currentPage - 1) * currentPageSize + 1;
+    const endItem = Math.min(currentPage * currentPageSize, totalPages * currentPageSize);
+    paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalPages * currentPageSize} items`;
+    
+    // Update button states
+    if (firstBtn) firstBtn.disabled = currentPage === 1;
+    if (prevBtn) prevBtn.disabled = currentPage === 1;
+    if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+    if (lastBtn) lastBtn.disabled = currentPage === totalPages;
+    
+    // Update page numbers
+    if (pageNumbers) {
+        pageNumbers.innerHTML = '';
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `pagination-number ${i === currentPage ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => goToPage(tab, i);
+            pageNumbers.appendChild(pageBtn);
+        }
+    }
+}
+
+// Enhanced table loading with pagination
+function loadInventoryTableWithPagination() {
+    const cacheKey = 'inventory_table';
+    let data = PerformanceManager.getCachedData(cacheKey);
+    
+    if (!data) {
+        // Filter data based on current filters
+        data = inventory.filter(item => {
+            const searchTerm = document.getElementById('searchItems')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('statusFilter')?.value || '';
+            const customerFilter = document.getElementById('customerFilter')?.value || '';
+            const locationFilter = document.getElementById('locationFilter')?.value || '';
+            
+            return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
+                   (!statusFilter || item.status === statusFilter) &&
+                   (!customerFilter || item.customer === customerFilter) &&
+                   (!locationFilter || item.location === locationFilter);
+        });
+        
+        PerformanceManager.setCachedData(cacheKey, data);
+    }
+    
+    const pagination = PerformanceManager.paginateData(data, currentPage, currentPageSize);
+    totalPages = pagination.totalPages;
+    
+    const tbody = document.getElementById('inventoryTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (pagination.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No projects found</td></tr>';
+        updatePaginationControls('projects');
+        return;
+    }
+    
+    pagination.data.forEach((item, index) => {
+        const row = createInventoryRow(item, (currentPage - 1) * currentPageSize + index);
+        tbody.appendChild(row);
+    });
+    
+    updatePaginationControls('projects');
+}
+
+function loadInventoryItemsTableWithPagination() {
+    const cacheKey = 'inventory_items_table';
+    let data = PerformanceManager.getCachedData(cacheKey);
+    
+    if (!data) {
+        // Filter data based on current filters
+        data = inventory.filter(item => {
+            const searchTerm = document.getElementById('inventorySearch')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('inventoryStatusFilter')?.value || '';
+            const categoryFilter = document.getElementById('inventoryCategoryFilter')?.value || '';
+            const locationFilter = document.getElementById('inventoryLocationFilter')?.value || '';
+            
+            return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
+                   (!statusFilter || item.status === statusFilter) &&
+                   (!categoryFilter || item.category === categoryFilter) &&
+                   (!locationFilter || item.location === locationFilter);
+        });
+        
+        PerformanceManager.setCachedData(cacheKey, data);
+    }
+    
+    const pagination = PerformanceManager.paginateData(data, currentPage, currentPageSize);
+    totalPages = pagination.totalPages;
+    
+    const tbody = document.getElementById('inventoryItemsTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (pagination.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No inventory items found</td></tr>';
+        updatePaginationControls('inventory');
+        return;
+    }
+    
+    pagination.data.forEach((item, index) => {
+        const row = createInventoryItemRow(item, (currentPage - 1) * currentPageSize + index);
+        tbody.appendChild(row);
+    });
+    
+    updatePaginationControls('inventory');
+}
+
+// Enhanced Search System
+class SearchManager {
+    constructor() {
+        this.savedSearches = this.loadSavedSearches();
+        this.currentSearch = null;
+        this.searchHistory = this.loadSearchHistory();
+    }
+    
+    // Debounced search function
+    debouncedFilterItems() {
+        return PerformanceManager.debounce(() => {
+            this.performSearch();
+        }, 300)();
+    }
+    
+    performSearch() {
+        const searchTerm = document.getElementById('searchItems')?.value.toLowerCase() || '';
+        const suggestions = this.getSearchSuggestions(searchTerm);
+        this.showSuggestions(suggestions);
+        
+        // Clear cache when searching
+        PerformanceManager.clearCache();
+        
+        // Reload table with new search
+        loadInventoryTableWithPagination();
+    }
+    
+    getSearchSuggestions(term) {
+        if (term.length < 2) return [];
+        
+        const suggestions = new Set();
+        
+        // Search in inventory items
+        inventory.forEach(item => {
+            if (item.description?.toLowerCase().includes(term)) {
+                suggestions.add(item.description);
+            }
+            if (item.customer?.toLowerCase().includes(term)) {
+                suggestions.add(item.customer);
+            }
+            if (item.notes?.toLowerCase().includes(term)) {
+                suggestions.add(item.notes);
+            }
+            if (item.tags?.toLowerCase().includes(term)) {
+                item.tags.split(',').forEach(tag => {
+                    if (tag.trim().toLowerCase().includes(term)) {
+                        suggestions.add(tag.trim());
+                    }
+                });
+            }
+        });
+        
+        return Array.from(suggestions).slice(0, 10);
+    }
+    
+    showSuggestions(suggestions) {
+        const container = document.getElementById('searchSuggestions');
+        if (!container) return;
+        
+        if (suggestions.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        container.innerHTML = '';
+        suggestions.forEach(suggestion => {
+            const div = document.createElement('div');
+            div.className = 'search-suggestion';
+            div.textContent = suggestion;
+            div.onclick = () => {
+                document.getElementById('searchItems').value = suggestion;
+                container.style.display = 'none';
+                this.performSearch();
+            };
+            container.appendChild(div);
+        });
+        
+        container.style.display = 'block';
+    }
+    
+    openAdvancedSearch(tab) {
+        this.currentTab = tab;
+        this.populateAdvancedSearchOptions();
+        document.getElementById('advancedSearchModal').style.display = 'block';
+    }
+    
+    populateAdvancedSearchOptions() {
+        // Populate customer options
+        const customerSelect = document.getElementById('advancedCustomer');
+        if (customerSelect) {
+            customerSelect.innerHTML = '';
+            customers.forEach(customer => {
+                const option = document.createElement('option');
+                option.value = customer.name;
+                option.textContent = customer.name;
+                customerSelect.appendChild(option);
+            });
+        }
+        
+        // Populate location options
+        const locationSelect = document.getElementById('advancedLocation');
+        if (locationSelect) {
+            locationSelect.innerHTML = '';
+            const locations = [...new Set(inventory.map(item => item.location).filter(Boolean))];
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationSelect.appendChild(option);
+            });
+        }
+    }
+    
+    performAdvancedSearch() {
+        const criteria = this.getAdvancedSearchCriteria();
+        const results = this.filterDataWithCriteria(criteria);
+        
+        // Apply results to current tab
+        this.applySearchResults(results);
+        
+        // Save to search history
+        this.addToSearchHistory(criteria);
+        
+        closeModal('advancedSearchModal');
+    }
+    
+    getAdvancedSearchCriteria() {
+        return {
+            text: document.getElementById('advancedSearchText')?.value || '',
+            status: Array.from(document.getElementById('advancedStatus')?.selectedOptions || []).map(o => o.value),
+            priority: Array.from(document.getElementById('advancedPriority')?.selectedOptions || []).map(o => o.value),
+            customer: Array.from(document.getElementById('advancedCustomer')?.selectedOptions || []).map(o => o.value),
+            location: Array.from(document.getElementById('advancedLocation')?.selectedOptions || []).map(o => o.value),
+            dateFrom: document.getElementById('advancedDateFrom')?.value || '',
+            dateTo: document.getElementById('advancedDateTo')?.value || '',
+            priceMin: parseFloat(document.getElementById('advancedPriceMin')?.value) || 0,
+            priceMax: parseFloat(document.getElementById('advancedPriceMax')?.value) || Infinity,
+            tags: document.getElementById('advancedTags')?.value || ''
+        };
+    }
+    
+    filterDataWithCriteria(criteria) {
+        return inventory.filter(item => {
+            // Text search
+            if (criteria.text) {
+                const searchText = criteria.text.toLowerCase();
+                const searchableText = [
+                    item.description,
+                    item.notes,
+                    item.customer,
+                    item.tags
+                ].join(' ').toLowerCase();
+                
+                if (!searchableText.includes(searchText)) {
+                    return false;
+                }
+            }
+            
+            // Status filter
+            if (criteria.status.length > 0 && !criteria.status.includes(item.status)) {
+                return false;
+            }
+            
+            // Priority filter
+            if (criteria.priority.length > 0 && !criteria.priority.includes(item.priority)) {
+                return false;
+            }
+            
+            // Customer filter
+            if (criteria.customer.length > 0 && !criteria.customer.includes(item.customer)) {
+                return false;
+            }
+            
+            // Location filter
+            if (criteria.location.length > 0 && !criteria.location.includes(item.location)) {
+                return false;
+            }
+            
+            // Date range filter
+            if (criteria.dateFrom || criteria.dateTo) {
+                const itemDate = new Date(item.dateAdded || item.dueDate);
+                if (criteria.dateFrom && itemDate < new Date(criteria.dateFrom)) {
+                    return false;
+                }
+                if (criteria.dateTo && itemDate > new Date(criteria.dateTo)) {
+                    return false;
+                }
+            }
+            
+            // Price range filter
+            if (item.price) {
+                if (item.price < criteria.priceMin || item.price > criteria.priceMax) {
+                    return false;
+                }
+            }
+            
+            // Tags filter
+            if (criteria.tags) {
+                const searchTags = criteria.tags.toLowerCase().split(',').map(t => t.trim());
+                const itemTags = (item.tags || '').toLowerCase().split(',').map(t => t.trim());
+                if (!searchTags.some(tag => itemTags.includes(tag))) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    }
+    
+    applySearchResults(results) {
+        // Store current search results
+        this.currentSearch = results;
+        
+        // Clear cache
+        PerformanceManager.clearCache();
+        
+        // Reload table with filtered results
+        if (this.currentTab === 'projects') {
+            loadInventoryTableWithPagination();
+        } else if (this.currentTab === 'inventory') {
+            loadInventoryItemsTableWithPagination();
+        }
+    }
+    
+    saveCurrentSearch(tab) {
+        const criteria = this.getAdvancedSearchCriteria();
+        const searchName = prompt('Enter a name for this search:');
+        if (!searchName) return;
+        
+        const savedSearch = {
+            id: Date.now(),
+            name: searchName,
+            tab: tab,
+            criteria: criteria,
+            createdAt: new Date().toISOString()
+        };
+        
+        this.savedSearches.push(savedSearch);
+        this.saveSavedSearches();
+        
+        showNotification('Search saved successfully!', 'success');
+    }
+    
+    loadSavedSearches(tab) {
+        const modal = document.getElementById('savedSearchesModal');
+        const list = document.getElementById('savedSearchesList');
+        
+        if (!list) return;
+        
+        const tabSearches = this.savedSearches.filter(search => search.tab === tab);
+        
+        if (tabSearches.length === 0) {
+            list.innerHTML = '<p>No saved searches found.</p>';
+        } else {
+            list.innerHTML = '';
+            tabSearches.forEach(search => {
+                const item = document.createElement('div');
+                item.className = 'saved-search-item';
+                item.innerHTML = `
+                    <div class="saved-search-info">
+                        <h4>${search.name}</h4>
+                        <p>Created: ${new Date(search.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div class="saved-search-actions">
+                        <button class="btn btn-outline" onclick="searchManager.loadSavedSearch(${search.id})">
+                            <i class="fas fa-play"></i> Use
+                        </button>
+                        <button class="btn btn-outline" onclick="searchManager.deleteSavedSearch(${search.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        modal.style.display = 'block';
+    }
+    
+    loadSavedSearch(searchId) {
+        const search = this.savedSearches.find(s => s.id === searchId);
+        if (!search) return;
+        
+        // Populate form with saved criteria
+        this.populateFormWithCriteria(search.criteria);
+        
+        // Apply the search
+        this.currentTab = search.tab;
+        this.performAdvancedSearch();
+        
+        closeModal('savedSearchesModal');
+    }
+    
+    populateFormWithCriteria(criteria) {
+        if (criteria.text) document.getElementById('advancedSearchText').value = criteria.text;
+        if (criteria.status) {
+            const statusSelect = document.getElementById('advancedStatus');
+            Array.from(statusSelect.options).forEach(option => {
+                option.selected = criteria.status.includes(option.value);
+            });
+        }
+        // ... populate other fields similarly
+    }
+    
+    deleteSavedSearch(searchId) {
+        this.savedSearches = this.savedSearches.filter(s => s.id !== searchId);
+        this.saveSavedSearches();
+        this.loadSavedSearches(this.currentTab);
+    }
+    
+    clearAllFilters(tab) {
+        // Clear all filter inputs
+        const inputs = document.querySelectorAll(`#${tab} input, #${tab} select`);
+        inputs.forEach(input => {
+            if (input.type === 'text' || input.type === 'number' || input.type === 'date') {
+                input.value = '';
+            } else if (input.type === 'select-one') {
+                input.selectedIndex = 0;
+            } else if (input.type === 'select-multiple') {
+                Array.from(input.options).forEach(option => option.selected = false);
+            }
+        });
+        
+        // Clear cache and reload
+        PerformanceManager.clearCache();
+        this.currentSearch = null;
+        
+        if (tab === 'projects') {
+            loadInventoryTableWithPagination();
+        } else if (tab === 'inventory') {
+            loadInventoryItemsTableWithPagination();
+        }
+    }
+    
+    addToSearchHistory(criteria) {
+        this.searchHistory.unshift({
+            criteria: criteria,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Keep only last 50 searches
+        this.searchHistory = this.searchHistory.slice(0, 50);
+        this.saveSearchHistory();
+    }
+    
+    loadSavedSearches() {
+        const saved = localStorage.getItem('embroidery_saved_searches');
+        return saved ? JSON.parse(saved) : [];
+    }
+    
+    saveSavedSearches() {
+        localStorage.setItem('embroidery_saved_searches', JSON.stringify(this.savedSearches));
+    }
+    
+    loadSearchHistory() {
+        const history = localStorage.getItem('embroidery_search_history');
+        return history ? JSON.parse(history) : [];
+    }
+    
+    saveSearchHistory() {
+        localStorage.setItem('embroidery_search_history', JSON.stringify(this.searchHistory));
+    }
+}
+
+// Initialize search manager
+const searchManager = new SearchManager();
+
+// UX Enhancement System
+class UXManager {
+    constructor() {
+        this.keyboardShortcuts = new Map();
+        this.bulkSelection = new Set();
+        this.dragDropManager = new DragDropManager();
+        this.initializeKeyboardShortcuts();
+        this.initializeBulkOperations();
+        this.initializeDragDrop();
+    }
+    
+    initializeKeyboardShortcuts() {
+        // Define keyboard shortcuts
+        this.keyboardShortcuts.set('ctrl+n', () => this.openAddItemModal());
+        this.keyboardShortcuts.set('ctrl+s', () => this.saveCurrentData());
+        this.keyboardShortcuts.set('ctrl+f', () => this.focusSearch());
+        this.keyboardShortcuts.set('ctrl+a', () => this.selectAllVisible());
+        this.keyboardShortcuts.set('escape', () => this.closeModals());
+        this.keyboardShortcuts.set('ctrl+delete', () => this.deleteSelected());
+        this.keyboardShortcuts.set('ctrl+c', () => this.copySelected());
+        this.keyboardShortcuts.set('ctrl+v', () => this.pasteSelected());
+        this.keyboardShortcuts.set('ctrl+z', () => this.undoLastAction());
+        this.keyboardShortcuts.set('ctrl+y', () => this.redoLastAction());
+        this.keyboardShortcuts.set('ctrl+1', () => switchTab('projects'));
+        this.keyboardShortcuts.set('ctrl+2', () => switchTab('inventory'));
+        this.keyboardShortcuts.set('ctrl+3', () => switchTab('customers'));
+        this.keyboardShortcuts.set('ctrl+4', () => switchTab('sales'));
+        this.keyboardShortcuts.set('ctrl+5', () => switchTab('gallery'));
+        this.keyboardShortcuts.set('ctrl+6', () => switchTab('ideas'));
+        
+        // Add event listener
+        document.addEventListener('keydown', (e) => this.handleKeyboardShortcut(e));
+    }
+    
+    handleKeyboardShortcut(e) {
+        const key = this.getKeyCombo(e);
+        const action = this.keyboardShortcuts.get(key);
+        
+        if (action) {
+            e.preventDefault();
+            action();
+        }
+    }
+    
+    getKeyCombo(e) {
+        const modifiers = [];
+        if (e.ctrlKey) modifiers.push('ctrl');
+        if (e.altKey) modifiers.push('alt');
+        if (e.shiftKey) modifiers.push('shift');
+        if (e.metaKey) modifiers.push('meta');
+        
+        const key = e.key.toLowerCase();
+        return modifiers.length > 0 ? `${modifiers.join('+')}+${key}` : key;
+    }
+    
+    openAddItemModal() {
+        const currentTab = document.querySelector('.tab-content.active').id;
+        switch(currentTab) {
+            case 'projects':
+                openAddItemModal();
+                break;
+            case 'inventory':
+                openAddItemModal();
+                break;
+            case 'customers':
+                openAddCustomerModal();
+                break;
+            case 'sales':
+                openAddSaleModal();
+                break;
+        }
+    }
+    
+    saveCurrentData() {
+        // Auto-save functionality
+        if (typeof saveData === 'function') {
+            saveData();
+            showNotification('Data saved successfully!', 'success');
+        }
+    }
+    
+    focusSearch() {
+        const searchInput = document.querySelector('.tab-content.active input[type="text"]');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+    
+    selectAllVisible() {
+        const checkboxes = document.querySelectorAll('.tab-content.active input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            this.bulkSelection.add(checkbox.value);
+        });
+        this.updateBulkActions();
+    }
+    
+    closeModals() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+        });
+    }
+    
+    deleteSelected() {
+        if (this.bulkSelection.size > 0) {
+            this.confirmBulkDelete();
+        }
+    }
+    
+    copySelected() {
+        if (this.bulkSelection.size > 0) {
+            this.copySelectedItems();
+        }
+    }
+    
+    pasteSelected() {
+        this.pasteItems();
+    }
+    
+    undoLastAction() {
+        // Implement undo functionality
+        console.log('Undo action');
+    }
+    
+    redoLastAction() {
+        // Implement redo functionality
+        console.log('Redo action');
+    }
+    
+    initializeBulkOperations() {
+        this.bulkActionsContainer = this.createBulkActionsContainer();
+        document.body.appendChild(this.bulkActionsContainer);
+    }
+    
+    createBulkActionsContainer() {
+        const container = document.createElement('div');
+        container.id = 'bulkActionsContainer';
+        container.className = 'bulk-actions-container';
+        container.innerHTML = `
+            <div class="bulk-actions">
+                <span class="bulk-selection-count">0 items selected</span>
+                <div class="bulk-actions-buttons">
+                    <button class="btn btn-outline" onclick="uxManager.bulkEdit()">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-outline" onclick="uxManager.bulkDelete()">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                    <button class="btn btn-outline" onclick="uxManager.bulkExport()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <button class="btn btn-outline" onclick="uxManager.bulkStatusUpdate()">
+                        <i class="fas fa-tag"></i> Update Status
+                    </button>
+                    <button class="btn btn-outline" onclick="uxManager.clearSelection()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        `;
+        return container;
+    }
+    
+    updateBulkActions() {
+        const count = this.bulkSelection.size;
+        const container = document.getElementById('bulkActionsContainer');
+        const countSpan = container.querySelector('.bulk-selection-count');
+        
+        countSpan.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+        
+        if (count > 0) {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+    
+    bulkEdit() {
+        if (this.bulkSelection.size === 0) return;
+        
+        const modal = document.getElementById('bulkEditModal');
+        if (!modal) {
+            this.createBulkEditModal();
+        }
+        
+        document.getElementById('bulkEditModal').style.display = 'block';
+    }
+    
+    bulkDelete() {
+        if (this.bulkSelection.size === 0) return;
+        
+        if (confirm(`Are you sure you want to delete ${this.bulkSelection.size} items?`)) {
+            this.bulkSelection.forEach(id => {
+                this.deleteItem(id);
+            });
+            this.clearSelection();
+            showNotification(`${this.bulkSelection.size} items deleted successfully!`, 'success');
+        }
+    }
+    
+    bulkExport() {
+        if (this.bulkSelection.size === 0) return;
+        
+        const selectedItems = Array.from(this.bulkSelection).map(id => 
+            inventory.find(item => item.id == id)
+        ).filter(Boolean);
+        
+        this.exportToCSV(selectedItems, 'selected_items.csv');
+    }
+    
+    bulkStatusUpdate() {
+        if (this.bulkSelection.size === 0) return;
+        
+        const newStatus = prompt('Enter new status:');
+        if (!newStatus) return;
+        
+        this.bulkSelection.forEach(id => {
+            const item = inventory.find(item => item.id == id);
+            if (item) {
+                item.status = newStatus;
+            }
+        });
+        
+        this.saveData();
+        this.clearSelection();
+        showNotification(`Status updated for ${this.bulkSelection.size} items!`, 'success');
+    }
+    
+    clearSelection() {
+        this.bulkSelection.clear();
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.updateBulkActions();
+    }
+    
+    initializeDragDrop() {
+        this.dragDropManager.initialize();
+    }
+    
+    createBulkEditModal() {
+        const modal = document.createElement('div');
+        modal.id = 'bulkEditModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('bulkEditModal')">&times;</span>
+                <h3><i class="fas fa-edit"></i> Bulk Edit</h3>
+                <form id="bulkEditForm" class="modal-form">
+                    <div class="form-group">
+                        <label for="bulkStatus">Status</label>
+                        <select id="bulkStatus">
+                            <option value="">Keep current</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="sold">Sold</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkPriority">Priority</label>
+                        <select id="bulkPriority">
+                            <option value="">Keep current</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkLocation">Location</label>
+                        <input type="text" id="bulkLocation" placeholder="Enter new location">
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkNotes">Notes (append)</label>
+                        <textarea id="bulkNotes" placeholder="Notes to append to existing notes"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('bulkEditModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Apply Changes</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add form submission handler
+        document.getElementById('bulkEditForm').onsubmit = (e) => {
+            e.preventDefault();
+            this.applyBulkEdit();
+        };
+    }
+    
+    applyBulkEdit() {
+        const status = document.getElementById('bulkStatus').value;
+        const priority = document.getElementById('bulkPriority').value;
+        const location = document.getElementById('bulkLocation').value;
+        const notes = document.getElementById('bulkNotes').value;
+        
+        this.bulkSelection.forEach(id => {
+            const item = inventory.find(item => item.id == id);
+            if (item) {
+                if (status) item.status = status;
+                if (priority) item.priority = priority;
+                if (location) item.location = location;
+                if (notes) item.notes = (item.notes || '') + '\n' + notes;
+            }
+        });
+        
+        this.saveData();
+        this.clearSelection();
+        closeModal('bulkEditModal');
+        showNotification(`Bulk edit applied to ${this.bulkSelection.size} items!`, 'success');
+    }
+}
+
+// Drag and Drop Manager
+class DragDropManager {
+    constructor() {
+        this.draggedElement = null;
+        this.dropZones = new Map();
+    }
+    
+    initialize() {
+        this.setupDragHandles();
+        this.setupDropZones();
+    }
+    
+    setupDragHandles() {
+        // Add drag handles to table rows
+        document.addEventListener('DOMContentLoaded', () => {
+            this.addDragHandlesToTables();
+        });
+    }
+    
+    addDragHandlesToTables() {
+        const tables = document.querySelectorAll('table tbody tr');
+        tables.forEach(row => {
+            row.draggable = true;
+            row.addEventListener('dragstart', (e) => this.handleDragStart(e));
+            row.addEventListener('dragend', (e) => this.handleDragEnd(e));
+        });
+    }
+    
+    handleDragStart(e) {
+        this.draggedElement = e.target;
+        e.target.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', e.target.outerHTML);
+    }
+    
+    handleDragEnd(e) {
+        e.target.style.opacity = '1';
+        this.draggedElement = null;
+    }
+    
+    setupDropZones() {
+        // Setup drop zones for reordering
+        const dropZones = document.querySelectorAll('.drop-zone');
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', (e) => this.handleDragOver(e));
+            zone.addEventListener('drop', (e) => this.handleDrop(e));
+        });
+    }
+    
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+    
+    handleDrop(e) {
+        e.preventDefault();
+        if (this.draggedElement) {
+            // Handle reordering logic
+            this.reorderItems(this.draggedElement, e.target);
+        }
+    }
+    
+    reorderItems(draggedElement, dropTarget) {
+        // Implement reordering logic
+        console.log('Reordering items');
+    }
+}
+
+// Initialize UX manager
+const uxManager = new UXManager();
+
+// Advanced Data Management & Backup System
+class DataManager {
+    constructor() {
+        this.backupInterval = null;
+        this.autoBackupEnabled = true;
+        this.backupFrequency = 24 * 60 * 60 * 1000; // 24 hours
+        this.maxBackups = 30;
+        this.dataVersion = 1;
+        this.changeHistory = [];
+        this.initializeDataManagement();
+    }
+    
+    initializeDataManagement() {
+        this.setupAutoBackup();
+        this.setupDataVersioning();
+        this.setupDataIntegrityChecks();
+        this.setupExportFormats();
+    }
+    
+    setupAutoBackup() {
+        if (this.autoBackupEnabled) {
+            this.backupInterval = setInterval(() => {
+                this.createBackup('auto');
+            }, this.backupFrequency);
+        }
+    }
+    
+    createBackup(type = 'manual') {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupData = {
+            timestamp: new Date().toISOString(),
+            type: type,
+            version: this.dataVersion,
+            data: {
+                inventory: [...inventory],
+                customers: [...customers],
+                sales: [...sales],
+                gallery: [...gallery],
+                invoices: [...invoices],
+                ideas: [...ideas]
+            },
+            metadata: {
+                totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
+                lastModified: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                appVersion: '2.0.0'
+            }
+        };
+        
+        // Store backup in localStorage
+        const backupKey = `backup_${timestamp}`;
+        localStorage.setItem(backupKey, JSON.stringify(backupData));
+        
+        // Clean up old backups
+        this.cleanupOldBackups();
+        
+        // Save backup info
+        this.saveBackupInfo(backupKey, backupData);
+        
+        showNotification(`Backup created successfully! (${type})`, 'success');
+        return backupKey;
+    }
+    
+    cleanupOldBackups() {
+        const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('backup_'));
+        if (backupKeys.length > this.maxBackups) {
+            // Sort by timestamp and remove oldest
+            const sortedKeys = backupKeys.sort((a, b) => {
+                const timestampA = a.split('_')[1];
+                const timestampB = b.split('_')[1];
+                return new Date(timestampA) - new Date(timestampB);
+            });
+            
+            const keysToRemove = sortedKeys.slice(0, backupKeys.length - this.maxBackups);
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+        }
+    }
+    
+    saveBackupInfo(backupKey, backupData) {
+        const backupInfo = this.getBackupInfo();
+        backupInfo.push({
+            key: backupKey,
+            timestamp: backupData.timestamp,
+            type: backupData.type,
+            version: backupData.version,
+            totalItems: backupData.metadata.totalItems
+        });
+        
+        localStorage.setItem('backup_info', JSON.stringify(backupInfo));
+    }
+    
+    getBackupInfo() {
+        const info = localStorage.getItem('backup_info');
+        return info ? JSON.parse(info) : [];
+    }
+    
+    restoreBackup(backupKey) {
+        const backupData = localStorage.getItem(backupKey);
+        if (!backupData) {
+            showNotification('Backup not found!', 'error');
+            return false;
+        }
+        
+        try {
+            const backup = JSON.parse(backupData);
+            
+            // Validate backup data
+            if (!this.validateBackupData(backup)) {
+                showNotification('Invalid backup data!', 'error');
+                return false;
+            }
+            
+            // Create current state backup before restore
+            this.createBackup('pre-restore');
+            
+            // Restore data
+            inventory = [...backup.data.inventory];
+            customers = [...backup.data.customers];
+            sales = [...backup.data.sales];
+            gallery = [...backup.data.gallery];
+            invoices = [...backup.data.invoices];
+            ideas = [...backup.data.ideas];
+            
+            // Save restored data
+            this.saveData();
+            
+            // Reload UI
+            loadInventoryTable();
+            loadCustomersTable();
+            loadSalesTable();
+            loadGallery();
+            loadIdeas();
+            
+            showNotification('Backup restored successfully!', 'success');
+            return true;
+            
+        } catch (error) {
+            logError('Backup restore failed', error);
+            showNotification('Failed to restore backup!', 'error');
+            return false;
+        }
+    }
+    
+    validateBackupData(backup) {
+        return backup && 
+               backup.data && 
+               Array.isArray(backup.data.inventory) &&
+               Array.isArray(backup.data.customers) &&
+               Array.isArray(backup.data.sales) &&
+               Array.isArray(backup.data.gallery) &&
+               Array.isArray(backup.data.invoices) &&
+               Array.isArray(backup.data.ideas);
+    }
+    
+    setupDataVersioning() {
+        // Track changes for versioning
+        this.originalData = {
+            inventory: [...inventory],
+            customers: [...customers],
+            sales: [...sales],
+            gallery: [...gallery],
+            invoices: [...invoices],
+            ideas: [...ideas]
+        };
+    }
+    
+    trackChange(action, itemType, itemId, oldValue, newValue) {
+        const change = {
+            timestamp: new Date().toISOString(),
+            action: action,
+            itemType: itemType,
+            itemId: itemId,
+            oldValue: oldValue,
+            newValue: newValue,
+            user: 'current_user' // Could be enhanced with actual user tracking
+        };
+        
+        this.changeHistory.push(change);
+        
+        // Keep only last 1000 changes
+        if (this.changeHistory.length > 1000) {
+            this.changeHistory = this.changeHistory.slice(-1000);
+        }
+        
+        // Save change history
+        localStorage.setItem('change_history', JSON.stringify(this.changeHistory));
+    }
+    
+    setupDataIntegrityChecks() {
+        // Run integrity checks periodically
+        setInterval(() => {
+            this.runDataIntegrityChecks();
+        }, 60 * 60 * 1000); // Every hour
+    }
+    
+    runDataIntegrityChecks() {
+        const issues = [];
+        
+        // Check for duplicate IDs
+        const allIds = [
+            ...inventory.map(item => item.id),
+            ...customers.map(item => item.id),
+            ...sales.map(item => item.id),
+            ...gallery.map(item => item.id),
+            ...invoices.map(item => item.id),
+            ...ideas.map(item => item.id)
+        ];
+        
+        const duplicateIds = allIds.filter((id, index) => allIds.indexOf(id) !== index);
+        if (duplicateIds.length > 0) {
+            issues.push(`Duplicate IDs found: ${duplicateIds.join(', ')}`);
+        }
+        
+        // Check for missing required fields
+        inventory.forEach((item, index) => {
+            if (!item.description || !item.status) {
+                issues.push(`Inventory item ${index} missing required fields`);
+            }
+        });
+        
+        customers.forEach((customer, index) => {
+            if (!customer.name || !customer.email) {
+                issues.push(`Customer ${index} missing required fields`);
+            }
+        });
+        
+        if (issues.length > 0) {
+            console.warn('Data integrity issues found:', issues);
+            showNotification(`Data integrity issues found: ${issues.length}`, 'warning');
+        }
+        
+        return issues;
+    }
+    
+    setupExportFormats() {
+        // Export functionality will be added here
+    }
+    
+    exportToCSV(data, filename) {
+        if (!data || data.length === 0) {
+            showNotification('No data to export!', 'warning');
+            return;
+        }
+        
+        const headers = Object.keys(data[0]);
+        const csvContent = [
+            headers.join(','),
+            ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+        ].join('\n');
+        
+        this.downloadFile(csvContent, filename, 'text/csv');
+    }
+    
+    exportToJSON(data, filename) {
+        const jsonContent = JSON.stringify(data, null, 2);
+        this.downloadFile(jsonContent, filename, 'application/json');
+    }
+    
+    exportToExcel(data, filename) {
+        // Simple Excel export using CSV format
+        this.exportToCSV(data, filename.replace('.xlsx', '.csv'));
+    }
+    
+    exportToPDF(data, filename) {
+        // Create a simple PDF-like report
+        const reportContent = this.generateReportContent(data);
+        this.downloadFile(reportContent, filename, 'text/html');
+    }
+    
+    generateReportContent(data) {
+        const timestamp = new Date().toLocaleString();
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Embroidery Inventory Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Embroidery Inventory Report</h1>
+                    <p>Generated on: ${timestamp}</p>
+                    <p>Total Items: ${data.length}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            ${Object.keys(data[0] || {}).map(key => `<th>${key}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(row => `
+                            <tr>
+                                ${Object.values(row).map(value => `<td>${value || ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+    }
+    
+    downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+    getDataStatistics() {
+        return {
+            inventory: inventory.length,
+            customers: customers.length,
+            sales: sales.length,
+            gallery: gallery.length,
+            invoices: invoices.length,
+            ideas: ideas.length,
+            totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
+            lastBackup: this.getLastBackupTime(),
+            dataSize: this.calculateDataSize(),
+            changeHistory: this.changeHistory.length
+        };
+    }
+    
+    getLastBackupTime() {
+        const backupInfo = this.getBackupInfo();
+        if (backupInfo.length === 0) return 'Never';
+        
+        const lastBackup = backupInfo[backupInfo.length - 1];
+        return new Date(lastBackup.timestamp).toLocaleString();
+    }
+    
+    calculateDataSize() {
+        const data = {
+            inventory, customers, sales, gallery, invoices, ideas
+        };
+        const jsonString = JSON.stringify(data);
+        return new Blob([jsonString]).size;
+    }
+    
+    enableAutoBackup() {
+        this.autoBackupEnabled = true;
+        this.setupAutoBackup();
+        showNotification('Auto-backup enabled!', 'success');
+    }
+    
+    disableAutoBackup() {
+        this.autoBackupEnabled = false;
+        if (this.backupInterval) {
+            clearInterval(this.backupInterval);
+            this.backupInterval = null;
+        }
+        showNotification('Auto-backup disabled!', 'info');
+    }
+    
+    setBackupFrequency(hours) {
+        this.backupFrequency = hours * 60 * 60 * 1000;
+        if (this.autoBackupEnabled) {
+            this.disableAutoBackup();
+            this.enableAutoBackup();
+        }
+        showNotification(`Backup frequency set to ${hours} hours!`, 'success');
+    }
+    
+    getBackupList() {
+        return this.getBackupInfo().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
+    
+    deleteBackup(backupKey) {
+        localStorage.removeItem(backupKey);
+        
+        // Update backup info
+        const backupInfo = this.getBackupInfo();
+        const updatedInfo = backupInfo.filter(backup => backup.key !== backupKey);
+        localStorage.setItem('backup_info', JSON.stringify(updatedInfo));
+        
+        showNotification('Backup deleted successfully!', 'success');
+    }
+    
+    exportAllData() {
+        const allData = {
+            inventory, customers, sales, gallery, invoices, ideas,
+            metadata: {
+                exportDate: new Date().toISOString(),
+                version: this.dataVersion,
+                totalItems: this.getDataStatistics().totalItems
+            }
+        };
+        
+        this.exportToJSON(allData, `embroidery_data_export_${new Date().toISOString().split('T')[0]}.json`);
+    }
+    
+    importData(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                if (!this.validateBackupData({ data: importedData })) {
+                    showNotification('Invalid data format!', 'error');
+                    return;
+                }
+                
+                // Create backup before import
+                this.createBackup('pre-import');
+                
+                // Import data
+                inventory = [...importedData.inventory];
+                customers = [...importedData.customers];
+                sales = [...importedData.sales];
+                gallery = [...importedData.gallery];
+                invoices = [...importedData.invoices];
+                ideas = [...importedData.ideas];
+                
+                // Save imported data
+                this.saveData();
+                
+                // Reload UI
+                loadInventoryTable();
+                loadCustomersTable();
+                loadSalesTable();
+                loadGallery();
+                loadIdeas();
+                
+                showNotification('Data imported successfully!', 'success');
+                
+            } catch (error) {
+                logError('Data import failed', error);
+                showNotification('Failed to import data!', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
+// Initialize data manager
+const dataManager = new DataManager();
+
+// Advanced Analytics & Reporting System
+class AnalyticsManager {
+    constructor() {
+        this.charts = new Map();
+        this.analyticsData = null;
+        this.predictiveModels = new Map();
+        this.initializeAnalytics();
+    }
+    
+    initializeAnalytics() {
+        this.setupCharts();
+        this.setupPredictiveAnalytics();
+        this.setupRealTimeUpdates();
+    }
+    
+    setupCharts() {
+        // Initialize Chart.js if available
+        if (typeof Chart !== 'undefined') {
+            this.initializeChartJS();
+        } else {
+            // Fallback to simple HTML/CSS charts
+            this.initializeSimpleCharts();
+        }
+    }
+    
+    initializeChartJS() {
+        // Revenue trend chart
+        const revenueCtx = document.getElementById('revenueChart');
+        if (revenueCtx) {
+            this.charts.set('revenue', new Chart(revenueCtx, {
+                type: 'line',
+                data: this.getRevenueData(),
+                options: this.getChartOptions('Revenue Trend', 'line')
+            }));
+        }
+        
+        // Project status pie chart
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            this.charts.set('status', new Chart(statusCtx, {
+                type: 'doughnut',
+                data: this.getStatusData(),
+                options: this.getChartOptions('Project Status', 'doughnut')
+            }));
+        }
+        
+        // Monthly completion chart
+        const completionCtx = document.getElementById('completionChart');
+        if (completionCtx) {
+            this.charts.set('completion', new Chart(completionCtx, {
+                type: 'bar',
+                data: this.getCompletionData(),
+                options: this.getChartOptions('Monthly Completions', 'bar')
+            }));
+        }
+    }
+    
+    initializeSimpleCharts() {
+        // Create simple HTML/CSS based charts
+        this.createSimpleCharts();
+    }
+    
+    createSimpleCharts() {
+        // Revenue trend chart
+        const revenueData = this.getRevenueData();
+        const revenueChart = document.getElementById('revenueChart');
+        if (revenueChart) {
+            revenueChart.innerHTML = this.generateSimpleLineChart(revenueData);
+        }
+        
+        // Status pie chart
+        const statusData = this.getStatusData();
+        const statusChart = document.getElementById('statusChart');
+        if (statusChart) {
+            statusChart.innerHTML = this.generateSimplePieChart(statusData);
+        }
+    }
+    
+    generateSimpleLineChart(data) {
+        const maxValue = Math.max(...data.datasets[0].data);
+        const minValue = Math.min(...data.datasets[0].data);
+        const range = maxValue - minValue;
+        
+        let html = '<div class="simple-chart line-chart">';
+        html += '<div class="chart-header">' + data.title + '</div>';
+        html += '<div class="chart-content">';
+        
+        data.datasets[0].data.forEach((value, index) => {
+            const height = range > 0 ? ((value - minValue) / range) * 100 : 50;
+            const left = (index / (data.datasets[0].data.length - 1)) * 100;
+            
+            html += `<div class="chart-bar" style="left: ${left}%; height: ${height}%;" title="${data.labels[index]}: $${value}"></div>`;
+        });
+        
+        html += '</div></div>';
+        return html;
+    }
+    
+    generateSimplePieChart(data) {
+        let html = '<div class="simple-chart pie-chart">';
+        html += '<div class="chart-header">' + data.title + '</div>';
+        html += '<div class="chart-content">';
+        
+        const total = data.datasets[0].data.reduce((sum, value) => sum + value, 0);
+        let cumulativePercentage = 0;
+        
+        data.datasets[0].data.forEach((value, index) => {
+            const percentage = (value / total) * 100;
+            const color = data.datasets[0].backgroundColor[index];
+            
+            html += `<div class="pie-segment" style="background: ${color}; transform: rotate(${cumulativePercentage * 3.6}deg); width: ${percentage}%;" title="${data.labels[index]}: ${value}"></div>`;
+            cumulativePercentage += percentage;
+        });
+        
+        html += '</div></div>';
+        return html;
+    }
+    
+    getRevenueData() {
+        const last12Months = this.getLast12Months();
+        const revenueData = last12Months.map(month => {
+            const monthSales = sales.filter(sale => {
+                const saleDate = new Date(sale.dateSold);
+                return saleDate.getMonth() === month.month && saleDate.getFullYear() === month.year;
+            });
+            return monthSales.reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+        });
+        
+        return {
+            title: 'Monthly Revenue',
+            labels: last12Months.map(m => m.name),
+            datasets: [{
+                label: 'Revenue',
+                data: revenueData,
+                borderColor: '#4A90A4',
+                backgroundColor: 'rgba(74, 144, 164, 0.1)',
+                tension: 0.4
+            }]
+        };
+    }
+    
+    getStatusData() {
+        const statusCounts = {
+            'Pending': inventory.filter(item => item.status === 'pending').length,
+            'In Progress': inventory.filter(item => item.status === 'in-progress').length,
+            'Completed': inventory.filter(item => item.status === 'completed').length,
+            'Sold': inventory.filter(item => item.status === 'sold').length
+        };
+        
+        return {
+            title: 'Project Status Distribution',
+            labels: Object.keys(statusCounts),
+            datasets: [{
+                data: Object.values(statusCounts),
+                backgroundColor: ['#ffc107', '#17a2b8', '#28a745', '#dc3545']
+            }]
+        };
+    }
+    
+    getCompletionData() {
+        const last6Months = this.getLast6Months();
+        const completionData = last6Months.map(month => {
+            const monthCompletions = inventory.filter(item => {
+                const completionDate = new Date(item.dateCompleted || item.dateAdded);
+                return completionDate.getMonth() === month.month && completionDate.getFullYear() === month.year;
+            });
+            return monthCompletions.length;
+        });
+        
+        return {
+            title: 'Monthly Completions',
+            labels: last6Months.map(m => m.name),
+            datasets: [{
+                label: 'Completions',
+                data: completionData,
+                backgroundColor: '#28a745'
+            }]
+        };
+    }
+    
+    getLast12Months() {
+        const months = [];
+        const now = new Date();
+        
+        for (let i = 11; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({
+                name: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+                month: date.getMonth(),
+                year: date.getFullYear()
+            });
+        }
+        
+        return months;
+    }
+    
+    getLast6Months() {
+        const months = [];
+        const now = new Date();
+        
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({
+                name: date.toLocaleDateString('en-US', { month: 'short' }),
+                month: date.getMonth(),
+                year: date.getFullYear()
+            });
+        }
+        
+        return months;
+    }
+    
+    getChartOptions(title, type) {
+        const baseOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: title
+                }
+            }
+        };
+        
+        if (type === 'line') {
+            baseOptions.scales = {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        }
+                    }
+                }
+            };
+        }
+        
+        return baseOptions;
+    }
+    
+    setupPredictiveAnalytics() {
+        this.predictiveModels.set('revenue', new RevenuePredictor());
+        this.predictiveModels.set('completion', new CompletionPredictor());
+        this.predictiveModels.set('demand', new DemandPredictor());
+    }
+    
+    generatePredictiveInsights() {
+        const insights = [];
+        
+        // Revenue prediction
+        const revenuePrediction = this.predictiveModels.get('revenue').predict();
+        if (revenuePrediction) {
+            insights.push({
+                type: 'revenue',
+                title: 'Revenue Forecast',
+                message: `Based on current trends, projected revenue for next month: $${revenuePrediction.toFixed(2)}`,
+                confidence: revenuePrediction.confidence,
+                trend: revenuePrediction.trend
+            });
+        }
+        
+        // Completion prediction
+        const completionPrediction = this.predictiveModels.get('completion').predict();
+        if (completionPrediction) {
+            insights.push({
+                type: 'completion',
+                title: 'Completion Forecast',
+                message: `Expected completions next month: ${completionPrediction.count} projects`,
+                confidence: completionPrediction.confidence,
+                trend: completionPrediction.trend
+            });
+        }
+        
+        // Demand prediction
+        const demandPrediction = this.predictiveModels.get('demand').predict();
+        if (demandPrediction) {
+            insights.push({
+                type: 'demand',
+                title: 'Demand Analysis',
+                message: `Peak demand expected in: ${demandPrediction.peakMonth}`,
+                confidence: demandPrediction.confidence,
+                trend: demandPrediction.trend
+            });
+        }
+        
+        return insights;
+    }
+    
+    setupRealTimeUpdates() {
+        // Update analytics every 5 minutes
+        setInterval(() => {
+            this.updateAnalytics();
+        }, 5 * 60 * 1000);
+    }
+    
+    updateAnalytics() {
+        this.analyticsData = this.calculateAnalytics();
+        this.updateCharts();
+        this.updateStatistics();
+    }
+    
+    calculateAnalytics() {
+        return {
+            totalRevenue: this.calculateTotalRevenue(),
+            averageProjectValue: this.calculateAverageProjectValue(),
+            completionRate: this.calculateCompletionRate(),
+            customerRetention: this.calculateCustomerRetention(),
+            monthlyGrowth: this.calculateMonthlyGrowth(),
+            topCustomers: this.getTopCustomers(),
+            topCategories: this.getTopCategories(),
+            seasonalTrends: this.getSeasonalTrends()
+        };
+    }
+    
+    calculateTotalRevenue() {
+        return sales.reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+    }
+    
+    calculateAverageProjectValue() {
+        const totalRevenue = this.calculateTotalRevenue();
+        const totalProjects = inventory.length;
+        return totalProjects > 0 ? totalRevenue / totalProjects : 0;
+    }
+    
+    calculateCompletionRate() {
+        const totalProjects = inventory.length;
+        const completedProjects = inventory.filter(item => item.status === 'completed').length;
+        return totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0;
+    }
+    
+    calculateCustomerRetention() {
+        // Simple retention calculation based on repeat customers
+        const customerIds = sales.map(sale => sale.customerId).filter(Boolean);
+        const uniqueCustomers = new Set(customerIds);
+        const repeatCustomers = customerIds.filter((id, index) => customerIds.indexOf(id) !== index);
+        
+        return uniqueCustomers.size > 0 ? (repeatCustomers.length / uniqueCustomers.size) * 100 : 0;
+    }
+    
+    calculateMonthlyGrowth() {
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        const currentMonthRevenue = sales.filter(sale => {
+            const saleDate = new Date(sale.dateSold);
+            return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+        }).reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+        
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        
+        const lastMonthRevenue = sales.filter(sale => {
+            const saleDate = new Date(sale.dateSold);
+            return saleDate.getMonth() === lastMonth && saleDate.getFullYear() === lastMonthYear;
+        }).reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+        
+        return lastMonthRevenue > 0 ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
+    }
+    
+    getTopCustomers() {
+        const customerSales = {};
+        sales.forEach(sale => {
+            if (sale.customer) {
+                customerSales[sale.customer] = (customerSales[sale.customer] || 0) + (sale.salePrice || 0);
+            }
+        });
+        
+        return Object.entries(customerSales)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([customer, revenue]) => ({ customer, revenue }));
+    }
+    
+    getTopCategories() {
+        const categoryCounts = {};
+        inventory.forEach(item => {
+            if (item.category) {
+                categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+            }
+        });
+        
+        return Object.entries(categoryCounts)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([category, count]) => ({ category, count }));
+    }
+    
+    getSeasonalTrends() {
+        const monthlyData = {};
+        sales.forEach(sale => {
+            const month = new Date(sale.dateSold).getMonth();
+            monthlyData[month] = (monthlyData[month] || 0) + (sale.salePrice || 0);
+        });
+        
+        return monthlyData;
+    }
+    
+    updateCharts() {
+        this.charts.forEach((chart, key) => {
+            if (chart && chart.update) {
+                chart.update();
+            }
+        });
+    }
+    
+    updateStatistics() {
+        const stats = this.analyticsData;
+        
+        // Update DOM elements
+        const elements = {
+            totalProjects: inventory.length,
+            totalRevenue: '$' + stats.totalRevenue.toFixed(2),
+            completedProjects: inventory.filter(item => item.status === 'completed').length,
+            activeCustomers: customers.length,
+            avgProjectValue: '$' + stats.averageProjectValue.toFixed(2),
+            completionRate: stats.completionRate.toFixed(1) + '%'
+        };
+        
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        });
+    }
+    
+    generateComprehensiveReport() {
+        const reportData = this.calculateAnalytics();
+        const insights = this.generatePredictiveInsights();
+        
+        const report = {
+            generatedAt: new Date().toISOString(),
+            summary: reportData,
+            insights: insights,
+            charts: {
+                revenue: this.getRevenueData(),
+                status: this.getStatusData(),
+                completion: this.getCompletionData()
+            }
+        };
+        
+        this.displayReport(report);
+        return report;
+    }
+    
+    displayReport(report) {
+        const reportContent = document.getElementById('reportContent');
+        if (!reportContent) return;
+        
+        reportContent.innerHTML = this.generateReportHTML(report);
+    }
+    
+    generateReportHTML(report) {
+        let html = '<div class="comprehensive-report">';
+        
+        // Header
+        html += '<div class="report-header">';
+        html += '<h2>Comprehensive Business Report</h2>';
+        html += '<p>Generated on: ' + new Date(report.generatedAt).toLocaleString() + '</p>';
+        html += '</div>';
+        
+        // Summary cards
+        html += '<div class="report-summary">';
+        html += '<h3>Business Summary</h3>';
+        html += '<div class="summary-cards">';
+        html += '<div class="summary-card"><h4>Total Revenue</h4><p>$' + report.summary.totalRevenue.toFixed(2) + '</p></div>';
+        html += '<div class="summary-card"><h4>Average Project Value</h4><p>$' + report.summary.averageProjectValue.toFixed(2) + '</p></div>';
+        html += '<div class="summary-card"><h4>Completion Rate</h4><p>' + report.summary.completionRate.toFixed(1) + '%</p></div>';
+        html += '<div class="summary-card"><h4>Customer Retention</h4><p>' + report.summary.customerRetention.toFixed(1) + '%</p></div>';
+        html += '</div></div>';
+        
+        // Insights
+        if (report.insights.length > 0) {
+            html += '<div class="report-insights">';
+            html += '<h3>Predictive Insights</h3>';
+            report.insights.forEach(insight => {
+                html += '<div class="insight-card">';
+                html += '<h4>' + insight.title + '</h4>';
+                html += '<p>' + insight.message + '</p>';
+                html += '<div class="insight-confidence">Confidence: ' + insight.confidence + '%</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        // Charts
+        html += '<div class="report-charts">';
+        html += '<h3>Visual Analytics</h3>';
+        html += '<div class="charts-grid">';
+        html += '<div class="chart-container"><canvas id="revenueChart"></canvas></div>';
+        html += '<div class="chart-container"><canvas id="statusChart"></canvas></div>';
+        html += '<div class="chart-container"><canvas id="completionChart"></canvas></div>';
+        html += '</div></div>';
+        
+        html += '</div>';
+        
+        return html;
+    }
+}
+
+// Predictive Analytics Models
+class RevenuePredictor {
+    predict() {
+        const last6Months = this.getLast6MonthsRevenue();
+        if (last6Months.length < 3) return null;
+        
+        const trend = this.calculateTrend(last6Months);
+        const nextMonth = last6Months[last6Months.length - 1] + trend;
+        
+        return {
+            value: Math.max(0, nextMonth),
+            trend: trend > 0 ? 'increasing' : trend < 0 ? 'decreasing' : 'stable',
+            confidence: Math.min(95, 60 + (last6Months.length * 5))
+        };
+    }
+    
+    getLast6MonthsRevenue() {
+        const months = [];
+        const now = new Date();
+        
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthRevenue = sales.filter(sale => {
+                const saleDate = new Date(sale.dateSold);
+                return saleDate.getMonth() === date.getMonth() && saleDate.getFullYear() === date.getFullYear();
+            }).reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+            
+            months.push(monthRevenue);
+        }
+        
+        return months;
+    }
+    
+    calculateTrend(data) {
+        if (data.length < 2) return 0;
+        
+        const n = data.length;
+        const sumX = (n * (n - 1)) / 2;
+        const sumY = data.reduce((sum, val) => sum + val, 0);
+        const sumXY = data.reduce((sum, val, index) => sum + (val * index), 0);
+        const sumXX = data.reduce((sum, val, index) => sum + (index * index), 0);
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        return slope;
+    }
+}
+
+class CompletionPredictor {
+    predict() {
+        const last6Months = this.getLast6MonthsCompletions();
+        if (last6Months.length < 3) return null;
+        
+        const trend = this.calculateTrend(last6Months);
+        const nextMonth = last6Months[last6Months.length - 1] + trend;
+        
+        return {
+            count: Math.max(0, Math.round(nextMonth)),
+            trend: trend > 0 ? 'increasing' : trend < 0 ? 'decreasing' : 'stable',
+            confidence: Math.min(95, 60 + (last6Months.length * 5))
+        };
+    }
+    
+    getLast6MonthsCompletions() {
+        const months = [];
+        const now = new Date();
+        
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthCompletions = inventory.filter(item => {
+                const completionDate = new Date(item.dateCompleted || item.dateAdded);
+                return completionDate.getMonth() === date.getMonth() && completionDate.getFullYear() === date.getFullYear();
+            }).length;
+            
+            months.push(monthCompletions);
+        }
+        
+        return months;
+    }
+    
+    calculateTrend(data) {
+        if (data.length < 2) return 0;
+        
+        const n = data.length;
+        const sumX = (n * (n - 1)) / 2;
+        const sumY = data.reduce((sum, val) => sum + val, 0);
+        const sumXY = data.reduce((sum, val, index) => sum + (val * index), 0);
+        const sumXX = data.reduce((sum, val, index) => sum + (index * index), 0);
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        return slope;
+    }
+}
+
+class DemandPredictor {
+    predict() {
+        const seasonalData = this.getSeasonalData();
+        const currentMonth = new Date().getMonth();
+        
+        // Find peak month
+        const peakMonth = Object.entries(seasonalData).reduce((a, b) => 
+            seasonalData[a[0]] > seasonalData[b[0]] ? a : b
+        )[0];
+        
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        return {
+            peakMonth: monthNames[parseInt(peakMonth)],
+            trend: 'seasonal',
+            confidence: 75
+        };
+    }
+    
+    getSeasonalData() {
+        const monthlyData = {};
+        sales.forEach(sale => {
+            const month = new Date(sale.dateSold).getMonth();
+            monthlyData[month] = (monthlyData[month] || 0) + 1;
+        });
+        
+        return monthlyData;
+    }
+}
+
+// Initialize analytics manager
+const analyticsManager = new AnalyticsManager();
+
+// Professional Desktop Features & Integration
+class DesktopManager {
+    constructor() {
+        this.isElectron = this.detectElectron();
+        this.fileSystemAccess = null;
+        this.notificationPermission = null;
+        this.systemIntegration = null;
+        this.initializeDesktopFeatures();
+    }
+    
+    detectElectron() {
+        return typeof window !== 'undefined' && window.process && window.process.type;
+    }
+    
+    initializeDesktopFeatures() {
+        if (this.isElectron) {
+            this.setupElectronFeatures();
+        } else {
+            this.setupWebFeatures();
+        }
+        
+        this.setupNotifications();
+        this.setupFileSystemAccess();
+        this.setupSystemIntegration();
+        this.setupAutoStart();
+    }
+    
+    setupElectronFeatures() {
+        // Electron-specific features
+        if (window.require) {
+            try {
+                const { ipcRenderer } = window.require('electron');
+                this.electronAPI = ipcRenderer;
+                this.setupElectronIPC();
+            } catch (error) {
+                console.warn('Electron API not available:', error);
+            }
+        }
+    }
+    
+    setupWebFeatures() {
+        // Web-based desktop features
+        this.setupWebNotifications();
+        this.setupWebFileSystem();
+        this.setupWebSystemIntegration();
+    }
+    
+    setupElectronIPC() {
+        if (!this.electronAPI) return;
+        
+        // Listen for system events
+        this.electronAPI.on('system-notification', (event, data) => {
+            this.showSystemNotification(data.title, data.body, data.icon);
+        });
+        
+        this.electronAPI.on('file-opened', (event, data) => {
+            this.handleFileOpen(data);
+        });
+        
+        this.electronAPI.on('app-close', (event) => {
+            this.handleAppClose();
+        });
+    }
+    
+    setupNotifications() {
+        if ('Notification' in window) {
+            this.notificationPermission = Notification.permission;
+            
+            if (this.notificationPermission === 'default') {
+                this.requestNotificationPermission();
+            }
+        }
+    }
+    
+    async requestNotificationPermission() {
+        try {
+            this.notificationPermission = await Notification.requestPermission();
+            return this.notificationPermission === 'granted';
+        } catch (error) {
+            console.warn('Notification permission request failed:', error);
+            return false;
+        }
+    }
+    
+    showNotification(title, options = {}) {
+        if (this.notificationPermission === 'granted') {
+            const notification = new Notification(title, {
+                icon: options.icon || '/logo.png',
+                badge: '/logo.png',
+                body: options.body || '',
+                tag: options.tag || 'embroidery-app',
+                requireInteraction: options.requireInteraction || false,
+                ...options
+            });
+            
+            if (options.onclick) {
+                notification.onclick = options.onclick;
+            }
+            
+            // Auto-close after 5 seconds unless requireInteraction is true
+            if (!options.requireInteraction) {
+                setTimeout(() => notification.close(), 5000);
+            }
+            
+            return notification;
+        } else {
+            // Fallback to browser notification
+            this.showBrowserNotification(title, options);
+        }
+    }
+    
+    showBrowserNotification(title, options = {}) {
+        // Create a custom notification element
+        const notification = document.createElement('div');
+        notification.className = 'desktop-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="notification-text">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-body">${options.body || ''}</div>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+        
+        return notification;
+    }
+    
+    setupFileSystemAccess() {
+        if ('showOpenFilePicker' in window) {
+            this.fileSystemAccess = 'native';
+        } else if (this.isElectron) {
+            this.fileSystemAccess = 'electron';
+        } else {
+            this.fileSystemAccess = 'fallback';
+        }
+    }
+    
+    async openFile(options = {}) {
+        if (this.fileSystemAccess === 'native') {
+            return this.openFileNative(options);
+        } else if (this.fileSystemAccess === 'electron') {
+            return this.openFileElectron(options);
+        } else {
+            return this.openFileFallback(options);
+        }
+    }
+    
+    async openFileNative(options) {
+        try {
+            const fileHandles = await window.showOpenFilePicker({
+                types: options.types || [
+                    {
+                        description: 'JSON files',
+                        accept: { 'application/json': ['.json'] }
+                    },
+                    {
+                        description: 'CSV files',
+                        accept: { 'text/csv': ['.csv'] }
+                    }
+                ],
+                multiple: options.multiple || false
+            });
+            
+            const files = [];
+            for (const fileHandle of fileHandles) {
+                const file = await fileHandle.getFile();
+                files.push(file);
+            }
+            
+            return files;
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('File open failed:', error);
+            }
+            return [];
+        }
+    }
+    
+    async openFileElectron(options) {
+        if (!this.electronAPI) return [];
+        
+        try {
+            const result = await this.electronAPI.invoke('open-file', options);
+            return result;
+        } catch (error) {
+            console.error('Electron file open failed:', error);
+            return [];
+        }
+    }
+    
+    openFileFallback(options) {
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = options.multiple || false;
+            input.accept = options.accept || '.json,.csv';
+            
+            input.onchange = (e) => {
+                resolve(Array.from(e.target.files));
+            };
+            
+            input.click();
+        });
+    }
+    
+    async saveFile(content, filename, mimeType = 'application/json') {
+        if (this.fileSystemAccess === 'native') {
+            return this.saveFileNative(content, filename, mimeType);
+        } else if (this.fileSystemAccess === 'electron') {
+            return this.saveFileElectron(content, filename, mimeType);
+        } else {
+            return this.saveFileFallback(content, filename, mimeType);
+        }
+    }
+    
+    async saveFileNative(content, filename, mimeType) {
+        try {
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                    description: 'Files',
+                    accept: { [mimeType]: ['.' + filename.split('.').pop()] }
+                }]
+            });
+            
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            
+            return true;
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('File save failed:', error);
+            }
+            return false;
+        }
+    }
+    
+    async saveFileElectron(content, filename, mimeType) {
+        if (!this.electronAPI) return false;
+        
+        try {
+            await this.electronAPI.invoke('save-file', { content, filename, mimeType });
+            return true;
+        } catch (error) {
+            console.error('Electron file save failed:', error);
+            return false;
+        }
+    }
+    
+    saveFileFallback(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    }
+    
+    setupSystemIntegration() {
+        this.setupAutoStart();
+        this.setupSystemTray();
+        this.setupGlobalShortcuts();
+        this.setupFileAssociations();
+    }
+    
+    setupAutoStart() {
+        // Check if app should start with system
+        const autoStart = localStorage.getItem('embroidery_auto_start');
+        if (autoStart === 'true') {
+            this.enableAutoStart();
+        }
+    }
+    
+    enableAutoStart() {
+        localStorage.setItem('embroidery_auto_start', 'true');
+        
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('enable-auto-start');
+        }
+        
+        this.showNotification('Auto-start enabled', {
+            body: 'App will start automatically with your system',
+            icon: '/logo.png'
+        });
+    }
+    
+    disableAutoStart() {
+        localStorage.setItem('embroidery_auto_start', 'false');
+        
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('disable-auto-start');
+        }
+        
+        this.showNotification('Auto-start disabled', {
+            body: 'App will not start automatically with your system',
+            icon: '/logo.png'
+        });
+    }
+    
+    setupSystemTray() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('setup-tray', {
+                title: 'Embroidery Inventory',
+                icon: '/logo.png',
+                menu: [
+                    { label: 'Show App', click: () => this.showApp() },
+                    { label: 'Hide App', click: () => this.hideApp() },
+                    { type: 'separator' },
+                    { label: 'Create Backup', click: () => dataManager.createBackup('manual') },
+                    { label: 'Export Data', click: () => dataManager.exportAllData() },
+                    { type: 'separator' },
+                    { label: 'Quit', click: () => this.quitApp() }
+                ]
+            });
+        }
+    }
+    
+    setupGlobalShortcuts() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('register-global-shortcuts', {
+                'CmdOrCtrl+Shift+E': () => this.showApp(),
+                'CmdOrCtrl+Shift+B': () => dataManager.createBackup('manual'),
+                'CmdOrCtrl+Shift+Q': () => this.quitApp()
+            });
+        }
+    }
+    
+    setupFileAssociations() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('register-file-associations', {
+                '.json': 'Embroidery Data File',
+                '.csv': 'Embroidery CSV File'
+            });
+        }
+    }
+    
+    showApp() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('show-app');
+        } else {
+            window.focus();
+        }
+    }
+    
+    hideApp() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('hide-app');
+        } else {
+            window.blur();
+        }
+    }
+    
+    quitApp() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('quit-app');
+        } else {
+            window.close();
+        }
+    }
+    
+    setupWebNotifications() {
+        // Web-based notification system
+        this.notificationContainer = this.createNotificationContainer();
+    }
+    
+    createNotificationContainer() {
+        const container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+        return container;
+    }
+    
+    setupWebFileSystem() {
+        // Web-based file system access
+        this.fileInput = document.createElement('input');
+        this.fileInput.type = 'file';
+        this.fileInput.style.display = 'none';
+        document.body.appendChild(this.fileInput);
+    }
+    
+    setupWebSystemIntegration() {
+        // Web-based system integration
+        this.setupWebAutoStart();
+        this.setupWebShortcuts();
+    }
+    
+    setupWebAutoStart() {
+        // Check for service worker support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered:', registration);
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+    }
+    
+    setupWebShortcuts() {
+        // Web-based keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey) {
+                switch(e.key) {
+                    case 'E':
+                        e.preventDefault();
+                        this.showApp();
+                        break;
+                    case 'B':
+                        e.preventDefault();
+                        dataManager.createBackup('manual');
+                        break;
+                    case 'Q':
+                        e.preventDefault();
+                        this.quitApp();
+                        break;
+                }
+            }
+        });
+    }
+    
+    handleFileOpen(data) {
+        if (data.type === 'json') {
+            dataManager.importData(data.file);
+        } else if (data.type === 'csv') {
+            this.importCSV(data.file);
+        }
+    }
+    
+    handleAppClose() {
+        // Save data before closing
+        if (typeof saveData === 'function') {
+            saveData();
+        }
+        
+        // Create backup
+        dataManager.createBackup('auto');
+    }
+    
+    importCSV(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const csv = e.target.result;
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',');
+            const data = lines.slice(1).map(line => {
+                const values = line.split(',');
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header.trim()] = values[index]?.trim() || '';
+                });
+                return obj;
+            });
+            
+            // Process CSV data
+            this.processImportedData(data);
+        };
+        reader.readAsText(file);
+    }
+    
+    processImportedData(data) {
+        // Process imported data based on type
+        console.log('Processing imported data:', data);
+        showNotification('Data imported successfully!', 'success');
+    }
+    
+    getSystemInfo() {
+        return {
+            platform: navigator.platform,
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            onLine: navigator.onLine,
+            cookieEnabled: navigator.cookieEnabled,
+            isElectron: this.isElectron,
+            fileSystemAccess: this.fileSystemAccess,
+            notificationPermission: this.notificationPermission
+        };
+    }
+    
+    checkForUpdates() {
+        if (this.isElectron && this.electronAPI) {
+            this.electronAPI.invoke('check-for-updates');
+        } else {
+            // Web-based update check
+            this.checkWebUpdates();
+        }
+    }
+    
+    checkWebUpdates() {
+        // Check for app updates
+        fetch('/version.json')
+            .then(response => response.json())
+            .then(data => {
+                const currentVersion = '2.0.0'; // Current app version
+                if (data.version !== currentVersion) {
+                    this.showNotification('Update Available', {
+                        body: `Version ${data.version} is available. Current version: ${currentVersion}`,
+                        requireInteraction: true,
+                        onclick: () => window.open(data.downloadUrl, '_blank')
+                    });
+                }
+            })
+            .catch(error => {
+                console.log('Update check failed:', error);
+            });
+    }
+    
+    setupWebNotifications() {
+        // Enhanced web notification system
+        this.notificationQueue = [];
+        this.maxNotifications = 5;
+    }
+    
+    showSystemNotification(title, body, icon) {
+        this.showNotification(title, { body, icon });
+    }
+    
+    scheduleNotification(title, body, delay) {
+        setTimeout(() => {
+            this.showNotification(title, { body });
+        }, delay);
+    }
+    
+    setupPeriodicNotifications() {
+        // Schedule periodic notifications for important tasks
+        setInterval(() => {
+            this.checkPendingTasks();
+        }, 60 * 60 * 1000); // Every hour
+    }
+    
+    checkPendingTasks() {
+        const pendingTasks = inventory.filter(item => 
+            item.status === 'pending' && 
+            new Date(item.dueDate) < new Date(Date.now() + 24 * 60 * 60 * 1000)
+        );
+        
+        if (pendingTasks.length > 0) {
+            this.showNotification('Pending Tasks', {
+                body: `${pendingTasks.length} tasks are due soon`,
+                requireInteraction: true
+            });
+        }
+    }
+}
+
+// Initialize desktop manager
+const desktopManager = new DesktopManager();
+
+// Advanced Form Management & Validation System
+class FormManager {
+    constructor() {
+        this.forms = new Map();
+        this.templates = new Map();
+        this.autoSaveInterval = null;
+        this.validationRules = new Map();
+        this.initializeFormManagement();
+    }
+    
+    initializeFormManagement() {
+        this.setupValidationRules();
+        this.setupAutoSave();
+        this.setupFormTemplates();
+        this.setupSmartValidation();
+    }
+    
+    setupValidationRules() {
+        // Define validation rules for different field types
+        this.validationRules.set('email', {
+            pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: 'Please enter a valid email address'
+        });
+        
+        this.validationRules.set('phone', {
+            pattern: /^[\+]?[1-9][\d]{0,15}$/,
+            message: 'Please enter a valid phone number'
+        });
+        
+        this.validationRules.set('price', {
+            pattern: /^\d+(\.\d{1,2})?$/,
+            message: 'Please enter a valid price (e.g., 25.99)'
+        });
+        
+        this.validationRules.set('date', {
+            validator: (value) => {
+                const date = new Date(value);
+                return !isNaN(date.getTime()) && date > new Date('1900-01-01');
+            },
+            message: 'Please enter a valid date'
+        });
+        
+        this.validationRules.set('required', {
+            validator: (value) => value && value.trim().length > 0,
+            message: 'This field is required'
+        });
+        
+        this.validationRules.set('minLength', {
+            validator: (value, min) => value && value.length >= min,
+            message: (min) => `Must be at least ${min} characters long`
+        });
+        
+        this.validationRules.set('maxLength', {
+            validator: (value, max) => !value || value.length <= max,
+            message: (max) => `Must be no more than ${max} characters long`
+        });
+    }
+    
+    setupAutoSave() {
+        // Auto-save forms every 30 seconds
+        this.autoSaveInterval = setInterval(() => {
+            this.autoSaveAllForms();
+        }, 30000);
+    }
+    
+    setupFormTemplates() {
+        // Define form templates for common use cases
+        this.templates.set('inventory-item', {
+            name: 'Inventory Item',
+            fields: [
+                { name: 'description', type: 'text', required: true, label: 'Item Description' },
+                { name: 'category', type: 'select', required: true, label: 'Category', options: ['kits', 'hoops', 'fabric', 'thread', 'supplies'] },
+                { name: 'quantity', type: 'number', required: true, label: 'Quantity', min: 0 },
+                { name: 'status', type: 'select', required: true, label: 'Status', options: ['available', 'low-stock', 'out-of-stock'] },
+                { name: 'location', type: 'text', label: 'Location' },
+                { name: 'notes', type: 'textarea', label: 'Notes' }
+            ]
+        });
+        
+        this.templates.set('customer', {
+            name: 'Customer',
+            fields: [
+                { name: 'name', type: 'text', required: true, label: 'Customer Name' },
+                { name: 'email', type: 'email', required: true, label: 'Email Address' },
+                { name: 'phone', type: 'tel', label: 'Phone Number' },
+                { name: 'address', type: 'textarea', label: 'Address' },
+                { name: 'notes', type: 'textarea', label: 'Notes' }
+            ]
+        });
+        
+        this.templates.set('sale', {
+            name: 'Sale',
+            fields: [
+                { name: 'itemName', type: 'text', required: true, label: 'Item Name' },
+                { name: 'customer', type: 'text', required: true, label: 'Customer' },
+                { name: 'salePrice', type: 'number', required: true, label: 'Sale Price', min: 0, step: 0.01 },
+                { name: 'dateSold', type: 'date', required: true, label: 'Date Sold' },
+                { name: 'saleChannel', type: 'select', required: true, label: 'Sale Channel', options: ['individual', 'etsy', 'facebook', 'instagram', 'other'] },
+                { name: 'notes', type: 'textarea', label: 'Notes' }
+            ]
+        });
+    }
+    
+    setupSmartValidation() {
+        // Set up real-time validation for all forms
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, select, textarea')) {
+                this.validateField(e.target);
+            }
+        });
+        
+        document.addEventListener('blur', (e) => {
+            if (e.target.matches('input, select, textarea')) {
+                this.validateField(e.target);
+            }
+        });
+    }
+    
+    validateField(field) {
+        const form = field.closest('form');
+        if (!form) return;
+        
+        const formId = form.id;
+        if (!formId) return;
+        
+        const fieldName = field.name;
+        const fieldValue = field.value;
+        const fieldType = field.type;
+        
+        // Get validation rules for this field
+        const rules = this.getFieldValidationRules(field);
+        const errors = [];
+        
+        // Apply validation rules
+        rules.forEach(rule => {
+            if (!this.validateRule(fieldValue, rule)) {
+                errors.push(rule.message);
+            }
+        });
+        
+        // Update field validation state
+        this.updateFieldValidation(field, errors);
+        
+        // Update form validation state
+        this.updateFormValidation(form);
+        
+        return errors.length === 0;
+    }
+    
+    getFieldValidationRules(field) {
+        const rules = [];
+        const fieldType = field.type;
+        const fieldName = field.name;
+        
+        // Required field validation
+        if (field.required) {
+            rules.push(this.validationRules.get('required'));
+        }
+        
+        // Type-specific validation
+        if (fieldType === 'email') {
+            rules.push(this.validationRules.get('email'));
+        } else if (fieldType === 'tel') {
+            rules.push(this.validationRules.get('phone'));
+        } else if (fieldType === 'number') {
+            if (fieldName.includes('price') || fieldName.includes('Price')) {
+                rules.push(this.validationRules.get('price'));
+            }
+        } else if (fieldType === 'date') {
+            rules.push(this.validationRules.get('date'));
+        }
+        
+        // Length validation
+        if (field.minLength) {
+            rules.push({
+                validator: (value) => this.validationRules.get('minLength').validator(value, field.minLength),
+                message: this.validationRules.get('minLength').message(field.minLength)
+            });
+        }
+        
+        if (field.maxLength) {
+            rules.push({
+                validator: (value) => this.validationRules.get('maxLength').validator(value, field.maxLength),
+                message: this.validationRules.get('maxLength').message(field.maxLength)
+            });
+        }
+        
+        return rules;
+    }
+    
+    validateRule(value, rule) {
+        if (rule.pattern) {
+            return rule.pattern.test(value);
+        } else if (rule.validator) {
+            return rule.validator(value);
+        }
+        return true;
+    }
+    
+    updateFieldValidation(field, errors) {
+        const fieldContainer = field.closest('.form-group') || field.parentElement;
+        const errorContainer = fieldContainer.querySelector('.field-error');
+        
+        // Remove existing error styling
+        field.classList.remove('error');
+        if (errorContainer) {
+            errorContainer.remove();
+        }
+        
+        // Add error styling and message
+        if (errors.length > 0) {
+            field.classList.add('error');
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'field-error';
+            errorDiv.textContent = errors[0]; // Show first error
+            fieldContainer.appendChild(errorDiv);
+        }
+    }
+    
+    updateFormValidation(form) {
+        const formId = form.id;
+        const fields = form.querySelectorAll('input, select, textarea');
+        const hasErrors = Array.from(fields).some(field => field.classList.contains('error'));
+        
+        // Update form validation state
+        form.classList.toggle('has-errors', hasErrors);
+        
+        // Update submit button state
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = hasErrors;
+        }
+    }
+    
+    autoSaveAllForms() {
+        this.forms.forEach((formData, formId) => {
+            if (formData.autoSave) {
+                this.autoSaveForm(formId);
+            }
+        });
+    }
+    
+    autoSaveForm(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        
+        const formData = this.serializeForm(form);
+        const autoSaveKey = `autosave_${formId}`;
+        
+        // Only save if form has been modified
+        const lastSaved = localStorage.getItem(`${autoSaveKey}_timestamp`);
+        const formModified = form.dataset.modified === 'true';
+        
+        if (formModified && formData) {
+            localStorage.setItem(autoSaveKey, JSON.stringify(formData));
+            localStorage.setItem(`${autoSaveKey}_timestamp`, Date.now().toString());
+            
+            // Show auto-save indicator
+            this.showAutoSaveIndicator(form);
+        }
+    }
+    
+    serializeForm(form) {
+        const formData = {};
+        const fields = form.querySelectorAll('input, select, textarea');
+        
+        fields.forEach(field => {
+            if (field.name) {
+                if (field.type === 'checkbox') {
+                    formData[field.name] = field.checked;
+                } else if (field.type === 'radio') {
+                    if (field.checked) {
+                        formData[field.name] = field.value;
+                    }
+                } else {
+                    formData[field.name] = field.value;
+                }
+            }
+        });
+        
+        return formData;
+    }
+    
+    showAutoSaveIndicator(form) {
+        const indicator = form.querySelector('.auto-save-indicator');
+        if (indicator) {
+            indicator.textContent = 'Auto-saved';
+            indicator.classList.add('show');
+            
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+    }
+    
+    restoreForm(formId) {
+        const autoSaveKey = `autosave_${formId}`;
+        const savedData = localStorage.getItem(autoSaveKey);
+        
+        if (savedData) {
+            try {
+                const formData = JSON.parse(savedData);
+                this.populateForm(formId, formData);
+                
+                // Show restore notification
+                this.showRestoreNotification(formId);
+            } catch (error) {
+                console.error('Failed to restore form data:', error);
+            }
+        }
+    }
+    
+    populateForm(formId, formData) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        
+        Object.entries(formData).forEach(([name, value]) => {
+            const field = form.querySelector(`[name="${name}"]`);
+            if (field) {
+                if (field.type === 'checkbox') {
+                    field.checked = value;
+                } else if (field.type === 'radio') {
+                    if (field.value === value) {
+                        field.checked = true;
+                    }
+                } else {
+                    field.value = value;
+                }
+            }
+        });
+        
+        // Mark form as restored
+        form.dataset.restored = 'true';
+    }
+    
+    showRestoreNotification(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        
+        const notification = document.createElement('div');
+        notification.className = 'restore-notification';
+        notification.innerHTML = `
+            <div class="restore-content">
+                <i class="fas fa-undo"></i>
+                <span>Form data restored from auto-save</span>
+                <button onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+        `;
+        
+        form.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+    
+    createFormFromTemplate(templateName, containerId) {
+        const template = this.templates.get(templateName);
+        if (!template) {
+            console.error(`Template ${templateName} not found`);
+            return;
+        }
+        
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Container ${containerId} not found`);
+            return;
+        }
+        
+        const form = document.createElement('form');
+        form.id = `${templateName}_form`;
+        form.className = 'template-form';
+        
+        // Add form fields
+        template.fields.forEach(field => {
+            const fieldElement = this.createFormField(field);
+            form.appendChild(fieldElement);
+        });
+        
+        // Add form actions
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'form-actions';
+        actionsDiv.innerHTML = `
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" onclick="formManager.clearForm('${form.id}')">Clear</button>
+            <button type="button" class="btn btn-outline" onclick="formManager.saveAsTemplate('${form.id}')">Save as Template</button>
+        `;
+        form.appendChild(actionsDiv);
+        
+        // Add auto-save indicator
+        const autoSaveIndicator = document.createElement('div');
+        autoSaveIndicator.className = 'auto-save-indicator';
+        autoSaveIndicator.textContent = 'Auto-save enabled';
+        form.appendChild(autoSaveIndicator);
+        
+        container.appendChild(form);
+        
+        // Register form for auto-save
+        this.forms.set(form.id, {
+            autoSave: true,
+            template: templateName
+        });
+        
+        // Set up form event listeners
+        this.setupFormEventListeners(form);
+        
+        return form;
+    }
+    
+    createFormField(fieldConfig) {
+        const fieldGroup = document.createElement('div');
+        fieldGroup.className = 'form-group';
+        
+        const label = document.createElement('label');
+        label.textContent = fieldConfig.label;
+        if (fieldConfig.required) {
+            label.innerHTML += ' <span class="required">*</span>';
+        }
+        fieldGroup.appendChild(label);
+        
+        let field;
+        
+        switch (fieldConfig.type) {
+            case 'text':
+            case 'email':
+            case 'tel':
+            case 'number':
+            case 'date':
+                field = document.createElement('input');
+                field.type = fieldConfig.type;
+                break;
+            case 'textarea':
+                field = document.createElement('textarea');
+                break;
+            case 'select':
+                field = document.createElement('select');
+                if (fieldConfig.options) {
+                    fieldConfig.options.forEach(option => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option;
+                        optionElement.textContent = option;
+                        field.appendChild(optionElement);
+                    });
+                }
+                break;
+            default:
+                field = document.createElement('input');
+                field.type = 'text';
+        }
+        
+        field.name = fieldConfig.name;
+        field.required = fieldConfig.required || false;
+        
+        if (fieldConfig.min !== undefined) field.min = fieldConfig.min;
+        if (fieldConfig.max !== undefined) field.max = fieldConfig.max;
+        if (fieldConfig.step !== undefined) field.step = fieldConfig.step;
+        if (fieldConfig.placeholder) field.placeholder = fieldConfig.placeholder;
+        
+        fieldGroup.appendChild(field);
+        
+        return fieldGroup;
+    }
+    
+    setupFormEventListeners(form) {
+        // Mark form as modified on input
+        form.addEventListener('input', () => {
+            form.dataset.modified = 'true';
+        });
+        
+        // Handle form submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleFormSubmission(form);
+        });
+        
+        // Handle form reset
+        form.addEventListener('reset', () => {
+            form.dataset.modified = 'false';
+        });
+    }
+    
+    handleFormSubmission(form) {
+        const formData = this.serializeForm(form);
+        const formId = form.id;
+        
+        // Validate form
+        if (!this.validateForm(form)) {
+            return false;
+        }
+        
+        // Process form data
+        this.processFormData(formId, formData);
+        
+        // Clear auto-save data
+        this.clearAutoSaveData(formId);
+        
+        // Mark form as not modified
+        form.dataset.modified = 'false';
+        
+        return true;
+    }
+    
+    validateForm(form) {
+        const fields = form.querySelectorAll('input, select, textarea');
+        let isValid = true;
+        
+        fields.forEach(field => {
+            if (!this.validateField(field)) {
+                isValid = false;
+            }
+        });
+        
+        return isValid;
+    }
+    
+    processFormData(formId, formData) {
+        // Process form data based on form type
+        const formInfo = this.forms.get(formId);
+        if (!formInfo) return;
+        
+        switch (formInfo.template) {
+            case 'inventory-item':
+                this.processInventoryItem(formData);
+                break;
+            case 'customer':
+                this.processCustomer(formData);
+                break;
+            case 'sale':
+                this.processSale(formData);
+                break;
+            default:
+                console.log('Processing form data:', formData);
+        }
+    }
+    
+    processInventoryItem(formData) {
+        const item = {
+            id: Date.now(),
+            description: formData.description,
+            category: formData.category,
+            quantity: parseInt(formData.quantity) || 0,
+            status: formData.status,
+            location: formData.location || '',
+            notes: formData.notes || '',
+            dateAdded: new Date().toISOString()
+        };
+        
+        inventory.push(item);
+        saveData();
+        loadInventoryTable();
+        
+        showNotification('Inventory item added successfully!', 'success');
+    }
+    
+    processCustomer(formData) {
+        const customer = {
+            id: Date.now(),
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || '',
+            address: formData.address || '',
+            notes: formData.notes || '',
+            dateAdded: new Date().toISOString()
+        };
+        
+        customers.push(customer);
+        saveData();
+        loadCustomersTable();
+        
+        showNotification('Customer added successfully!', 'success');
+    }
+    
+    processSale(formData) {
+        const sale = {
+            id: Date.now(),
+            itemName: formData.itemName,
+            customer: formData.customer,
+            salePrice: parseFloat(formData.salePrice) || 0,
+            dateSold: formData.dateSold,
+            saleChannel: formData.saleChannel,
+            notes: formData.notes || '',
+            dateAdded: new Date().toISOString()
+        };
+        
+        sales.push(sale);
+        saveData();
+        loadSalesTable();
+        
+        showNotification('Sale recorded successfully!', 'success');
+    }
+    
+    clearForm(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        
+        form.reset();
+        form.dataset.modified = 'false';
+        
+        // Clear validation errors
+        const errorFields = form.querySelectorAll('.error');
+        errorFields.forEach(field => {
+            field.classList.remove('error');
+            const errorContainer = field.parentElement.querySelector('.field-error');
+            if (errorContainer) {
+                errorContainer.remove();
+            }
+        });
+    }
+    
+    saveAsTemplate(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        
+        const templateName = prompt('Enter template name:');
+        if (!templateName) return;
+        
+        const fields = Array.from(form.querySelectorAll('input, select, textarea')).map(field => ({
+            name: field.name,
+            type: field.type,
+            required: field.required,
+            label: field.previousElementSibling?.textContent?.replace('*', '').trim() || field.name,
+            placeholder: field.placeholder || ''
+        }));
+        
+        this.templates.set(templateName, {
+            name: templateName,
+            fields: fields
+        });
+        
+        // Save templates to localStorage
+        localStorage.setItem('form_templates', JSON.stringify(Array.from(this.templates.entries())));
+        
+        showNotification('Template saved successfully!', 'success');
+    }
+    
+    clearAutoSaveData(formId) {
+        const autoSaveKey = `autosave_${formId}`;
+        localStorage.removeItem(autoSaveKey);
+        localStorage.removeItem(`${autoSaveKey}_timestamp`);
+    }
+    
+    loadTemplates() {
+        const savedTemplates = localStorage.getItem('form_templates');
+        if (savedTemplates) {
+            try {
+                const templates = JSON.parse(savedTemplates);
+                this.templates = new Map(templates);
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+            }
+        }
+    }
+    
+    saveTemplates() {
+        localStorage.setItem('form_templates', JSON.stringify(Array.from(this.templates.entries())));
+    }
+    
+    getFormTemplates() {
+        return Array.from(this.templates.entries()).map(([name, template]) => ({
+            name,
+            ...template
+        }));
+    }
+    
+    createFormBuilder() {
+        // Create a form builder interface
+        const builder = document.createElement('div');
+        builder.className = 'form-builder';
+        builder.innerHTML = `
+            <div class="form-builder-header">
+                <h3>Form Builder</h3>
+                <button class="btn btn-primary" onclick="formManager.saveFormBuilder()">Save Form</button>
+            </div>
+            <div class="form-builder-content">
+                <div class="form-preview" id="formPreview"></div>
+                <div class="form-fields">
+                    <h4>Add Field</h4>
+                    <div class="field-types">
+                        <button class="btn btn-outline" onclick="formManager.addField('text')">Text</button>
+                        <button class="btn btn-outline" onclick="formManager.addField('email')">Email</button>
+                        <button class="btn btn-outline" onclick="formManager.addField('tel')">Phone</button>
+                        <button class="btn btn-outline" onclick="formManager.addField('number')">Number</button>
+                        <button class="btn btn-outline" onclick="formManager.addField('date')">Date</button>
+                        <button class="btn btn-outline" onclick="formManager.addField('textarea')">Textarea</button>
+                        <button class="btn btn-outline" onclick="formManager.addField('select')">Select</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return builder;
+    }
+    
+    addField(type) {
+        const preview = document.getElementById('formPreview');
+        if (!preview) return;
+        
+        const fieldConfig = {
+            name: `field_${Date.now()}`,
+            type: type,
+            label: `New ${type} field`,
+            required: false
+        };
+        
+        const fieldElement = this.createFormField(fieldConfig);
+        preview.appendChild(fieldElement);
+    }
+    
+    saveFormBuilder() {
+        const preview = document.getElementById('formPreview');
+        if (!preview) return;
+        
+        const fields = Array.from(preview.querySelectorAll('.form-group')).map(group => {
+            const field = group.querySelector('input, select, textarea');
+            const label = group.querySelector('label');
+            
+            return {
+                name: field.name,
+                type: field.type,
+                required: field.required,
+                label: label.textContent.replace('*', '').trim()
+            };
+        });
+        
+        const templateName = prompt('Enter template name:');
+        if (!templateName) return;
+        
+        this.templates.set(templateName, {
+            name: templateName,
+            fields: fields
+        });
+        
+        this.saveTemplates();
+        showNotification('Form template saved!', 'success');
+    }
+}
+
+// Initialize form manager
+const formManager = new FormManager();
+
+// Global functions for HTML onclick handlers
+function debouncedFilterItems() {
+    searchManager.debouncedFilterItems();
+}
+
+function openAdvancedSearch(tab) {
+    searchManager.openAdvancedSearch(tab);
+}
+
+function saveCurrentSearch(tab) {
+    searchManager.saveCurrentSearch(tab);
+}
+
+function loadSavedSearches(tab) {
+    searchManager.loadSavedSearches(tab);
+}
+
+function clearAllFilters(tab) {
+    searchManager.clearAllFilters(tab);
+}
+
+function clearAdvancedSearch() {
+    document.getElementById('advancedSearchForm').reset();
+}
+
+function saveAdvancedSearch() {
+    searchManager.saveCurrentSearch(searchManager.currentTab);
+}
+
 // Error handling utilities
 function logError(context, error, additionalInfo = {}) {
     console.error(`❌ ${context}:`, {
@@ -45,15 +3479,27 @@ function logout() {
 }
 
 function showChangePasswordModal() {
-    document.getElementById('changePasswordModal').style.display = 'block';
-    document.getElementById('currentPassword').focus();
+    const modal = document.getElementById('changePasswordModal');
+    const passwordField = document.getElementById('currentPassword');
+    
+    if (modal) {
+        modal.style.display = 'block';
+    }
+    if (passwordField) {
+        passwordField.focus();
+    }
 }
 
 function hideChangePasswordModal() {
-    document.getElementById('changePasswordModal').style.display = 'none';
-    document.getElementById('changePasswordForm').reset();
-    document.getElementById('changePasswordError').style.display = 'none';
-    document.getElementById('changePasswordSuccess').style.display = 'none';
+    const modal = document.getElementById('changePasswordModal');
+    const form = document.getElementById('changePasswordForm');
+    const errorDiv = document.getElementById('changePasswordError');
+    const successDiv = document.getElementById('changePasswordSuccess');
+    
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+    if (errorDiv) errorDiv.style.display = 'none';
+    if (successDiv) successDiv.style.display = 'none';
 }
 
 function handleChangePassword(event) {
@@ -68,22 +3514,31 @@ function handleChangePassword(event) {
     
     // Validate current password
     if (currentPassword !== ADMIN_PASSWORD) {
-        document.getElementById('changePasswordErrorText').textContent = 'Current password is incorrect.';
-        document.getElementById('changePasswordError').style.display = 'block';
+        const errorText = document.getElementById('changePasswordErrorText');
+        const errorDiv = document.getElementById('changePasswordError');
+        
+        if (errorText) errorText.textContent = 'Current password is incorrect.';
+        if (errorDiv) errorDiv.style.display = 'block';
         return;
     }
     
     // Validate new password
     if (newPassword.length < 4) {
-        document.getElementById('changePasswordErrorText').textContent = 'New password must be at least 4 characters long.';
-        document.getElementById('changePasswordError').style.display = 'block';
+        const errorText = document.getElementById('changePasswordErrorText');
+        const errorDiv = document.getElementById('changePasswordError');
+        
+        if (errorText) errorText.textContent = 'New password must be at least 4 characters long.';
+        if (errorDiv) errorDiv.style.display = 'block';
         return;
     }
     
     // Validate password confirmation
     if (newPassword !== confirmPassword) {
-        document.getElementById('changePasswordErrorText').textContent = 'New passwords do not match.';
-        document.getElementById('changePasswordError').style.display = 'block';
+        const errorText = document.getElementById('changePasswordErrorText');
+        const errorDiv = document.getElementById('changePasswordError');
+        
+        if (errorText) errorText.textContent = 'New passwords do not match.';
+        if (errorDiv) errorDiv.style.display = 'block';
         return;
     }
     
@@ -213,20 +3668,20 @@ function loadSalesForInvoice() {
     }
     
     // Show individual sales for the selected customer (exclude shop sales)
-    sales.forEach((sale, index) => {
-        if (sale.customer === selectedCustomer && sale.saleChannel !== 'shop') {
-            const saleDiv = document.createElement('div');
-            saleDiv.className = 'sale-item';
-            saleDiv.innerHTML = `
-                <label class="sale-checkbox">
-                    <input type="checkbox" name="selectedSales" value="${index}" checked>
-                    <span class="sale-info">
-                        <strong>${sale.itemName}</strong> - $${sale.salePrice} - ${sale.dateSold}
-                    </span>
-                </label>
-            `;
-            container.appendChild(saleDiv);
-        }
+    customerSales.forEach((sale, index) => {
+        // Find the original index in the sales array for proper mapping
+        const originalIndex = sales.findIndex(s => s === sale);
+        const saleDiv = document.createElement('div');
+        saleDiv.className = 'sale-item';
+        saleDiv.innerHTML = `
+            <label class="sale-checkbox">
+                <input type="checkbox" name="selectedSales" value="${originalIndex}" checked>
+                <span class="sale-info">
+                    <strong>${sale.itemName}</strong> - $${sale.salePrice} - ${sale.dateSold}
+                </span>
+            </label>
+        `;
+        container.appendChild(saleDiv);
     });
 }
 
@@ -239,7 +3694,11 @@ function handleInvoiceGeneration(event) {
     
     // Get selected sales
     const selectedSales = Array.from(document.querySelectorAll('input[name="selectedSales"]:checked'))
-        .map(checkbox => sales[parseInt(checkbox.value)]);
+        .map(checkbox => {
+            const index = parseInt(checkbox.value);
+            return !isNaN(index) && index >= 0 && index < sales.length ? sales[index] : null;
+        })
+        .filter(sale => sale !== null);
     
     if (selectedSales.length === 0) {
         alert('Please select at least one sale to include in the invoice.');
@@ -1740,6 +5199,12 @@ function loadMobileInventoryCards() {
     // Group items by customer
     const groupedItems = {};
     projectItems.forEach((item, filteredIndex) => {
+        // Skip if item is null or malformed
+        if (!item || typeof item !== 'object') {
+            console.warn('Skipping invalid item in mobile inventory:', item);
+            return;
+        }
+        
         const customer = item.customer || 'No Customer';
         if (!groupedItems[customer]) {
             groupedItems[customer] = [];
@@ -1776,11 +5241,15 @@ function loadMobileInventoryCards() {
         const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
+        // Safely escape customer name for HTML attributes
+        const safeCustomerName = customer ? customer.replace(/'/g, "\\'") : 'No Customer';
+        const safeCustomerId = customer ? customer.replace(/\s+/g, '-').toLowerCase() : 'no-customer';
+        
         customerHeaderCard.innerHTML = `
-            <div class="mobile-customer-header" onclick="toggleMobileCustomerGroup('${customer.replace(/'/g, "\\'")}')">
+            <div class="mobile-customer-header" data-customer="${safeCustomerName}">
                 <h3 class="mobile-customer-name">
-                    <i class="fas fa-chevron-right mobile-customer-toggle" id="toggle-${customer.replace(/\s+/g, '-').toLowerCase()}"></i>
-                    ${customer}
+                    <i class="fas fa-chevron-right mobile-customer-toggle" id="toggle-${safeCustomerId}"></i>
+                    ${customer || 'No Customer'}
                 </h3>
                 <span class="mobile-card-status status-customer">${totalProjects} Projects</span>
             </div>
@@ -1803,6 +5272,40 @@ function loadMobileInventoryCards() {
             </div>
         `;
         container.appendChild(customerHeaderCard);
+        
+        // Add proper touch event handling to prevent accidental toggles during scroll
+        const customerHeader = customerHeaderCard.querySelector('.mobile-customer-header');
+        if (customerHeader) {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartTime = 0;
+            
+            customerHeader.addEventListener('touchstart', (e) => {
+                if (e.touches && e.touches.length > 0) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchStartTime = Date.now();
+                }
+            });
+            
+            customerHeader.addEventListener('touchend', (e) => {
+                if (e.changedTouches && e.changedTouches.length > 0) {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const touchEndTime = Date.now();
+                    
+                    const deltaX = Math.abs(touchEndX - touchStartX);
+                    const deltaY = Math.abs(touchEndY - touchStartY);
+                    const deltaTime = touchEndTime - touchStartTime;
+                    
+                    // Only trigger toggle if it's a tap (small movement, short duration)
+                    if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
+                        const customerName = customerHeader.getAttribute('data-customer');
+                        toggleMobileCustomerGroup(customerName);
+                    }
+                }
+            });
+        }
         
         // Create projects container
         const projectsContainer = customerHeaderCard.querySelector('.mobile-customer-projects');
@@ -2161,6 +5664,12 @@ function loadMobileCustomerCards() {
     }
 
     customerItems.forEach((customer, index) => {
+        // Skip if customer is null or doesn't have a name
+        if (!customer || !customer.name) {
+            console.warn('Skipping invalid customer:', customer);
+            return;
+        }
+        
         const card = document.createElement('div');
         card.className = 'customer-card';
         
@@ -2217,6 +5726,12 @@ function loadMobileSalesCards() {
     }
 
     sales.forEach((sale, index) => {
+        // Skip if sale is null or malformed
+        if (!sale) {
+            console.warn('Skipping invalid sale:', sale);
+            return;
+        }
+        
         const listedPrice = sale.listedPrice || sale.price || 0;
         const salePrice = sale.salePrice || sale.price || 0;
         const discount = listedPrice - salePrice;
@@ -2280,8 +5795,15 @@ function loadMobileSalesCards() {
 
 // Mobile-only function for toggling customer groups
 function toggleMobileCustomerGroup(customer) {
-    const projectsId = `mobile-projects-${customer.replace(/\s+/g, '-').toLowerCase()}`;
-    const toggleId = `toggle-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+    // Validate customer parameter
+    if (!customer || typeof customer !== 'string') {
+        console.warn('Invalid customer parameter for toggleMobileCustomerGroup:', customer);
+        return;
+    }
+    
+    const safeCustomerId = customer.replace(/\s+/g, '-').toLowerCase();
+    const projectsId = `mobile-projects-${safeCustomerId}`;
+    const toggleId = `toggle-${safeCustomerId}`;
     
     const projectsContainer = document.getElementById(projectsId);
     const toggleIcon = document.getElementById(toggleId);
@@ -2493,7 +6015,8 @@ function handleAddItem(e) {
     };
     
     // Handle photo if present
-    const photoFile = document.getElementById('itemPhoto').files[0];
+    const photoInput = document.getElementById('itemPhoto');
+    const photoFile = photoInput && photoInput.files && photoInput.files.length > 0 ? photoInput.files[0] : null;
     let photoData = null;
     
     if (photoFile) {
@@ -5861,6 +9384,44 @@ function setupMobileFeatures() {
         }
         lastTouchEnd = now;
     }, false);
+    
+    // Improve mobile scrolling behavior
+    document.addEventListener('touchstart', function(e) {
+        // Allow scrolling to continue naturally
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+        // Allow scrolling to continue naturally
+    }, { passive: true });
+    
+    // Enhanced mobile scroll handling for cards containers
+    function enhanceMobileScroll() {
+        const mobileContainers = document.querySelectorAll('.mobile-cards-container');
+        mobileContainers.forEach(container => {
+            // Ensure smooth scrolling
+            container.style.scrollBehavior = 'smooth';
+            container.style.webkitOverflowScrolling = 'touch';
+            
+            // Add momentum scrolling for iOS
+            if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                container.style.webkitOverflowScrolling = 'touch';
+            }
+        });
+    }
+    
+    // Apply mobile scroll enhancements when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', enhanceMobileScroll);
+    } else {
+        enhanceMobileScroll();
+    }
+    
+    // Re-apply on tab changes
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('nav-btn')) {
+            setTimeout(enhanceMobileScroll, 100);
+        }
+    });
     
     // Handle viewport height on mobile browsers
     function setViewportHeight() {
