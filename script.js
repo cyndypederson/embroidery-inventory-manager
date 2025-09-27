@@ -9563,6 +9563,12 @@ function setupMobilePhotoGestures() {
 
 // OCR Analysis Functions
 function analyzePhotoForInventory() {
+    // Skip OCR on mobile devices to prevent interference
+    if (window.innerWidth <= 768) {
+        showNotification('Photo analysis is not available on mobile devices', 'info');
+        return;
+    }
+    
     const fileInput = document.getElementById('itemPhoto');
     const file = fileInput.files[0];
     
@@ -9575,6 +9581,12 @@ function analyzePhotoForInventory() {
 }
 
 function analyzePhotoForGallery() {
+    // Skip OCR on mobile devices to prevent interference
+    if (window.innerWidth <= 768) {
+        showNotification('Photo analysis is not available on mobile devices', 'info');
+        return;
+    }
+    
     const fileInput = document.getElementById('photoFile');
     const file = fileInput.files[0];
     
@@ -9966,6 +9978,12 @@ function populateFormFields(data, context, confidence) {
 
 // Setup OCR functionality when DOM is loaded
 function setupOCRFunctionality() {
+    // Skip OCR setup on mobile devices to prevent interference
+    if (window.innerWidth <= 768) {
+        console.log('OCR functionality skipped on mobile devices');
+        return;
+    }
+    
     // Enable analyze buttons when photos are selected
     const photoInputs = [
         { input: 'itemPhoto', button: 'analyzeInventoryBtn' },
