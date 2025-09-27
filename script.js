@@ -5280,15 +5280,20 @@ function loadMobileInventoryCards() {
             let touchStartY = 0;
             let touchStartTime = 0;
             
+            console.log('Adding touch events to customer header for:', customer); // Debug log
+            
             customerHeader.addEventListener('touchstart', (e) => {
+                console.log('Touch start detected on customer:', customer); // Debug log
                 if (e.touches && e.touches.length > 0) {
                     touchStartX = e.touches[0].clientX;
                     touchStartY = e.touches[0].clientY;
                     touchStartTime = Date.now();
+                    console.log('Touch start coordinates:', touchStartX, touchStartY); // Debug log
                 }
             });
             
             customerHeader.addEventListener('touchend', (e) => {
+                console.log('Touch end detected on customer:', customer); // Debug log
                 if (e.changedTouches && e.changedTouches.length > 0) {
                     const touchEndX = e.changedTouches[0].clientX;
                     const touchEndY = e.changedTouches[0].clientY;
@@ -5298,14 +5303,22 @@ function loadMobileInventoryCards() {
                     const deltaY = Math.abs(touchEndY - touchStartY);
                     const deltaTime = touchEndTime - touchStartTime;
                     
+                    console.log('Touch movement:', deltaX, deltaY, 'Time:', deltaTime); // Debug log
+                    
                     // Only trigger toggle if it's a tap (small movement, short duration)
                     if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
                         const customerName = customerHeader.getAttribute('data-customer');
                         console.log('Mobile toggle triggered for customer:', customerName); // Debug log
+                        console.log('Customer header element:', customerHeader); // Debug log
+                        console.log('Data-customer attribute:', customerHeader.getAttribute('data-customer')); // Debug log
                         toggleMobileCustomerGroup(customerName);
+                    } else {
+                        console.log('Touch rejected - too much movement or too long'); // Debug log
                     }
                 }
             });
+        } else {
+            console.log('No customer header found for customer:', customer); // Debug log
         }
         
         // Create projects container
@@ -5796,6 +5809,10 @@ function loadMobileSalesCards() {
 
 // Mobile-only function for toggling customer groups
 function toggleMobileCustomerGroup(customer) {
+    console.log('=== toggleMobileCustomerGroup called ===');
+    console.log('Customer parameter:', customer);
+    console.log('Customer type:', typeof customer);
+    
     // Validate customer parameter
     if (!customer || typeof customer !== 'string') {
         console.warn('Invalid customer parameter for toggleMobileCustomerGroup:', customer);
@@ -5806,11 +5823,19 @@ function toggleMobileCustomerGroup(customer) {
     const projectsId = `mobile-projects-${safeCustomerId}`;
     const toggleId = `toggle-${safeCustomerId}`;
     
+    console.log('Generated safeCustomerId:', safeCustomerId);
+    console.log('Looking for projectsId:', projectsId);
+    console.log('Looking for toggleId:', toggleId);
+    
     const projectsContainer = document.getElementById(projectsId);
     const toggleIcon = document.getElementById(toggleId);
     
+    console.log('Found projectsContainer:', projectsContainer);
+    console.log('Found toggleIcon:', toggleIcon);
+    
     if (projectsContainer && toggleIcon) {
         const isExpanded = projectsContainer.classList.contains('expanded');
+        console.log('Current expanded state:', isExpanded);
         
         if (isExpanded) {
             // Collapse
