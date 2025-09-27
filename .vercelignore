@@ -1,0 +1,17 @@
+# Ignore development files
+node_modules/
+logs/
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore backup files
+*.backup
+backups/
+
+# Ignore deployment files
+cloudflared.pkg
+ngrok.zip
