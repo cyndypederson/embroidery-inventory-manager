@@ -2507,16 +2507,7 @@ class DesktopManager {
     }
     
     setupWebAutoStart() {
-        // Check for service worker support
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('Service Worker registered:', registration);
-                })
-                .catch(error => {
-                    console.log('Service Worker registration failed:', error);
-                });
-        }
+        // Service worker removed to fix deployment issues
     }
     
     setupWebShortcuts() {
@@ -9358,25 +9349,7 @@ function showPhotoPreview(inputId, imageUrl) {
 // ===== PWA & MOBILE FEATURES =====
 
 function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('Service Worker registered successfully:', registration);
-                
-                // Check for updates
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showNotification('App update available! Refresh to get the latest version.', 'info');
-                        }
-                    });
-                });
-            })
-            .catch(error => {
-                console.log('Service Worker registration failed:', error);
-            });
-    }
+    // Service worker removed to fix deployment issues
 }
 
 function setupMobileFeatures() {
