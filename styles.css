@@ -1199,6 +1199,7 @@ tr:nth-child(even) {
         padding: 10px 5px;
         width: 100%;
         max-width: 100vw;
+        overflow: visible; /* Remove conflicting scroll */
     }
     
     .section-header {
@@ -3388,16 +3389,7 @@ body {
         display: none;
     }
     
-    /* Enhanced mobile scroll behavior */
-    .mobile-cards-container {
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
-        max-height: calc(100vh - 200px);
-        padding: 0 1rem;
-        /* Prevent scroll conflicts */
-        contain: layout style;
-    }
+    /* Enhanced mobile scroll behavior - removed duplicate to prevent conflicts */
     
     /* Ensure smooth scrolling for all mobile content */
     .tab-content.active {
@@ -3781,8 +3773,9 @@ body {
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scroll-behavior: smooth;
-        max-height: calc(100vh - 200px);
+        max-height: calc(100vh - 120px); /* Better height calculation */
         padding: 0 1rem;
+        margin-bottom: 2rem; /* Add bottom margin to prevent cutoff */
     }
     
     /* Mobile card grid */
@@ -5235,6 +5228,7 @@ body {
     .tab-content {
         padding: 0.5rem;
         min-height: calc(100vh - 120px);
+        overflow: visible; /* Remove conflicting scroll */
     }
     
     /* Mobile section headers */
