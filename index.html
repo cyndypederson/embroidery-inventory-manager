@@ -83,6 +83,14 @@
         <main>
             <!-- Projects Tab -->
             <div id="projects" class="tab-content active">
+                <div class="section-header">
+                    <h2>Projects</h2>
+                    <div class="projects-actions">
+                        <button class="btn btn-primary" onclick="openAddItemModal()">
+                            <i class="fas fa-plus"></i> Add Project
+                        </button>
+                    </div>
+                </div>
                 <div class="filters">
                     <div class="search-container">
                         <div class="search-input-wrapper">
@@ -196,6 +204,14 @@
 
             <!-- Inventory Tab -->
             <div id="inventory" class="tab-content">
+                <div class="section-header">
+                    <h2>Inventory</h2>
+                    <div class="inventory-actions">
+                        <button class="btn btn-primary" onclick="openAddInventoryModal()">
+                            <i class="fas fa-plus"></i> Add Inventory
+                        </button>
+                    </div>
+                </div>
                 <div class="filters">
                     <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
                     <select id="inventoryStatusFilter" onchange="filterInventory()">

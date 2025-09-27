@@ -3783,6 +3783,12 @@ body {
         display: none !important;
     }
     
+    /* Ensure action buttons are visible on mobile */
+    .projects-actions,
+    .inventory-actions {
+        display: flex !important;
+    }
+    
     /* Hide Data Management tab on mobile only */
     .nav-btn[data-tab="data"],
     #data.tab-content {
