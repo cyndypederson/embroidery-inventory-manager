@@ -8842,6 +8842,13 @@ function handleAddIdea(event) {
     const form = document.getElementById('addIdeaForm');
     const isEditing = form.dataset.editingId;
     
+    console.log('🎯 Image file details:', {
+        hasFile: !!imageFile,
+        fileName: imageFile ? imageFile.name : 'none',
+        fileSize: imageFile ? imageFile.size : 0,
+        fileType: imageFile ? imageFile.type : 'none'
+    }); // Debug log
+    
     if (!title) {
         showNotification('Please enter an idea title', 'error');
         return;
@@ -8876,11 +8883,22 @@ function handleAddIdea(event) {
         console.log('🎯 Total ideas count:', ideas.length); // Debug log
     }
     
-    // Handle image upload - mobile-friendly
-    if (imageFile && imageFile.size > 0) {
+    // Handle image upload - mobile-friendly with timeout fallback
+    if (imageFile && imageFile.size > 0 && imageFile.size < 10000000) { // Max 10MB
         console.log('🎯 Processing image file:', imageFile.name, imageFile.size); // Debug log
         const reader = new FileReader();
+        
+        // Add timeout to prevent hanging
+        const timeout = setTimeout(() => {
+            console.log('🎯 Image processing timeout, saving without image...'); // Debug log
+            saveData();
+            loadIdeasGrid();
+            closeModal('addIdeaModal');
+            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+        }, 5000); // 5 second timeout
+        
         reader.onload = function(e) {
+            clearTimeout(timeout);
             if (isEditing) {
                 ideas[ideas.findIndex(i => i.id === isEditing)].imageUrl = e.target.result;
             } else {
@@ -8893,6 +8911,7 @@ function handleAddIdea(event) {
             showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
         };
         reader.onerror = function() {
+            clearTimeout(timeout);
             console.log('🎯 Image processing failed, saving without image...'); // Debug log
             saveData();
             loadIdeasGrid();
@@ -8901,8 +8920,8 @@ function handleAddIdea(event) {
         };
         reader.readAsDataURL(imageFile);
     } else {
-        console.log('🎯 No image file or empty file, saving data directly...'); // Debug log
-        console.log('🎯 Image file detected:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null'); // Debug log
+        console.log('🎯 No image file, empty file, or file too large - saving data directly...'); // Debug log
+        console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null'); // Debug log
         saveData();
         console.log('🎯 Data saved, loading ideas grid...'); // Debug log
         loadIdeasGrid();
