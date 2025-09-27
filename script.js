@@ -5835,6 +5835,9 @@ function toggleMobileCustomerGroup(customer) {
     console.log('Found projectsContainer:', projectsContainer);
     console.log('Found toggleIcon:', toggleIcon);
     
+    // Debug alert to show what we're looking for vs what we found
+    alert('Looking for: ' + projectsId + ' and ' + toggleId + '\nFound: ' + (projectsContainer ? 'YES' : 'NO') + ' and ' + (toggleIcon ? 'YES' : 'NO'));
+    
     if (projectsContainer && toggleIcon) {
         const isExpanded = projectsContainer.classList.contains('expanded');
         console.log('Current expanded state:', isExpanded);
