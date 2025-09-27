@@ -9557,6 +9557,12 @@ function analyzePhotoForGallery() {
 }
 
 function analyzePhotoForIdeas() {
+    // Skip OCR on mobile devices to prevent interference with form submission
+    if (window.innerWidth <= 768) {
+        showNotification('Photo analysis is not available on mobile devices', 'info');
+        return;
+    }
+    
     const fileInput = document.getElementById('ideaImage');
     const file = fileInput.files[0];
     

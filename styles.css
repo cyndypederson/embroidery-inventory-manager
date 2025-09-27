@@ -3884,6 +3884,13 @@ body {
         display: none !important;
     }
     
+    /* Hide OCR/Analyze buttons on mobile to prevent conflicts */
+    #analyzeIdeasBtn,
+    #analyzeInventoryBtn,
+    #analyzeGalleryBtn {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
