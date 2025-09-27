@@ -5311,9 +5311,11 @@ function loadMobileInventoryCards() {
                         console.log('Mobile toggle triggered for customer:', customerName); // Debug log
                         console.log('Customer header element:', customerHeader); // Debug log
                         console.log('Data-customer attribute:', customerHeader.getAttribute('data-customer')); // Debug log
+                        alert('Touch detected for: ' + customerName); // Simple debug alert
                         toggleMobileCustomerGroup(customerName);
                     } else {
                         console.log('Touch rejected - too much movement or too long'); // Debug log
+                        alert('Touch rejected - movement: ' + deltaX + ',' + deltaY + ' time: ' + deltaTime); // Simple debug alert
                     }
                 }
             });
