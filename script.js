@@ -5841,10 +5841,13 @@ function toggleMobileCustomerGroup(customer) {
         
         if (isExpanded) {
             // Collapse
+            console.log('Collapsing customer group');
             projectsContainer.classList.remove('expanded');
             toggleIcon.classList.remove('expanded');
+            alert('Collapsed customer group');
         } else {
             // Expand - collapse all other groups first
+            console.log('Expanding customer group');
             document.querySelectorAll('.mobile-customer-projects.expanded').forEach(container => {
                 container.classList.remove('expanded');
             });
@@ -5855,6 +5858,7 @@ function toggleMobileCustomerGroup(customer) {
             // Expand this group
             projectsContainer.classList.add('expanded');
             toggleIcon.classList.add('expanded');
+            alert('Expanded customer group - classes added');
         }
     }
 }
