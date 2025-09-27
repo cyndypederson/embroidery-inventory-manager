@@ -5677,6 +5677,11 @@ body {
         padding: 0.5rem;
         font-size: 0.8rem;
         border-radius: 6px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
     }
     
     /* Mobile empty states */
