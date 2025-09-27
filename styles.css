@@ -3783,6 +3783,12 @@ body {
         display: none !important;
     }
     
+    /* Hide Data Management tab on mobile only */
+    .nav-btn[data-tab="data"],
+    #data.tab-content {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
