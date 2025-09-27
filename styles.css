@@ -3768,6 +3768,11 @@ body {
         display: none !important;
     }
     
+    /* Hide export button on ideas tab mobile */
+    #ideas .ideas-actions .btn-secondary {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
