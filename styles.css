@@ -3779,6 +3779,11 @@ body {
         display: none !important;
     }
     
+    /* Hide all section headers on mobile - keep only action buttons */
+    .section-header h2 {
+        display: none !important;
+    }
+    
     /* Show mobile card containers */
     .mobile-cards-container {
         display: block;
