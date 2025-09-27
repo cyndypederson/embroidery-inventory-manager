@@ -1239,14 +1239,14 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('addIdeaModal')">&times;</span>
             <h3>Add New Idea</h3>
-            <form id="addIdeaForm" class="modal-form">
+            <form id="addIdeaForm" class="modal-form" novalidate>
                 <div class="form-group full-width">
                     <label for="ideaTitle">Idea Title *</label>
-                    <input type="text" id="ideaTitle" required placeholder="e.g., Floral Hoop Design, Geometric Pattern">
+                    <input type="text" id="ideaTitle" required maxlength="100" placeholder="e.g., Floral Hoop Design, Geometric Pattern">
                 </div>
                 <div class="form-group full-width">
                     <label for="ideaDescription">Description</label>
-                    <textarea id="ideaDescription" rows="3" placeholder="Describe the idea, inspiration, techniques, etc."></textarea>
+                    <textarea id="ideaDescription" rows="3" maxlength="500" placeholder="Describe the idea, inspiration, techniques, etc."></textarea>
                 </div>
                 <div class="form-group half-width">
                     <label for="ideaCategory">Category</label>
