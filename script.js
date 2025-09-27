@@ -9563,11 +9563,7 @@ function setupMobilePhotoGestures() {
 
 // OCR Analysis Functions
 function analyzePhotoForInventory() {
-    // Skip OCR on mobile devices to prevent interference
-    if (window.innerWidth <= 768) {
-        showNotification('Photo analysis is not available on mobile devices', 'info');
-        return;
-    }
+    // OCR now works on mobile with improved error handling
     
     const fileInput = document.getElementById('itemPhoto');
     const file = fileInput.files[0];
@@ -9581,11 +9577,7 @@ function analyzePhotoForInventory() {
 }
 
 function analyzePhotoForGallery() {
-    // Skip OCR on mobile devices to prevent interference
-    if (window.innerWidth <= 768) {
-        showNotification('Photo analysis is not available on mobile devices', 'info');
-        return;
-    }
+    // OCR now works on mobile with improved error handling
     
     const fileInput = document.getElementById('photoFile');
     const file = fileInput.files[0];
@@ -9599,11 +9591,7 @@ function analyzePhotoForGallery() {
 }
 
 function analyzePhotoForIdeas() {
-    // Skip OCR on mobile devices to prevent interference with form submission
-    if (window.innerWidth <= 768) {
-        showNotification('Photo analysis is not available on mobile devices', 'info');
-        return;
-    }
+    // OCR now works on mobile with improved error handling
     
     const fileInput = document.getElementById('ideaImage');
     const file = fileInput.files[0];
@@ -9626,14 +9614,21 @@ async function analyzePhotoWithOCR(imageFile, context) {
         analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
         showNotification('Analyzing photo... This may take a few seconds.', 'info');
         
-        // Perform OCR
-        const result = await Tesseract.recognize(imageFile, 'eng', {
+        // Mobile-optimized OCR with timeout
+        const ocrPromise = Tesseract.recognize(imageFile, 'eng', {
             logger: m => {
                 if (m.status === 'recognizing text') {
                     console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
                 }
             }
         });
+        
+        // Add timeout for mobile devices (30 seconds max)
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('OCR timeout - photo processing took too long')), 30000);
+        });
+        
+        const result = await Promise.race([ocrPromise, timeoutPromise]);
         
         const extractedText = result.data.text;
         const confidence = result.data.confidence;
@@ -9660,7 +9655,15 @@ async function analyzePhotoWithOCR(imageFile, context) {
         
     } catch (error) {
         console.error('OCR Error:', error);
-        showNotification('Failed to analyze photo. Please try again or enter details manually.', 'error');
+        
+        // Provide specific error messages for mobile
+        if (error.message.includes('timeout')) {
+            showNotification('Photo analysis timed out. Try a smaller image or better lighting.', 'warning');
+        } else if (error.message.includes('memory') || error.message.includes('out of memory')) {
+            showNotification('Image too large for analysis. Try a smaller photo.', 'warning');
+        } else {
+            showNotification('Failed to analyze photo. Please try again or enter details manually.', 'error');
+        }
     } finally {
         // Reset button state
         analyzeBtn.disabled = false;
@@ -9978,11 +9981,7 @@ function populateFormFields(data, context, confidence) {
 
 // Setup OCR functionality when DOM is loaded
 function setupOCRFunctionality() {
-    // Skip OCR setup on mobile devices to prevent interference
-    if (window.innerWidth <= 768) {
-        console.log('OCR functionality skipped on mobile devices');
-        return;
-    }
+    // OCR now works on all devices with improved error handling
     
     // Enable analyze buttons when photos are selected
     const photoInputs = [

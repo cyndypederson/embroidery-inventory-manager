@@ -435,7 +435,7 @@ tbody tr {
     align-items: center;
 }
 
-/* CRITICAL FIX: Desktop filters MUST be horizontal - v2.1 */
+        /* CRITICAL FIX: Desktop filters MUST be horizontal - v2.2 - MOBILE OCR ENABLED */
 @media (min-width: 769px) {
     .filters {
         display: flex !important;
@@ -481,12 +481,7 @@ tbody tr {
         }
     }
 
-    /* Show desktop-only elements on desktop */
-    @media (min-width: 769px) {
-        .desktop-only {
-            display: inline-block !important;
-        }
-    }
+    /* OCR buttons are now available on all devices */
 
 .filters input,
 .filters select {
@@ -3907,11 +3902,7 @@ body {
         display: none !important;
     }
     
-    /* Hide OCR/Analyze buttons on mobile to prevent conflicts */
-        /* Hide OCR analyze buttons on mobile */
-        .desktop-only {
-            display: none !important;
-        }
+    /* OCR buttons now work on mobile with improved error handling */
     
     /* Show mobile card containers */
     .mobile-cards-container {
