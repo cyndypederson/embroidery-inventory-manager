@@ -435,7 +435,7 @@ tbody tr {
     align-items: center;
 }
 
-        /* CRITICAL FIX: Desktop filters MUST be horizontal - v2.2 - MOBILE OCR ENABLED */
+        /* CRITICAL FIX: Desktop filters MUST be horizontal - v2.3 - FORCE CACHE CLEAR */
 @media (min-width: 769px) {
     .filters {
         display: flex !important;
