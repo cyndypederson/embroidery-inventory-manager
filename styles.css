@@ -1196,12 +1196,12 @@ tr:nth-child(even) {
         margin: 0;
     }
     
-    .top-bar {
+    /* .top-bar {
         padding: 10px 15px;
         flex-direction: column;
         gap: 10px;
         text-align: center;
-    }
+    } */
     
     .branding h1 {
         font-size: 1.2rem;
@@ -1213,11 +1213,11 @@ tr:nth-child(even) {
         font-size: 0.9rem;
     }
     
-    .top-bar {
+    /* .top-bar {
         padding: 0.5rem 1rem;
         flex-direction: column;
         gap: 0.5rem;
-    }
+    } */
     
     .connection-status {
         margin: 0.5rem 0;
@@ -1296,21 +1296,21 @@ tr:nth-child(even) {
         text-align: center;
     }
     
-    .section-header {
+    /* .section-header {
         flex-direction: column;
         gap: 1rem;
         align-items: stretch;
-    }
+    } */
     
     .section-header h2 {
         font-size: 1.5rem;
         text-align: center;
     }
     
-    .filters {
+    /* .filters {
         flex-direction: column;
         gap: 0.5rem;
-    }
+    } */
     
     .filter-group {
         width: 100%;
@@ -1349,10 +1349,10 @@ tr:nth-child(even) {
         white-space: nowrap;
     }
     
-    .action-buttons {
+    /* .action-buttons {
         flex-direction: column;
         gap: 0.25rem;
-    }
+    } */
     
     .action-buttons .btn {
         width: 100%;
@@ -1384,10 +1384,10 @@ tr:nth-child(even) {
         padding: 0.75rem;
     }
     
-    .form-row {
+    /* .form-row {
         flex-direction: column;
         gap: 1rem;
-    }
+    } */
     
     .form-row .form-group {
         width: 100%;
@@ -2400,10 +2400,10 @@ tr:nth-child(even) {
         gap: 1rem;
     } */
     
-    .ideas-filters {
+    /* .ideas-filters {
         flex-direction: column;
         align-items: stretch;
-    }
+    } */
     
     .ideas-filters input,
     .ideas-filters select {
@@ -2803,11 +2803,11 @@ tr:nth-child(even) {
         margin: 0;
     }
     
-    .top-bar {
+    /* .top-bar {
         padding: 0.75rem 1rem;
         flex-direction: column;
         gap: 0.5rem;
-    }
+    } */
     
     .branding h1 {
         font-size: 1.4rem;
@@ -2892,10 +2892,10 @@ tr:nth-child(even) {
         margin: 0.25rem;
     }
     
-    .modal-form .form-actions {
+    /* .modal-form .form-actions {
         flex-direction: column;
         gap: 0.5rem;
-    }
+    } */
 }
 
 /* Pattern Link Styling */
@@ -3621,16 +3621,16 @@ body {
         padding: 5px 10px;
     }
     
-    .section-header {
+    /* .section-header {
         flex-direction: column;
         align-items: stretch;
         gap: 15px;
-    }
+    } */
     
-    .section-actions, .customer-actions, .ideas-actions {
+    /* .section-actions, .customer-actions, .ideas-actions {
         flex-direction: column;
         gap: 10px;
-    }
+    } */
     
     .section-actions .btn,
     .customer-actions .btn,
@@ -4560,17 +4560,17 @@ body {
 
 /* Mobile pagination */
 @media (max-width: 768px) {
-    .pagination-container {
+    /* .pagination-container {
         flex-direction: column;
         gap: 1rem;
         padding: 1rem;
-    }
+    } */
     
-    .pagination-info {
+    /* .pagination-info {
         flex-direction: column;
         gap: 0.5rem;
         text-align: center;
-    }
+    } */
     
     .pagination-controls {
         flex-wrap: wrap;
@@ -5007,10 +5007,10 @@ body {
         min-width: auto;
     }
     
-    .bulk-actions {
+    /* .bulk-actions {
         flex-direction: column;
         gap: 0.5rem;
-    }
+    } */
     
     .bulk-actions-buttons {
         flex-wrap: wrap;
@@ -5258,26 +5258,26 @@ body {
         grid-template-columns: repeat(2, 1fr);
     } */
     
-    .backup-controls {
+    /* .backup-controls {
         flex-direction: column;
         align-items: stretch;
-    }
+    } */
     
-    .backup-settings {
+    /* .backup-settings {
         flex-direction: column;
         align-items: stretch;
         gap: 0.5rem;
-    }
+    } */
     
     /* .export-options {
         grid-template-columns: 1fr;
     } */
     
-    .backup-item {
+    /* .backup-item {
         flex-direction: column;
         align-items: stretch;
         gap: 1rem;
-    }
+    } */
     
     .backup-actions {
         justify-content: center;
