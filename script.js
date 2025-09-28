@@ -5269,39 +5269,7 @@ function loadMobileInventoryCards() {
         `;
         container.appendChild(customerHeaderCard);
         
-        // Add proper touch event handling to prevent accidental toggles during scroll
-        const customerHeader = customerHeaderCard.querySelector('.mobile-customer-header');
-        if (customerHeader) {
-            let touchStartX = 0;
-            let touchStartY = 0;
-            let touchStartTime = 0;
-            
-            customerHeader.addEventListener('touchstart', (e) => {
-                if (e.touches && e.touches.length > 0) {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                    touchStartTime = Date.now();
-                }
-            }, { passive: true });
-            
-            customerHeader.addEventListener('touchend', (e) => {
-                if (e.changedTouches && e.changedTouches.length > 0) {
-                    const touchEndX = e.changedTouches[0].clientX;
-                    const touchEndY = e.changedTouches[0].clientY;
-                    const touchEndTime = Date.now();
-                    
-                    const deltaX = Math.abs(touchEndX - touchStartX);
-                    const deltaY = Math.abs(touchEndY - touchStartY);
-                    const deltaTime = touchEndTime - touchStartTime;
-                    
-                    // Only trigger toggle if it's a tap (small movement, short duration)
-                    if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
-                        const customerName = customerHeader.getAttribute('data-customer');
-                        toggleMobileCustomerGroup(customerName);
-                    }
-                }
-            }, { passive: true });
-        }
+        // Touch event handling will be added via event delegation after the loop
         
         // Create projects container
         const projectsContainer = customerHeaderCard.querySelector('.mobile-customer-projects');
@@ -5377,6 +5345,44 @@ function loadMobileInventoryCards() {
             projectsContainer.appendChild(card);
         });
     });
+    
+    // Add event delegation for touch events to prevent duplicate listeners
+    setupMobileCustomerTouchEvents(container);
+}
+
+// Setup touch events for mobile customer headers using event delegation
+function setupMobileCustomerTouchEvents(container) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    
+    container.addEventListener('touchstart', (e) => {
+        const customerHeader = e.target.closest('.mobile-customer-header');
+        if (customerHeader && e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+        }
+    }, { passive: true });
+    
+    container.addEventListener('touchend', (e) => {
+        const customerHeader = e.target.closest('.mobile-customer-header');
+        if (customerHeader && e.changedTouches && e.changedTouches.length > 0) {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndTime = Date.now();
+            
+            const deltaX = Math.abs(touchEndX - touchStartX);
+            const deltaY = Math.abs(touchEndY - touchStartY);
+            const deltaTime = touchEndTime - touchStartTime;
+            
+            // Only trigger toggle if it's a tap (small movement, short duration)
+            if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
+                const customerName = customerHeader.getAttribute('data-customer');
+                toggleMobileCustomerGroup(customerName);
+            }
+        }
+    }, { passive: true });
 }
 
 // Mobile inventory items cards
