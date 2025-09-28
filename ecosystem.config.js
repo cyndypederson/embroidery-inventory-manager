@@ -4,6 +4,7 @@ module.exports = {
     script: 'server.js',
     cwd: '/Users/cyndyp/Desktop/Projects/Embroidery',
     instances: 1,
+    exec_mode: 'fork', // Changed from cluster to fork to avoid port conflicts
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',
