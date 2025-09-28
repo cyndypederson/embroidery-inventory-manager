@@ -3648,10 +3648,10 @@ body {
     }
     
     /* Keep only search input visible on mobile */
-    .search-container {
+    /* .search-container {
         display: block !important;
         margin-bottom: 1rem;
-    }
+    } */
     
     .search-container input {
         width: 100%;
