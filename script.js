@@ -734,6 +734,7 @@ class UXManager {
         this.keyboardShortcuts.set('ctrl+4', () => switchTab('sales'));
         this.keyboardShortcuts.set('ctrl+5', () => switchTab('gallery'));
         this.keyboardShortcuts.set('ctrl+6', () => switchTab('ideas'));
+        this.keyboardShortcuts.set('ctrl+7', () => switchTab('data'));
         
         // Add event listener
         document.addEventListener('keydown', (e) => this.handleKeyboardShortcut(e));
@@ -4165,8 +4166,8 @@ function requireAuth(tabName) {
         return true;
     }
     
-    // Only require auth for sales and reports on production
-    if (tabName === 'sales' || tabName === 'reports') {
+    // Only require auth for sales, reports, and data management on production
+    if (tabName === 'sales' || tabName === 'reports' || tabName === 'data') {
         if (!checkAuthentication()) {
             sessionStorage.setItem('requestedTab', tabName);
             showAuthModal();
