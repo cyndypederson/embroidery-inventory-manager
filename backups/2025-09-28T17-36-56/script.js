@@ -4903,75 +4903,12 @@ function cleanupLocalStorage() {
 }
 
 function saveData() {
-    // Validate data before saving
-    if (!validateDataIntegrity()) {
-        console.error('Data validation failed, skipping save');
-        showNotification('Data validation failed. Please refresh and try again.', 'error');
-        return;
-    }
-    
     // Try API first, fallback to localStorage
     saveDataToAPI();
     saveDataToLocalStorage();
     
     // Trigger synchronization for both desktop and mobile views
     synchronizeViews();
-}
-
-function validateDataIntegrity() {
-    try {
-        // Validate inventory data
-        if (!Array.isArray(inventory)) {
-            console.error('Inventory is not an array');
-            return false;
-        }
-        
-        // Validate customers data
-        if (!Array.isArray(customers)) {
-            console.error('Customers is not an array');
-            return false;
-        }
-        
-        // Validate sales data
-        if (!Array.isArray(sales)) {
-            console.error('Sales is not an array');
-            return false;
-        }
-        
-        // Validate gallery data
-        if (!Array.isArray(gallery)) {
-            console.error('Gallery is not an array');
-            return false;
-        }
-        
-        // Validate ideas data
-        if (!Array.isArray(ideas)) {
-            console.error('Ideas is not an array');
-            return false;
-        }
-        
-        // Check for corrupted image data
-        const allData = [...inventory, ...gallery, ...ideas];
-        for (const item of allData) {
-            if (item.imageUrl || item.imageData || item.photo) {
-                const imageData = item.imageUrl || item.imageData || (item.photo && item.photo.dataUrl);
-                if (imageData && typeof imageData === 'string') {
-                    // Check if it's a valid base64 data URL
-                    if (!imageData.startsWith('data:image/') || imageData.length < 100) {
-                        console.warn('Invalid image data found, removing:', item.name || item.title);
-                        delete item.imageUrl;
-                        delete item.imageData;
-                        if (item.photo) delete item.photo.dataUrl;
-                    }
-                }
-            }
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('Data validation error:', error);
-        return false;
-    }
 }
 
 function synchronizeViews() {
@@ -6180,19 +6117,8 @@ function handleAddItem(e) {
         // Convert to base64 for storage
         const reader = new FileReader();
         reader.onload = function(e) {
-            try {
-                photoData.dataUrl = e.target.result;
-                newItem.photo = photoData;
-                saveItemWithPhoto(newItem);
-            } catch (error) {
-                console.error('Error processing photo data:', error);
-                showNotification('Error processing photo. Item saved without photo.', 'warning');
-                saveItemWithPhoto(newItem);
-            }
-        };
-        reader.onerror = function(error) {
-            console.error('Error reading photo file:', error);
-            showNotification('Error reading photo file. Item saved without photo.', 'warning');
+            photoData.dataUrl = e.target.result;
+            newItem.photo = photoData;
             saveItemWithPhoto(newItem);
         };
         reader.readAsDataURL(photoFile);
@@ -8794,31 +8720,21 @@ function handleAddPhoto(e) {
     
     const reader = new FileReader();
     reader.onload = function(e) {
-        try {
-            const newPhoto = {
-                title: document.getElementById('photoTitle').value,
-                description: document.getElementById('photoDescription').value,
-                status: document.getElementById('photoStatus').value,
-                relatedItem: document.getElementById('photoItem').value,
-                imageData: e.target.result,
-                dateAdded: new Date().toISOString()
-            };
-            
-            gallery.push(newPhoto);
-            saveData();
-            loadGallery();
-            closeModal('addPhotoModal');
-            
-            showNotification('Photo added to gallery!', 'success');
-        } catch (error) {
-            console.error('Error processing gallery photo:', error);
-            showNotification('Error processing photo. Please try again.', 'error');
-        }
-    };
-    
-    reader.onerror = function(error) {
-        console.error('Error reading gallery photo file:', error);
-        showNotification('Error reading photo file. Please try again.', 'error');
+        const newPhoto = {
+            title: document.getElementById('photoTitle').value,
+            description: document.getElementById('photoDescription').value,
+            status: document.getElementById('photoStatus').value,
+            relatedItem: document.getElementById('photoItem').value,
+            imageData: e.target.result,
+            dateAdded: new Date().toISOString()
+        };
+        
+        gallery.push(newPhoto);
+        saveData();
+        loadGallery();
+        closeModal('addPhotoModal');
+        
+        showNotification('Photo added to gallery!', 'success');
     };
     
     reader.readAsDataURL(file);
@@ -9057,101 +8973,58 @@ function handleAddIdea(event) {
         console.log('🎯 Total ideas count:', ideas.length); // Debug log
     }
     
-    // Handle image upload with improved error handling
+    // Handle image upload - mobile-friendly with photo library bypass
     if (imageFile && imageFile.size > 0 && imageFile.size < 10000000) { // Max 10MB
-        console.log('🎯 Processing image file:', imageFile.name, imageFile.size);
-        
-        // Validate file type
-        if (!imageFile.type.startsWith('image/')) {
-            console.log('🎯 Invalid file type, saving without image...');
-            showNotification('Invalid file type. Only images are allowed.', 'warning');
-            saveData();
-            loadIdeasGrid();
-            closeModal('addIdeaModal');
-            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-            return;
-        }
+        console.log('🎯 Processing image file:', imageFile.name, imageFile.size); // Debug log
         
         // On mobile, skip FileReader for photo library images to prevent hanging
         if (window.innerWidth <= 768) {
-            console.log('🎯 Mobile detected - skipping image processing, saving idea without image...');
+            console.log('🎯 Mobile detected - skipping image processing, saving idea without image...'); // Debug log
             saveData();
             loadIdeasGrid();
             closeModal('addIdeaModal');
             showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
         } else {
-            // Desktop: use FileReader with improved error handling
+            // Desktop: use FileReader
             const reader = new FileReader();
             
             // Add timeout to prevent hanging
             const timeout = setTimeout(() => {
-                console.log('🎯 Image processing timeout, saving without image...');
-                showNotification('Image processing timed out. Idea saved without image.', 'warning');
+                console.log('🎯 Image processing timeout, saving without image...'); // Debug log
                 saveData();
                 loadIdeasGrid();
                 closeModal('addIdeaModal');
                 showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-            }, 10000); // 10 second timeout
+            }, 5000); // 5 second timeout
             
             reader.onload = function(e) {
-                try {
-                    clearTimeout(timeout);
-                    
-                    // Validate the result
-                    if (!e.target.result || e.target.result.length === 0) {
-                        throw new Error('Empty image data');
-                    }
-                    
-                    if (isEditing) {
-                        const ideaIndex = ideas.findIndex(i => i.id === isEditing);
-                        if (ideaIndex !== -1) {
-                            ideas[ideaIndex].imageUrl = e.target.result;
-                        }
-                    } else {
-                        const lastIdeaIndex = ideas.length - 1;
-                        if (lastIdeaIndex >= 0) {
-                            ideas[lastIdeaIndex].imageUrl = e.target.result;
-                        }
-                    }
-                    
-                    console.log('🎯 Image processed successfully, saving data...');
-                    saveData();
-                    loadIdeasGrid();
-                    closeModal('addIdeaModal');
-                    showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-                } catch (error) {
-                    clearTimeout(timeout);
-                    console.error('🎯 Error processing image data:', error);
-                    showNotification('Error processing image. Idea saved without image.', 'warning');
-                    saveData();
-                    loadIdeasGrid();
-                    closeModal('addIdeaModal');
-                    showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
-                }
-            };
-            
-            reader.onerror = function(error) {
                 clearTimeout(timeout);
-                console.error('🎯 Image processing failed:', error);
-                showNotification('Error reading image file. Idea saved without image.', 'warning');
+                if (isEditing) {
+                    ideas[ideas.findIndex(i => i.id === isEditing)].imageUrl = e.target.result;
+                } else {
+                    ideas[ideas.length - 1].imageUrl = e.target.result;
+                }
+                console.log('🎯 Image processed, saving data...'); // Debug log
                 saveData();
                 loadIdeasGrid();
                 closeModal('addIdeaModal');
                 showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
             };
-            
+            reader.onerror = function() {
+                clearTimeout(timeout);
+                console.log('🎯 Image processing failed, saving without image...'); // Debug log
+                saveData();
+                loadIdeasGrid();
+                closeModal('addIdeaModal');
+                showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+            };
             reader.readAsDataURL(imageFile);
         }
     } else {
-        console.log('🎯 No image file, empty file, or file too large - saving data directly...');
-        console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null');
-        
-        if (imageFile && imageFile.size >= 10000000) {
-            showNotification('Image file too large. Maximum size is 10MB.', 'warning');
-        }
-        
+        console.log('🎯 No image file, empty file, or file too large - saving data directly...'); // Debug log
+        console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null'); // Debug log
         saveData();
-        console.log('🎯 Data saved, loading ideas grid...');
+        console.log('🎯 Data saved, loading ideas grid...'); // Debug log
         loadIdeasGrid();
         closeModal('addIdeaModal');
         showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
@@ -9163,7 +9036,7 @@ function handleAddIdea(event) {
 }
 
 function generateIdeaId() {
-    return 'IDEA-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    return 'IDEA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
 }
 
 function loadIdeasGrid() {
@@ -9577,39 +9450,10 @@ function setupPhotoPreviews() {
             input.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
-                    // Validate file type
-                    if (!file.type.startsWith('image/')) {
-                        showNotification('Please select a valid image file.', 'error');
-                        e.target.value = ''; // Clear the input
-                        return;
-                    }
-                    
-                    // Validate file size (10MB max)
-                    if (file.size > 10000000) {
-                        showNotification('Image file too large. Maximum size is 10MB.', 'error');
-                        e.target.value = ''; // Clear the input
-                        return;
-                    }
-                    
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        try {
-                            if (e.target.result && e.target.result.length > 0) {
-                                showPhotoPreview(inputId, e.target.result);
-                            } else {
-                                throw new Error('Empty image data');
-                            }
-                        } catch (error) {
-                            console.error('Error processing image preview:', error);
-                            showNotification('Error processing image preview.', 'error');
-                        }
+                        showPhotoPreview(inputId, e.target.result);
                     };
-                    
-                    reader.onerror = function(error) {
-                        console.error('Error reading image file for preview:', error);
-                        showNotification('Error reading image file.', 'error');
-                    };
-                    
                     reader.readAsDataURL(file);
                 }
             });
