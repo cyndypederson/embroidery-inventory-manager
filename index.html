@@ -93,59 +93,38 @@
                     </div>
                 </div>
                 <div class="filters">
-                    <div class="search-container">
-                        <div class="search-input-wrapper">
-                            <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="debouncedFilterItems()">
-                            <div class="search-suggestions" id="searchSuggestions"></div>
-                        </div>
-                        <button class="btn btn-outline" onclick="openAdvancedSearch('projects')" title="Advanced Search">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button class="btn btn-outline" onclick="saveCurrentSearch('projects')" title="Save Search">
-                            <i class="fas fa-bookmark"></i>
-                        </button>
-                        <button class="btn btn-outline" onclick="loadSavedSearches('projects')" title="Load Saved Searches">
-                            <i class="fas fa-history"></i>
-                        </button>
-                    </div>
-                    <div class="filter-row">
-                        <select id="statusFilter" onchange="filterItems()">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="work-in-progress">Work in Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="sold">Sold</option>
-                        </select>
-                        <select id="customerFilter" onchange="filterItems()">
-                            <option value="">All Customers</option>
-                        </select>
-                        <select id="locationFilter" onchange="filterItems()">
-                            <option value="">All Locations</option>
-                        </select>
-                        <select id="priorityFilter" onchange="filterItems()">
-                            <option value="">All Priority</option>
-                            <option value="high">High Priority</option>
-                            <option value="medium">Medium Priority</option>
-                            <option value="low">Low Priority</option>
-                        </select>
-                        <select id="dateRangeFilter" onchange="filterItems()">
-                            <option value="">All Dates</option>
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
-                            <option value="quarter">This Quarter</option>
-                            <option value="year">This Year</option>
-                        </select>
-                        <button class="btn btn-outline" onclick="clearAllFilters('projects')" title="Clear All Filters">
-                            <i class="fas fa-times"></i> Clear
-                        </button>
-                    </div>
-                    <div class="filter-actions">
-                        <button class="btn btn-primary" onclick="openAddItemModal()">
-                            <i class="fas fa-plus"></i> Add New Project
-                        </button>
-                    </div>
+                    <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="debouncedFilterItems()">
+                    <select id="statusFilter" onchange="filterItems()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="work-in-progress">Work in Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                    <select id="customerFilter" onchange="filterItems()">
+                        <option value="">All Customers</option>
+                    </select>
+                    <select id="locationFilter" onchange="filterItems()">
+                        <option value="">All Locations</option>
+                    </select>
+                    <select id="priorityFilter" onchange="filterItems()">
+                        <option value="">All Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                    <select id="dateRangeFilter" onchange="filterItems()">
+                        <option value="">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="quarter">This Quarter</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add New Project
+                    </button>
                 </div>
 
                 <div class="table-container">

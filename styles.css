@@ -378,7 +378,10 @@ header {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.filters {
+.filters,
+.wip-filters,
+.ideas-filters,
+.gallery-filters {
     position: sticky;
     top: 0;
     z-index: 998;
@@ -432,22 +435,24 @@ tbody tr {
 
 /* Duplicate btn-info style removed */
 
-/* Desktop filter layout - ensure horizontal display */
+/* Desktop filter layout - ensure horizontal display for ALL filter types */
 @media (min-width: 769px) {
-    .filters {
+    .filters,
+    .wip-filters,
+    .ideas-filters,
+    .gallery-filters {
         flex-direction: row !important;
-    }
-    
-    .search-container {
-        display: flex !important;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
     }
     
     /* Override ANY mobile styles that might be interfering */
     .filters input,
-    .filters select {
+    .filters select,
+    .wip-filters input,
+    .wip-filters select,
+    .ideas-filters input,
+    .ideas-filters select,
+    .gallery-filters input,
+    .gallery-filters select {
         width: auto !important;
         max-width: 200px !important;
         margin: 0 !important;
@@ -459,15 +464,7 @@ tbody tr {
         vertical-align: middle !important;
     }
     
-    .filters input,
-    .filters select {
-        width: auto !important;
-        margin: 0 !important;
-        padding: 0.75rem !important;
-        border: 2px solid #e9ecef !important;
-        border-radius: 8px !important;
-        font-size: 1rem !important;
-    }
+    /* Remove duplicate rules - handled above */
     
         .filters .btn {
             margin-left: auto !important;
@@ -478,7 +475,13 @@ tbody tr {
     /* OCR buttons are now available on all devices */
 
 .filters input,
-.filters select {
+.filters select,
+.wip-filters input,
+.wip-filters select,
+.ideas-filters input,
+.ideas-filters select,
+.gallery-filters input,
+.gallery-filters select {
     padding: 0.75rem;
     border: 2px solid #e9ecef;
     border-radius: 8px;
@@ -487,7 +490,13 @@ tbody tr {
 }
 
 .filters input:focus,
-.filters select:focus {
+.filters select:focus,
+.wip-filters input:focus,
+.wip-filters select:focus,
+.ideas-filters input:focus,
+.ideas-filters select:focus,
+.gallery-filters input:focus,
+.gallery-filters select:focus {
     outline: none;
     border-color: #4A90A4;
     box-shadow: 0 0 0 3px rgba(74, 144, 164, 0.1);
