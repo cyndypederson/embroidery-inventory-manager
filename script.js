@@ -5282,7 +5282,7 @@ function loadMobileInventoryCards() {
                     touchStartY = e.touches[0].clientY;
                     touchStartTime = Date.now();
                 }
-            });
+            }, { passive: true });
             
             customerHeader.addEventListener('touchend', (e) => {
                 if (e.changedTouches && e.changedTouches.length > 0) {
@@ -5300,7 +5300,7 @@ function loadMobileInventoryCards() {
                         toggleMobileCustomerGroup(customerName);
                     }
                 }
-            });
+            }, { passive: true });
         }
         
         // Create projects container
@@ -9537,7 +9537,7 @@ function setupMobilePhotoGestures() {
         cameraModal.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
-        });
+        }, { passive: true });
         
         cameraModal.addEventListener('touchend', (e) => {
             const endX = e.changedTouches[0].clientX;
@@ -9553,7 +9553,7 @@ function setupMobilePhotoGestures() {
             else if (Math.abs(diffY) > Math.abs(diffX) && diffY < -50) {
                 closeCameraModal();
             }
-        });
+        }, { passive: true });
     }
 }
 
