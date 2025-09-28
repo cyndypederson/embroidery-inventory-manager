@@ -4630,7 +4630,7 @@ body {
 @media (min-width: 769px) {
     .filter-row {
         display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
         gap: 1rem;
         margin-bottom: 1rem;
     }
