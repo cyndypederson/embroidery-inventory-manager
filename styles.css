@@ -5420,7 +5420,7 @@ body {
     }
     
     /* Mobile filters enhancement */
-    .filters,
+    /* .filters,
     .wip-filters,
     .ideas-filters,
     .gallery-filters {
@@ -5432,7 +5432,7 @@ body {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-    }
+    } */
     
     .filters input,
     .filters select,
