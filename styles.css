@@ -4154,7 +4154,7 @@ body {
 
 /* Mobile form improvements */
 @media (max-width: 768px) {
-    .filters {
+    /* .filters {
         display: grid;
         grid-template-columns: 1fr;
         gap: 0.75rem;
@@ -4162,7 +4162,7 @@ body {
         background: #f8f9fa;
         border-radius: 8px;
         margin-bottom: 1rem;
-    }
+    } */
     
     .filters input,
     .filters select {
