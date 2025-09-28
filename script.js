@@ -1064,7 +1064,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '2.6.0'
+                appVersion: '2.7.0'
             }
         };
         
@@ -2604,7 +2604,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '2.6.0'; // Current app version
+                const currentVersion = '2.7.0'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
