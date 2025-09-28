@@ -1755,10 +1755,10 @@ tr:nth-child(even) {
     align-items: end;
 }
 
-/* Desktop-specific filter row layout */
+/* Desktop-specific filter row layout - more specific to override mobile rules */
 @media (min-width: 769px) {
     .filter-row {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
     }
 }
 
@@ -4626,11 +4626,11 @@ body {
     border-bottom: none;
 }
 
-/* Desktop filter row for search section */
+/* Desktop filter row for search section - more specific to override mobile rules */
 @media (min-width: 769px) {
     .filter-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
         gap: 1rem;
         margin-bottom: 1rem;
     }
@@ -4749,6 +4749,13 @@ body {
     
     .filter-actions {
         justify-content: center;
+    }
+}
+
+/* Final desktop override to ensure horizontal filter layout */
+@media (min-width: 769px) {
+    .filter-row {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
     }
 }
 
