@@ -91,16 +91,12 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
 
-// Cache control middleware
+// Cache control middleware - FORCE NO CACHE for deployment
 app.use((req, res, next) => {
-    // Set cache headers for static assets
-    if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg)$/)) {
-        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour cache
-    } else if (req.path.match(/\.(html)$/)) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // No cache for HTML
-    } else {
-        res.setHeader('Cache-Control', 'no-cache'); // No cache for API routes
-    }
+    // Force no cache for all files during deployment
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     next();
 });
 
