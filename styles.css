@@ -1969,9 +1969,9 @@ tr:nth-child(even) {
         grid-template-columns: 1fr;
     }
     
-    .filter-row {
+    /* .filter-row {
         grid-template-columns: 1fr;
-    }
+    } */
     
     .financial-grid,
     .project-grid,
@@ -4739,9 +4739,9 @@ body {
         align-items: stretch;
     }
     
-    .filter-row {
+    /* .filter-row {
         grid-template-columns: 1fr;
-    }
+    } */
     
     .search-criteria {
         grid-template-columns: 1fr;
