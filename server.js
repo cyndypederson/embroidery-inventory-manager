@@ -91,16 +91,29 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
 
-// Cache control middleware - FORCE NO CACHE for deployment
+// Cache control middleware - AGGRESSIVE NO CACHE for version sync
 app.use((req, res, next) => {
-    // Force no cache for all files during deployment
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    // Force no cache for all files to prevent version mismatches
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+    res.setHeader('ETag', `"${Date.now()}"`);
     next();
 });
 
 app.use(express.static(path.join(__dirname)));
+
+// Version check endpoint for debugging
+app.get('/version.json', (req, res) => {
+    const packageJson = require('./package.json');
+    res.json({
+        version: packageJson.version,
+        timestamp: new Date().toISOString(),
+        build: process.env.VERCEL_GIT_COMMIT_SHA || 'local',
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
 
 // Serve the main HTML file
 app.get('/', (req, res) => {
