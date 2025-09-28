@@ -847,6 +847,7 @@ class UXManager {
         const container = document.createElement('div');
         container.id = 'bulkActionsContainer';
         container.className = 'bulk-actions-container';
+        container.style.display = 'none'; // Ensure it starts hidden
         container.innerHTML = `
             <div class="bulk-actions">
                 <span class="bulk-selection-count">0 items selected</span>
