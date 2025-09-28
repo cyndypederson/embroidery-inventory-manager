@@ -1755,6 +1755,13 @@ tr:nth-child(even) {
     align-items: end;
 }
 
+/* Desktop-specific filter row layout */
+@media (min-width: 769px) {
+    .filter-row {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
 .filter-row select,
 .filter-row input {
     padding: 0.75rem;
@@ -4619,11 +4626,14 @@ body {
     border-bottom: none;
 }
 
-.filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+/* Desktop filter row for search section */
+@media (min-width: 769px) {
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
 }
 
 .filter-actions {
