@@ -18,6 +18,82 @@ const PERFORMANCE_CONFIG = {
 const cache = new Map();
 const cacheTimestamps = new Map();
 
+// Event listener management to prevent memory leaks
+class EventManager {
+    constructor() {
+        this.listeners = new Map();
+    }
+    
+    addListener(element, event, handler, options = {}) {
+        const key = `${element.constructor.name}-${event}`;
+        if (!this.listeners.has(key)) {
+            this.listeners.set(key, []);
+        }
+        this.listeners.get(key).push({ element, event, handler, options });
+        element.addEventListener(event, handler, options);
+    }
+    
+    removeAllListeners() {
+        this.listeners.forEach((listeners, key) => {
+            listeners.forEach(({ element, event, handler, options }) => {
+                element.removeEventListener(event, handler, options);
+            });
+        });
+        this.listeners.clear();
+    }
+    
+    removeListenersForElement(element) {
+        this.listeners.forEach((listeners, key) => {
+            const filtered = listeners.filter(listener => listener.element !== element);
+            if (filtered.length === 0) {
+                this.listeners.delete(key);
+            } else {
+                this.listeners.set(key, filtered);
+            }
+        });
+    }
+}
+
+const eventManager = new EventManager();
+
+// Security utilities
+class SecurityManager {
+    static sanitizeInput(input) {
+        if (typeof input !== 'string') return input;
+        return input
+            .replace(/[<>]/g, '') // Remove potential HTML tags
+            .replace(/javascript:/gi, '') // Remove javascript: protocols
+            .replace(/on\w+=/gi, '') // Remove event handlers
+            .trim();
+    }
+    
+    static validateInput(input, type = 'text') {
+        if (!input || typeof input !== 'string') return false;
+        
+        switch (type) {
+            case 'email':
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+            case 'number':
+                return !isNaN(parseFloat(input)) && isFinite(input);
+            case 'text':
+                return input.length > 0 && input.length < 1000;
+            default:
+                return true;
+        }
+    }
+    
+    static escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+}
+
 // Pagination state
 let currentPage = 1;
 let totalPages = 1;
@@ -5974,9 +6050,15 @@ function handleAddItem(e) {
     e.preventDefault();
     console.log('🔘 Add Item button clicked!');
     
-    // Basic validation
-    const description = document.getElementById('itemDescription').value.trim();
+    // Get and sanitize form data
+    const description = SecurityManager.sanitizeInput(document.getElementById('itemDescription').value.trim());
     console.log('📝 Description:', description);
+    
+    // Security validation
+    if (!SecurityManager.validateInput(description, 'text')) {
+        showNotification('Invalid description format', 'error');
+        return;
+    }
     
     if (!description) {
         showNotification('Please enter a description', 'error');

@@ -386,6 +386,10 @@ header {
     padding: 1rem 2rem;
     margin-bottom: 1rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .table-container {
@@ -428,27 +432,10 @@ tbody tr {
 
 /* Duplicate btn-info style removed */
 
-.filters {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-        /* CRITICAL FIX: Desktop filters MUST be horizontal - v2.3 - FORCE CACHE CLEAR */
+/* Desktop filter layout - ensure horizontal display */
 @media (min-width: 769px) {
     .filters {
-        display: flex !important;
-        gap: 1rem !important;
-        flex-wrap: wrap !important;
-        align-items: center !important;
         flex-direction: row !important;
-        padding: 1rem 2rem !important;
-        background: white !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-        margin-bottom: 1rem !important;
-        width: 100% !important;
-        max-width: none !important;
     }
     
     /* Override ANY mobile styles that might be interfering */
@@ -3638,20 +3625,34 @@ body {
         width: 100%;
     }
     
-    /* Hide all filters and pagination on mobile - show only mobile cards and search */
+    /* Mobile filter layout - show filters but in mobile-friendly format */
     .filters,
     .wip-filters,
     .ideas-filters,
-    .gallery-filters,
-    .pagination-container {
-        display: none !important;
+    .gallery-filters {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
     }
     
-    /* Keep only search input visible on mobile */
-    /* .search-container {
-        display: block !important;
+    .pagination-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    /* Mobile search container layout */
+    .search-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
         margin-bottom: 1rem;
-    } */
+    }
     
     .search-container input {
         width: 100%;
