@@ -91,14 +91,24 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
 
-// Cache control middleware - AGGRESSIVE NO CACHE for version sync
+// NUCLEAR CACHE CONTROL - Force no caching whatsoever
 app.use((req, res, next) => {
     // Force no cache for all files to prevent version mismatches
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Last-Modified', new Date().toUTCString());
-    res.setHeader('ETag', `"${Date.now()}"`);
+    res.setHeader('ETag', `"${Date.now()}-${Math.random()}"`);
+    res.setHeader('Vary', '*');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('X-Accel-Expires', '0');
+    res.setHeader('X-Cache', 'MISS');
+    res.setHeader('X-Cache-Lookup', 'MISS');
+    
+    // Add timestamp to all responses
+    res.locals.timestamp = Date.now();
+    res.locals.random = Math.random().toString(36).substring(7);
+    
     next();
 });
 
@@ -115,8 +125,19 @@ app.get('/version.json', (req, res) => {
     });
 });
 
-// Serve the main HTML file
+// Serve the main HTML file with NUCLEAR cache busting
 app.get('/', (req, res) => {
+    // Add timestamp to response headers
+    res.setHeader('X-Timestamp', res.locals.timestamp);
+    res.setHeader('X-Random', res.locals.random);
+    res.setHeader('X-Cache-Bust', `${res.locals.timestamp}-${res.locals.random}`);
+    
+    // If no cache bust parameter, redirect with one
+    if (!req.query.cb) {
+        const timestamp = Date.now();
+        return res.redirect(`/?cb=${timestamp}&r=${Math.random().toString(36).substring(7)}`);
+    }
+    
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 

@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CyndyP StitchCraft Inventory - v1.0.8 - CACHE BUST</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>CyndyP StitchCraft Inventory - v1.0.8 - CACHE BUST - 202501282000</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -31,7 +34,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.8&t=202501281800">
+    <link rel="stylesheet" href="styles.css?v=1.0.8&t=202501281900&cb=1&r=" id="css-cache-bust">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- OCR Library -->
@@ -44,10 +47,15 @@
                 <div class="branding">
                     <h1>CyndyP StitchCraft Inventory Management</h1>
                 </div>
-                <div class="connection-status" id="connectionStatusContainer">
-                    <span id="connectionStatus" class="status-indicator">
-                        <i class="fas fa-circle"></i> Connecting...
-                    </span>
+                <div class="header-right">
+                    <div class="version-display" id="versionDisplay">
+                        <i class="fas fa-tag"></i> v1.0.8
+                    </div>
+                    <div class="connection-status" id="connectionStatusContainer">
+                        <span id="connectionStatus" class="status-indicator">
+                            <i class="fas fa-circle"></i> Connecting...
+                        </span>
+                    </div>
                 </div>
             </div>
             <nav>
@@ -1174,11 +1182,8 @@
                         <button type="button" class="btn btn-outline" onclick="openCameraForGallery()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForGallery()" title="Analyze Photo to Auto-Fill Fields" id="analyzeGalleryBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
                     </div>
-                    <small>Upload a photo or take one with your camera. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
+                    <small>Upload a photo or take one with your camera.</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="photoTitle">Photo Title *</label>
@@ -1256,11 +1261,8 @@
                         <button type="button" class="btn btn-outline" onclick="openCameraForIdeas()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForIdeas()" title="Analyze Photo to Auto-Fill Fields" id="analyzeIdeasBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
                     </div>
-                    <small>Upload a photo or take one with your camera. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
+                    <small>Upload a photo or take one with your camera.</small>
                 </div>
                 <div class="form-group full-width">
                     <label for="ideaWebLink">Web Link</label>
@@ -1662,6 +1664,44 @@
         </div>
     </div>
 
-    <script src="script.js?v=1.0.8&t=202501281800"></script>
+    <script>
+        // NUCLEAR CACHE BUSTING - Force reload of CSS and JS on every page load
+        (function() {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
+            
+            // Update page title with timestamp
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.8 - ' + timestamp;
+            
+            // Force reload CSS with cache bypass
+            const cssLink = document.getElementById('css-cache-bust');
+            if (cssLink) {
+                const newCssHref = cssLink.href + timestamp + '&rand=' + random + '&nocache=1';
+                cssLink.href = newCssHref;
+                console.log('💥 CSS RELOADED:', newCssHref);
+            }
+            
+            // Force reload JS with cache bypass
+            const jsLink = document.getElementById('js-cache-bust');
+            if (jsLink) {
+                const newJsSrc = jsLink.src + timestamp + '&rand=' + random + '&nocache=1';
+                jsLink.src = newJsSrc;
+                console.log('💥 JS RELOADED:', newJsSrc);
+            }
+            
+            // Force clear any caches
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                        console.log('🗑️ Cache deleted:', name);
+                    }
+                });
+            }
+            
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random);
+        })();
+    </script>
+    <script src="script.js?v=1.0.8&t=202501281900&cb=1&r=" id="js-cache-bust"></script>
 </body>
 </html>

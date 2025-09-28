@@ -115,6 +115,24 @@ header {
     color: #F5F5DC;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.version-display {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: white;
+}
+
 .connection-status {
     position: relative;
     z-index: 1;
@@ -4782,6 +4800,17 @@ body {
     z-index: 1000;
     display: none !important; /* Force hidden by default */
     min-width: 400px;
+}
+
+/* Hide PWA install banner aggressively */
+[data-pwa], .pwa-banner, .install-prompt, .install-banner,
+[aria-label*="install"], [aria-label*="Install"],
+[class*="install"], [class*="pwa"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 .bulk-actions {

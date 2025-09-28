@@ -2790,8 +2790,20 @@ class FormManager {
         });
         
         this.validationRules.set('maxLength', {
-            validator: (value, max) => !value || value.length <= max,
-            message: (max) => `Must be no more than ${max} characters long`
+            validator: (value, max) => {
+                if (typeof max !== 'number' || max < 0) {
+                    console.warn('⚠️ Invalid maxLength parameter:', max, 'for value:', value);
+                    return true; // Skip validation for invalid parameters
+                }
+                return !value || value.length <= max;
+            },
+            message: (max) => {
+                if (typeof max !== 'number' || max < 0) {
+                    console.error('❌ Invalid maxLength validation called with:', max);
+                    return 'Invalid validation parameter';
+                }
+                return `Must be no more than ${max} characters long`;
+            }
         });
     }
     
@@ -4177,6 +4189,12 @@ function requireAuth(tabName) {
     return true;
 }
 
+// Force cache busting on page load
+if (window.performance && window.performance.navigation.type === 1) {
+    // Page was refreshed, force reload of resources
+    console.log('🔄 Page refreshed - forcing cache bust');
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Embroidery Inventory Manager Initialized');
@@ -4187,6 +4205,18 @@ document.addEventListener('DOMContentLoaded', function() {
         existingBanner.remove();
     }
     
+    // Aggressively prevent PWA install banner
+    window.addEventListener('beforeinstallprompt', function(e) {
+        console.log('🚫 PWA install prompt prevented');
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+    });
+    
+    // Remove any PWA-related elements
+    const pwaElements = document.querySelectorAll('[data-pwa], .pwa-banner, .install-prompt');
+    pwaElements.forEach(el => el.remove());
+    
     // Remove any existing sales notifications
     const existingNotifications = document.querySelectorAll('.notification');
     existingNotifications.forEach(notification => {
@@ -4196,6 +4226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     initializeApp();
+    updateVersionDisplay();
     loadDataFromAPI().then(() => {
         // Update existing sales with commission fields after data is loaded (notifications disabled)
         // updateExistingSalesWithCommission();
@@ -4212,6 +4243,15 @@ document.addEventListener('DOMContentLoaded', function() {
     setupMobileFeatures();
     setupMobileModalEnhancements();
 });
+
+function updateVersionDisplay() {
+    const versionElement = document.getElementById('versionDisplay');
+    if (versionElement) {
+        // Use the same version as defined in the script
+        const currentVersion = '1.0.8';
+        versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
+    }
+}
 
 function initializeApp() {
     // Show production mode indicator if not localhost
@@ -4811,11 +4851,11 @@ async function saveDataToAPI() {
     } catch (error) {
         console.error('❌ API save failed:', error.message);
         console.log('🔄 Falling back to localStorage...');
-        saveDataToLocalStorage();
+        await saveDataToLocalStorage();
     }
 }
 
-function saveDataToLocalStorage() {
+async function saveDataToLocalStorage() {
     try {
         localStorage.setItem('embroideryInventory', JSON.stringify(inventory));
         localStorage.setItem('embroideryCustomers', JSON.stringify(customers));
@@ -4846,7 +4886,16 @@ function saveDataToLocalStorage() {
                 showNotification('Data saved after cleanup', 'success');
             } catch (retryError) {
                 console.error('Still failed after cleanup:', retryError);
-                showNotification('Storage full - some data may not be saved', 'error');
+                // Clear all localStorage and save to server only
+                try {
+                    console.log('🧹 Clearing all localStorage data...');
+                    localStorage.clear();
+                    await saveDataToAPI();
+                    showNotification('Data saved to server (localStorage cleared)', 'success');
+                } catch (apiError) {
+                    console.error('Failed to save to API:', apiError);
+                    showNotification('Storage full - please refresh and try again', 'error');
+                }
             }
         } else {
             showNotification('Failed to save data locally', 'error');
@@ -9643,6 +9692,15 @@ function showPhotoPreview(inputId, imageUrl) {
 
 function registerServiceWorker() {
     // Service worker removed to fix deployment issues
+    // Also unregister any existing service workers to prevent caching
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+                console.log('🗑️ Unregistering service worker:', registration.scope);
+                registration.unregister();
+            }
+        });
+    }
 }
 
 function setupMobileFeatures() {
