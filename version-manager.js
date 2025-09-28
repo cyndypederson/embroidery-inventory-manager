@@ -28,22 +28,25 @@ fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2));
 const htmlPath = path.join(__dirname, 'index.html');
 let htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
-// Update title
+// Update title with cache bust indicator
 htmlContent = htmlContent.replace(
     /<title>CyndyP StitchCraft Inventory - v[\d.]+.*?<\/title>/,
-    `<title>CyndyP StitchCraft Inventory - v${newVersion}</title>`
+    `<title>CyndyP StitchCraft Inventory - v${newVersion} - CACHE BUST</title>`
 );
 
-// Update CSS cache-busting
+// Generate fresh timestamp for cache-busting
+const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+
+// Update CSS cache-busting with version AND timestamp
 htmlContent = htmlContent.replace(
-    /styles\.css\?v=[\d.]+/g,
-    `styles.css?v=${newVersion}`
+    /styles\.css\?v=[\d.]+&t=\d+/g,
+    `styles.css?v=${newVersion}&t=${timestamp}`
 );
 
-// Update JS cache-busting
+// Update JS cache-busting with version AND timestamp
 htmlContent = htmlContent.replace(
-    /script\.js\?v=[\d.]+/g,
-    `script.js?v=${newVersion}`
+    /script\.js\?v=[\d.]+&t=\d+/g,
+    `script.js?v=${newVersion}&t=${timestamp}`
 );
 
 fs.writeFileSync(htmlPath, htmlContent);
