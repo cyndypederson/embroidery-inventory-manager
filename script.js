@@ -9852,7 +9852,7 @@ function analyzePhotoForIdeas() {
 
 // Main OCR Analysis Function
 async function analyzePhotoWithOCR(imageFile, context) {
-    const analyzeBtn = document.getElementById(`analyze${context.charAt(0).toUpperCase() + context.slice(1)}Btn`);
+    const analyzeBtn = document.getElementById(`analyze${context && context.length > 0 ? context.charAt(0).toUpperCase() + context.slice(1) : 'Default'}Btn`);
     
     try {
         // Show loading state
