@@ -2481,7 +2481,6 @@ tr:nth-child(even) {
     margin-bottom: 1rem;
     display: -webkit-box;
     -webkit-line-clamp: 3;
-    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -3184,7 +3183,9 @@ tr:nth-child(even) {
     font-weight: 600;
 }
 
-/* Medium priority items use status colors */
+.inventory-row.priority-medium {
+    /* Use status colors for medium priority */
+}
 
 .inventory-row.priority-low {
     opacity: 0.8;
@@ -3467,7 +3468,9 @@ td:nth-child(4) {
     --vh: 1vh;
 }
 
-/* PWA mode styles can be added here when needed */
+.pwa-mode {
+    /* Styles when running as PWA */
+}
 
 .install-banner {
     position: fixed;
@@ -6020,7 +6023,6 @@ body {
         margin-bottom: 0.75rem;
         display: -webkit-box;
         -webkit-line-clamp: 3;
-        line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }

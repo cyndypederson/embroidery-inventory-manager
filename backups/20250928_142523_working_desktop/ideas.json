@@ -1,0 +1,54 @@
+[
+  {
+    "id": "idea-001",
+    "title": "Custom Wedding Hoop Design",
+    "description": "Create a beautiful circular embroidery hoop with the couple's initials and wedding date",
+    "category": "wedding",
+    "status": "new",
+    "webLink": "",
+    "source": "Pinterest inspiration",
+    "priority": "high",
+    "notes": "Perfect for wedding gifts or keepsakes. Could offer as a package deal with custom colors.",
+    "imageUrl": null,
+    "dateAdded": "2024-01-15T10:30:00.000Z"
+  },
+  {
+    "id": "idea-002", 
+    "title": "Pet Portrait Embroidery",
+    "description": "Custom embroidered pet portraits from photos - could be a great niche market",
+    "category": "pet",
+    "status": "researching",
+    "webLink": "https://example.com/pet-embroidery-inspiration",
+    "source": "Instagram",
+    "priority": "medium",
+    "notes": "Need to practice portrait techniques. Could charge premium prices for custom work.",
+    "imageUrl": null,
+    "dateAdded": "2024-01-10T14:20:00.000Z"
+  },
+  {
+    "id": "idea-003",
+    "title": "Seasonal Wall Hangings",
+    "description": "Create seasonal embroidery wall hangings for home decor - spring, summer, fall, winter themes",
+    "category": "home-decor",
+    "status": "new",
+    "webLink": "",
+    "source": "Home decor magazine",
+    "priority": "low",
+    "notes": "Could create a subscription box or seasonal collection. Good for Etsy shop.",
+    "imageUrl": null,
+    "dateAdded": "2024-01-08T09:15:00.000Z"
+  },
+  {
+    "id": "idea-004",
+    "title": "Embroidered Tote Bags",
+    "description": "Custom embroidered tote bags with personalized designs or quotes",
+    "category": "accessories",
+    "status": "in-progress",
+    "webLink": "",
+    "source": "Customer request",
+    "priority": "high",
+    "notes": "Customer specifically requested this. Need to source quality canvas tote bags.",
+    "imageUrl": null,
+    "dateAdded": "2024-01-05T16:45:00.000Z"
+  }
+]

@@ -1,0 +1,180 @@
+{
+  "timestamp": "2025-09-30T02:19:03.014Z",
+  "summary": {
+    "total": 22,
+    "passed": 6,
+    "failed": 16,
+    "successRate": "27.3%"
+  },
+  "testedFeatures": [
+    {
+      "name": "Server Connection",
+      "category": "Core",
+      "status": "PASSED",
+      "duration": 5420
+    },
+    {
+      "name": "All Navigation Tabs",
+      "category": "Core",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Projects Add Button",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Projects Form Fields",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Form field itemName not found"
+    },
+    {
+      "name": "Projects Form Validation",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Cannot read properties of null (reading 'evaluate')"
+    },
+    {
+      "name": "Projects Form Submission",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "No element found for selector: #itemName"
+    },
+    {
+      "name": "Projects Edit Button",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Edit button not found"
+    },
+    {
+      "name": "Projects Edit Fields",
+      "category": "Projects",
+      "status": "PASSED",
+      "duration": 93
+    },
+    {
+      "name": "Projects Edit Submission",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Projects Delete Button",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Delete button not found"
+    },
+    {
+      "name": "Projects Search",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Projects Filters",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Inventory Tab",
+      "category": "Inventory",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Customers Tab",
+      "category": "Customers",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Ideas Tab",
+      "category": "Ideas",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Photo Upload",
+      "category": "Media",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Mobile View",
+      "category": "Mobile",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    },
+    {
+      "name": "Rapid Clicking",
+      "category": "Edge Cases",
+      "status": "PASSED",
+      "duration": 1
+    },
+    {
+      "name": "Large Data Input",
+      "category": "Edge Cases",
+      "status": "PASSED",
+      "duration": 0
+    },
+    {
+      "name": "Special Characters",
+      "category": "Edge Cases",
+      "status": "PASSED",
+      "duration": 1
+    },
+    {
+      "name": "Keyboard Navigation",
+      "category": "Edge Cases",
+      "status": "PASSED",
+      "duration": 13
+    },
+    {
+      "name": "Performance",
+      "category": "Performance",
+      "status": "FAILED",
+      "error": "this.page.waitForTimeout is not a function"
+    }
+  ],
+  "errors": [
+    "All Navigation Tabs: this.page.waitForTimeout is not a function",
+    "Projects Add Button: this.page.waitForTimeout is not a function",
+    "Projects Form Fields: Form field itemName not found",
+    "Projects Form Validation: Cannot read properties of null (reading 'evaluate')",
+    "Projects Form Submission: No element found for selector: #itemName",
+    "Projects Edit Button: Edit button not found",
+    "Projects Edit Submission: Node is either not clickable or not an Element",
+    "Projects Delete Button: Delete button not found",
+    "Projects Search: this.page.waitForTimeout is not a function",
+    "Projects Filters: this.page.waitForTimeout is not a function",
+    "Inventory Tab: this.page.waitForTimeout is not a function",
+    "Customers Tab: this.page.waitForTimeout is not a function",
+    "Ideas Tab: this.page.waitForTimeout is not a function",
+    "Photo Upload: this.page.waitForTimeout is not a function",
+    "Request Failed: http://localhost:3000/api/customers",
+    "Request Failed: http://localhost:3000/api/gallery",
+    "Request Failed: http://localhost:3000/api/ideas",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/sales",
+    "Console Error: ❌ API data loading failed: Failed to fetch",
+    "Mobile View: this.page.waitForTimeout is not a function",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/sales",
+    "Request Failed: http://localhost:3000/api/gallery",
+    "Request Failed: http://localhost:3000/api/ideas",
+    "Request Failed: http://localhost:3000/api/customers",
+    "Console Error: ❌ API data loading failed: Failed to fetch",
+    "Performance: this.page.waitForTimeout is not a function"
+  ],
+  "warnings": [],
+  "performance": {
+    "loadTime": 5564,
+    "memoryUsage": 57495944
+  }
+}

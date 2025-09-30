@@ -112,16 +112,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Special endpoint for script.js with aggressive cache busting
-app.get('/script.js', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private, no-transform');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Last-Modified', new Date().toUTCString());
-    res.setHeader('ETag', `"${Date.now()}-${Math.random()}"`);
-    res.sendFile(path.join(__dirname, 'script.js'));
-});
-
 app.use(express.static(path.join(__dirname)));
 
 // Version check endpoint for debugging
@@ -142,10 +132,13 @@ app.get('/', (req, res) => {
     res.setHeader('X-Random', res.locals.random);
     res.setHeader('X-Cache-Bust', `${res.locals.timestamp}-${res.locals.random}`);
     
-    // Always redirect with fresh cache bust parameters to force reload
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(7);
-    return res.redirect(`/?cb=${timestamp}&r=${random}&v=1.0.12&force=${timestamp}`);
+    // If no cache bust parameter, redirect with one
+    if (!req.query.cb) {
+        const timestamp = Date.now();
+        return res.redirect(`/?cb=${timestamp}&r=${Math.random().toString(36).substring(7)}`);
+    }
+    
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Health check endpoint
@@ -312,13 +305,11 @@ app.post('/api/gallery', async (req, res) => {
 
 app.get('/api/ideas', async (req, res) => {
     try {
-        console.log('📖 Server: Fetching ideas from database');
         const database = await connectToDatabase();
         if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
         const ideas = await database.collection('ideas').find({}).toArray();
-        console.log('📖 Server: Found', ideas.length, 'ideas in database');
         res.json(ideas);
     } catch (error) {
         console.error('Error fetching ideas:', error);
@@ -328,18 +319,13 @@ app.get('/api/ideas', async (req, res) => {
 
 app.post('/api/ideas', async (req, res) => {
     try {
-        console.log('💾 Server: Saving ideas, count:', req.body ? req.body.length : 'no body');
         const database = await connectToDatabase();
         if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
         await database.collection('ideas').deleteMany({});
-        console.log('💾 Server: Cleared all ideas from database');
         if (req.body && req.body.length > 0) {
             await database.collection('ideas').insertMany(req.body);
-            console.log('💾 Server: Inserted', req.body.length, 'ideas into database');
-        } else {
-            console.log('💾 Server: No ideas to insert (empty body)');
         }
         res.json({ success: true });
     } catch (error) {

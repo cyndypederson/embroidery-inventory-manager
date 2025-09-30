@@ -13,11 +13,7 @@
     "pm2:restart": "pm2 restart embroidery-inventory",
     "pm2:delete": "pm2 delete embroidery-inventory",
     "pm2:status": "pm2 status",
-    "pm2:logs": "pm2 logs embroidery-inventory",
-    "test": "node run-tests.js",
-    "test:full": "node test-suite.js",
-    "test:comprehensive": "node comprehensive-test.js",
-    "test:watch": "nodemon run-tests.js"
+    "pm2:logs": "pm2 logs embroidery-inventory"
   },
   "keywords": [
     "embroidery",

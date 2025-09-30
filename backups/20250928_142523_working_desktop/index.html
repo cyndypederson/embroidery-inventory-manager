@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0, private, no-transform">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="1.0.15">
-    <title>CyndyP StitchCraft Inventory - v1.0.15 - CACHE BUST</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.9 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -35,151 +34,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.15&t=202509300013&cb=1&r=&force=grid&cache=bust" id="css-cache-bust">
-    <script>
-        // Force cache clear and reload CSS
-        (function() {
-            const timestamp = Date.now();
-            const cssLink = document.getElementById('css-cache-bust');
-            if (cssLink) {
-                cssLink.href = cssLink.href.replace(/[?&]t=\d+/, '') + '&t=' + timestamp + '&force=' + timestamp;
-            }
-            
-            // Force reload if version is old
-            if (window.location.search.indexOf('v=1.0.12') !== -1 || 
-                window.location.search.indexOf('v=1.0.13') !== -1) {
-                window.location.reload(true);
-            }
-        })();
-    </script>
-    <style>
-        /* Force modal grid layout - inline CSS to override any caching issues */
-        .modal-form,
-        #editItemForm,
-        #addItemForm,
-        #addIdeaForm,
-        #addPhotoForm,
-        #addCustomerForm,
-        #editCustomerForm,
-        #addSaleForm,
-        #editSaleForm {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 1.75rem !important;
-            align-items: start !important;
-            margin-top: 1rem !important;
-            width: 100% !important;
-            min-width: 600px !important;
-            flex: none !important;
-            flex-direction: unset !important;
-            position: relative !important;
-            box-sizing: border-box !important;
-        }
-        
-        /* Force modal content to be wider for proper grid layout */
-        .modal-content {
-            max-width: 1000px !important;
-            min-width: 800px !important;
-            width: 90% !important;
-        }
-        
-        /* Force grid to use fractional units by removing width constraints */
-        .modal-form,
-        #editItemForm,
-        #addItemForm,
-        #addIdeaForm,
-        #addPhotoForm,
-        #addCustomerForm,
-        #editCustomerForm,
-        #addSaleForm,
-        #editSaleForm {
-            width: auto !important;
-            min-width: 700px !important;
-            max-width: none !important;
-        }
-        
-        /* ULTRA HIGH SPECIFICITY - Force fractional units */
-        .modal-content .modal-form,
-        .modal-content #addItemForm,
-        .modal-content #editItemForm {
-            grid-template-columns: 1fr 1fr !important;
-            display: grid !important;
-        }
-        
-        /* Ensure half-width form groups don't take full width */
-        .modal-form .form-group.half-width,
-        #editItemForm .form-group.half-width,
-        #addItemForm .form-group.half-width,
-        #addIdeaForm .form-group.half-width,
-        #addPhotoForm .form-group.half-width,
-        #addCustomerForm .form-group.half-width,
-        #editCustomerForm .form-group.half-width,
-        #addSaleForm .form-group.half-width,
-        #editSaleForm .form-group.half-width {
-            width: auto !important;
-            max-width: none !important;
-        }
-        .modal-form .form-group.full-width,
-        #editItemForm .form-group.full-width,
-        #addItemForm .form-group.full-width,
-        #addIdeaForm .form-group.full-width,
-        #addPhotoForm .form-group.full-width,
-        #addCustomerForm .form-group.full-width,
-        #editCustomerForm .form-group.full-width,
-        #addSaleForm .form-group.full-width,
-        #editSaleForm .form-group.full-width {
-            grid-column: 1 / -1 !important;
-            width: 100% !important;
-        }
-        .modal-form .form-group.half-width,
-        #editItemForm .form-group.half-width,
-        #addItemForm .form-group.half-width,
-        #addIdeaForm .form-group.half-width,
-        #addPhotoForm .form-group.half-width,
-        #addCustomerForm .form-group.half-width,
-        #editCustomerForm .form-group.half-width,
-        #addSaleForm .form-group.half-width,
-        #editSaleForm .form-group.half-width {
-            grid-column: span 1 !important;
-            width: 100% !important;
-        }
-        
-        /* Override any mobile styles that might be interfering */
-        @media (max-width: 768px) {
-            .modal-form {
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 1.75rem !important;
-                align-items: start !important;
-                margin-top: 1rem !important;
-                width: 100% !important;
-                flex: none !important;
-                flex-direction: unset !important;
-            }
-            .modal-form .form-group.full-width {
-                grid-column: 1 / -1 !important;
-                width: 100% !important;
-            }
-            .modal-form .form-group.half-width {
-                grid-column: span 1 !important;
-                width: 100% !important;
-            }
-        }
-        
-        /* Force all form groups to use proper grid layout */
-        .modal .form-group {
-            display: block !important;
-            width: 100% !important;
-            margin-bottom: 1.5rem !important;
-        }
-        
-        .modal .form-group input,
-        .modal .form-group select,
-        .modal .form-group textarea {
-            width: 100% !important;
-            box-sizing: border-box !important;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css?v=1.0.9&t=202509281922&cb=1&r=" id="css-cache-bust">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- OCR Library -->
@@ -239,6 +94,11 @@
             <div id="projects" class="tab-content active">
                 <div class="section-header">
                     <h2>Projects</h2>
+                    <div class="projects-actions">
+                        <button class="btn btn-primary" onclick="openAddItemModal()">
+                            <i class="fas fa-plus"></i> Add Project
+                        </button>
+                    </div>
                 </div>
                 <div class="filters">
                     <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="debouncedFilterItems()">
@@ -270,7 +130,7 @@
                         <option value="quarter">This Quarter</option>
                         <option value="year">This Year</option>
                     </select>
-                    <button class="btn btn-primary" onclick="openAddProjectModal()">
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
                         <i class="fas fa-plus"></i> Add New Project
                     </button>
                 </div>
@@ -334,6 +194,11 @@
             <div id="inventory" class="tab-content">
                 <div class="section-header">
                     <h2>Inventory</h2>
+                    <div class="inventory-actions">
+                        <button class="btn btn-primary" onclick="openAddItemModal()">
+                            <i class="fas fa-plus"></i> Add Inventory
+                        </button>
+                    </div>
                 </div>
                 <div class="filters">
                     <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
@@ -354,8 +219,8 @@
                     <select id="inventoryLocationFilter" onchange="filterInventory()">
                         <option value="">All Locations</option>
                     </select>
-                    <button class="btn btn-primary" onclick="openAddInventoryModal()">
-                        <i class="fas fa-plus"></i> Add New Inventory
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        <i class="fas fa-plus"></i> Add Inventory Item
                     </button>
                 </div>
 
@@ -1006,10 +871,10 @@
                     </div>
                     <small>Add a photo of your inventory item or project. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
                 </div>
-                <div id="projectFields" style="display: none;">
+                <div class="form-group full-width" id="projectFields" style="display: none;">
                     <div class="form-group half-width">
-                        <label for="itemProjectStatus">Status</label>
-                        <select id="itemProjectStatus">
+                        <label for="itemStatus">Status</label>
+                        <select id="itemStatus">
                             <option value="pending">Pending</option>
                             <option value="in-progress">In Progress</option>
                             <option value="work-in-progress">Work in Progress</option>
@@ -1057,198 +922,6 @@
                     </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Add Item
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Dedicated Add New Inventory Modal -->
-    <div id="addInventoryModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('addInventoryModal')">&times;</span>
-            <h3>Add New Inventory Item</h3>
-            <form id="addInventoryForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="inventoryDescription">Description *</label>
-                    <input type="text" id="inventoryDescription" required maxlength="200" placeholder="e.g., Embroidery Thread - Red, 4-inch Hoop, Cotton Fabric">
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryQuantity">Quantity</label>
-                    <input type="number" id="inventoryQuantity" min="1" value="1">
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryCategory">Category</label>
-                    <select id="inventoryCategory">
-                        <option value="">Select Category</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom</option>
-                        <option value="gift">Gift</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryStatus">Status</label>
-                    <select id="inventoryStatus">
-                        <option value="available">Available</option>
-                        <option value="low-stock">Low Stock</option>
-                        <option value="out-of-stock">Out of Stock</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryPrice">Cost (per unit)</label>
-                    <input type="number" id="inventoryPrice" step="0.01" min="0" placeholder="0.00">
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryTotalPrice">Total Value</label>
-                    <input type="number" id="inventoryTotalPrice" step="0.01" min="0" readonly>
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryLocation">Location</label>
-                    <input type="text" id="inventoryLocation" placeholder="e.g., Craft Room, Garage" maxlength="100">
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventorySupplier">Supplier</label>
-                    <input type="text" id="inventorySupplier" placeholder="e.g., Joann's, Amazon, Local Store" maxlength="100">
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryReorderPoint">Reorder Point</label>
-                    <input type="number" id="inventoryReorderPoint" min="0" placeholder="Minimum quantity before reordering">
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryNotes">Notes</label>
-                    <input type="text" id="inventoryNotes" placeholder="Color, size, special instructions, etc." maxlength="500">
-                </div>
-                <div class="form-group full-width">
-                    <label for="inventoryPhoto">Photo</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="inventoryPhoto" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForInventory()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForInventory()" title="Analyze Photo to Auto-Fill Fields" id="analyzeInventoryBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
-                    </div>
-                    <small>Add a photo of your inventory item. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addInventoryModal')">Cancel</button>
-                    <button type="button" class="btn btn-info" onclick="copyFromLastInventory()" title="Copy from last added inventory item">
-                        <i class="fas fa-copy"></i> Copy Last
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Add Inventory Item
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Dedicated Add New Project Modal -->
-    <div id="addProjectModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('addProjectModal')">&times;</span>
-            <h3>Add New Project</h3>
-            <form id="addProjectForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="projectDescription">Description *</label>
-                    <input type="text" id="projectDescription" required maxlength="200" placeholder="e.g., Custom Wedding Dress Embroidery, Baby Blanket, Holiday Decorations">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectQuantity">Quantity</label>
-                    <input type="number" id="projectQuantity" min="1" value="1">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectCategory">Category</label>
-                    <select id="projectCategory">
-                        <option value="">Select Category</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom</option>
-                        <option value="gift">Gift</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectStatus">Status</label>
-                    <select id="projectStatus">
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectCustomer">Customer</label>
-                    <div class="input-with-button">
-                        <select id="projectCustomer">
-                            <option value="">Select Customer (Optional)</option>
-                        </select>
-                        <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectDueDate">Due Date</label>
-                    <input type="date" id="projectDueDate">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectPriority">Priority</label>
-                    <select id="projectPriority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectPrice">Price</label>
-                    <input type="number" id="projectPrice" step="0.01" min="0" placeholder="0.00">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectLocation">Location</label>
-                    <input type="text" id="projectLocation" placeholder="e.g., Craft Room, Studio" maxlength="100">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectPatternLink">Pattern Link (Google Drive)</label>
-                    <input type="url" id="projectPatternLink" placeholder="https://drive.google.com/file/d/..." maxlength="500">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectTags">Tags (comma-separated)</label>
-                    <input type="text" id="projectTags" placeholder="e.g., wedding, baby, holiday" maxlength="200">
-                </div>
-                <div class="form-group full-width">
-                    <label for="projectNotes">Notes</label>
-                    <textarea id="projectNotes" placeholder="Special instructions, color preferences, size requirements, etc." maxlength="500" rows="3"></textarea>
-                </div>
-                <div class="form-group full-width">
-                    <label for="projectPhoto">Photo</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="projectPhoto" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForProject()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForProject()" title="Analyze Photo to Auto-Fill Fields" id="analyzeProjectBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
-                    </div>
-                    <small>Add a photo of your project. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addProjectModal')">Cancel</button>
-                    <button type="button" class="btn btn-info" onclick="copyFromLastProject()" title="Copy from last added project">
-                        <i class="fas fa-copy"></i> Copy Last
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Add Project
                     </button>
                 </div>
             </form>
@@ -1589,6 +1262,12 @@
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
                     </div>
+                    <small>Upload a photo or take one with your camera.</small>
+                </div>
+                <div class="form-group full-width">
+                    <label for="ideaWebLink">Web Link</label>
+                    <input type="url" id="ideaWebLink" placeholder="https://..." maxlength="500">
+                    <small>Link to the original source or inspiration</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="ideaSource">Source</label>
@@ -1626,14 +1305,6 @@
                 <div class="form-group full-width">
                     <label for="editItemDescription">Description *</label>
                     <input type="text" id="editItemDescription" required placeholder="e.g., Embroidery Thread - Red, 4-inch Hoop, Cotton Fabric">
-                </div>
-                
-                <!-- Image Preview Section -->
-                <div class="form-group full-width" id="editItemImageSection" style="display: none;">
-                    <label>Current Image</label>
-                    <div id="editItemImagePreview" class="image-preview-container">
-                        <img id="editItemImageDisplay" src="" alt="Item Image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
-                    </div>
                 </div>
                 
                 <div class="form-group half-width">
@@ -2000,7 +1671,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.12 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.8 - ' + timestamp;
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2028,17 +1699,9 @@
                 });
             }
             
-            // Force reload if version doesn't match
-            setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.12') {
-                    console.log('🔄 Version mismatch detected, forcing reload...');
-                    window.location.reload(true);
-                }
-            }, 1000);
-            
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.15');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random);
         })();
     </script>
-    <script src="script.js?v=1.0.15&t=202509300013&cb=1&r=" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.9&t=202509281922&cb=1&r=" id="js-cache-bust"></script>
 </body>
 </html>
