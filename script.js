@@ -6111,7 +6111,7 @@ function loadMobileCustomerCards() {
                 <div><strong>Total Spent:</strong> $${totalSpent.toFixed(2)}</div>
                 <div><strong>Status:</strong> ${customer.status || 'Active'}</div>
             </div>
-            <div class="customer-card-actions">
+            <div class="customer-card-actions mobile-card-actions">
                 <button class="btn btn-info btn-sm" onclick="viewCustomerProjects('${customer.name}')" title="View Projects">
                     <i class="fas fa-eye"></i> Projects
                 </button>
@@ -6120,6 +6120,9 @@ function loadMobileCustomerCards() {
                 </button>
                 <button class="btn btn-primary btn-sm" onclick="createProjectForCustomer('${customer.name}')" title="New Project">
                     <i class="fas fa-plus"></i> Project
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${index})" title="Delete">
+                    <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
         `;
@@ -7630,6 +7633,15 @@ function testDeleteClick(index) {
 let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
+    // Check if we're on mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Use mobile-friendly confirmation
+        showMobileConfirmation(title, message, onConfirm);
+        return;
+    }
+    
     // Try to find the modal element
     let modal = document.getElementById('confirmModal');
     
@@ -7933,17 +7945,21 @@ function createProjectForCustomer(customerName) {
 }
 
 function deleteCustomer(index) {
-    if (confirm('Are you sure you want to delete this customer? This will also delete all associated items.')) {
-        const customerName = customers[index].name;
-        inventory = inventory.filter(item => item.customer !== customerName);
-        sales = sales.filter(sale => sale.customer !== customerName);
-        customers.splice(index, 1);
-        saveData();
-        loadCustomersTable();
-        loadInventoryTable();
-        loadSalesTable();
-        showNotification('Customer and associated data deleted!', 'success');
-    }
+    showConfirmModal(
+        'Delete Customer',
+        'Are you sure you want to delete this customer? This will also delete all associated items.',
+        () => {
+            const customerName = customers[index].name;
+            inventory = inventory.filter(item => item.customer !== customerName);
+            sales = sales.filter(sale => sale.customer !== customerName);
+            customers.splice(index, 1);
+            saveData();
+            loadCustomersTable();
+            loadInventoryTable();
+            loadSalesTable();
+            showNotification('Customer and associated data deleted!', 'success');
+        }
+    );
 }
 
 function printCustomerList() {
@@ -8198,12 +8214,16 @@ function handleEditSale(e) {
 }
 
 function deleteSale(index) {
-    if (confirm('Are you sure you want to delete this sale record?')) {
-        sales.splice(index, 1);
-        saveData();
-        loadSalesTable();
-        showNotification('Sale record deleted!', 'success');
-    }
+    showConfirmModal(
+        'Delete Sale',
+        'Are you sure you want to delete this sale record?',
+        () => {
+            sales.splice(index, 1);
+            saveData();
+            loadSalesTable();
+            showNotification('Sale record deleted!', 'success');
+        }
+    );
 }
 
 // Enhanced Reports System
@@ -9407,12 +9427,16 @@ async function deleteGalleryItem(index) {
 }
 
 async function deletePhoto(index) {
-    if (confirm('Are you sure you want to delete this photo from the gallery?')) {
-        gallery.splice(index, 1);
-        await saveData();
-        loadGallery();
-        showNotification('Photo deleted from gallery!', 'success');
-    }
+    showConfirmModal(
+        'Delete Photo',
+        'Are you sure you want to delete this photo from the gallery?',
+        async () => {
+            gallery.splice(index, 1);
+            await saveData();
+            loadGallery();
+            showNotification('Photo deleted from gallery!', 'success');
+        }
+    );
 }
 
 async function editPhoto(index) {
@@ -9429,6 +9453,68 @@ async function editPhoto(index) {
         loadGallery();
         showNotification('Photo updated!', 'success');
     }
+}
+
+// Mobile Confirmation Dialog
+function showMobileConfirmation(title, message, onConfirm, onCancel = null) {
+    // Remove existing confirmation if any
+    const existing = document.querySelector('.mobile-confirmation');
+    if (existing) existing.remove();
+    
+    // Create confirmation dialog
+    const confirmation = document.createElement('div');
+    confirmation.className = 'mobile-confirmation';
+    confirmation.innerHTML = `
+        <h3>${title}</h3>
+        <p>${message}</p>
+        <div class="mobile-confirmation-buttons">
+            <button class="btn btn-secondary" onclick="closeMobileConfirmation()">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmMobileAction()">Confirm</button>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(confirmation);
+    
+    // Store callbacks globally
+    window.mobileConfirmCallback = onConfirm;
+    window.mobileCancelCallback = onCancel;
+    
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'mobile-confirmation-backdrop';
+    backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+    `;
+    document.body.appendChild(backdrop);
+}
+
+function closeMobileConfirmation() {
+    const confirmation = document.querySelector('.mobile-confirmation');
+    const backdrop = document.querySelector('.mobile-confirmation-backdrop');
+    
+    if (confirmation) confirmation.remove();
+    if (backdrop) backdrop.remove();
+    
+    if (window.mobileCancelCallback) {
+        window.mobileCancelCallback();
+    }
+    
+    window.mobileConfirmCallback = null;
+    window.mobileCancelCallback = null;
+}
+
+function confirmMobileAction() {
+    if (window.mobileConfirmCallback) {
+        window.mobileConfirmCallback();
+    }
+    closeMobileConfirmation();
 }
 
 // Notification System
@@ -9822,7 +9908,10 @@ function deleteIdea(ideaId) {
     console.log('🗑️ Current ideas count before delete:', ideas.length);
     console.log('🗑️ Ideas before delete:', ideas.map(i => ({ id: i.id, title: i.title })));
     
-    if (confirm('Are you sure you want to delete this idea?')) {
+    showConfirmModal(
+        'Delete Idea',
+        'Are you sure you want to delete this idea?',
+        () => {
         // Set flag to prevent storage events from interfering
         window.isModifying = true;
         console.log('🗑️ Set isModifying = true');
@@ -9855,7 +9944,8 @@ function deleteIdea(ideaId) {
             console.log('🗑️ Clearing isModifying flag');
             window.isModifying = false;
         }, 500);
-    }
+        }
+    );
 }
 
 function viewIdeaImage(ideaId) {
