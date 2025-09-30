@@ -5928,7 +5928,18 @@ function loadMobileGalleryCards() {
         container.innerHTML = '';
         
         const galleryItems = gallery || [];
-        console.log('🖼️ Gallery items to load:', galleryItems.length);
+        console.log('🖼️ Gallery items to load (raw):', galleryItems.length);
+
+        // De-duplicate by id (fallback to composite key) to avoid duplicate cards on mobile
+        const seenGallery = new Set();
+        const uniqueGallery = galleryItems.filter(item => {
+            if (!item) return false;
+            const key = item.id || `${item.imageData || ''}|${item.name || ''}|${item.dateAdded || ''}`;
+            if (seenGallery.has(key)) return false;
+            seenGallery.add(key);
+            return true;
+        });
+        console.log('🖼️ Gallery items to load (unique):', uniqueGallery.length);
 
     if (galleryItems.length === 0) {
         container.innerHTML = `
@@ -5941,7 +5952,7 @@ function loadMobileGalleryCards() {
         return;
     }
 
-    galleryItems.forEach((item, index) => {
+    uniqueGallery.forEach((item, index) => {
         const card = document.createElement('div');
         card.className = 'gallery-item';
         
@@ -5990,7 +6001,17 @@ function loadMobileIdeasCards() {
         container.innerHTML = '';
         
         const ideasItems = ideas || [];
-        console.log('💡 Ideas items to load:', ideasItems.length);
+        console.log('💡 Ideas items to load (raw):', ideasItems.length);
+
+        // De-duplicate by stable id to avoid duplicate cards on mobile
+        const seenIdeaIds = new Set();
+        const uniqueIdeas = ideasItems.filter(item => {
+            if (!item || !item.id) return false;
+            if (seenIdeaIds.has(item.id)) return false;
+            seenIdeaIds.add(item.id);
+            return true;
+        });
+        console.log('💡 Ideas items to load (unique):', uniqueIdeas.length);
 
     if (ideasItems.length === 0) {
         container.innerHTML = `
@@ -6003,7 +6024,7 @@ function loadMobileIdeasCards() {
         return;
     }
 
-    ideasItems.forEach((item, index) => {
+    uniqueIdeas.forEach((item, index) => {
         const card = document.createElement('div');
         card.className = 'idea-card';
         
@@ -6034,6 +6055,9 @@ function loadMobileIdeasCards() {
                 </button>
                 <button class="btn btn-success btn-sm" onclick="convertIdeaToProject(${index})" title="Convert to Project">
                     <i class="fas fa-plus"></i> Convert
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteIdea('${item.id}')" title="Delete">
+                    <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
         `;
@@ -6124,7 +6148,17 @@ function loadMobileSalesCards() {
         return;
     }
 
-    sales.forEach((sale, index) => {
+    // De-duplicate by id (fallback to composite key)
+    const seenSales = new Set();
+    const uniqueSales = (sales || []).filter(sale => {
+        if (!sale) return false;
+        const key = sale.id || `${sale.itemName || ''}|${sale.customer || ''}|${sale.date || ''}|${sale.price || sale.salePrice || ''}`;
+        if (seenSales.has(key)) return false;
+        seenSales.add(key);
+        return true;
+    });
+
+    uniqueSales.forEach((sale, index) => {
         // Skip if sale is null or malformed
         if (!sale) {
             console.warn('Skipping invalid sale:', sale);
@@ -9812,6 +9846,10 @@ function deleteIdea(ideaId) {
         saveData();
         showNotification('Idea deleted', 'success');
         
+        // Proactively refresh UI on both desktop and mobile
+        try { if (typeof loadIdeas === 'function') loadIdeas(); } catch(e) { /* no-op */ }
+        try { if (typeof loadMobileIdeasCards === 'function') loadMobileIdeasCards(); } catch(e) { /* no-op */ }
+
         // Clear the flag after a delay
         setTimeout(() => {
             console.log('🗑️ Clearing isModifying flag');

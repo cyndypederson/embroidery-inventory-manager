@@ -1,0 +1,106 @@
+{
+  "timestamp": "2025-09-30T18:05:09.415Z",
+  "baseUrl": "https://embroidery-inventory-manager.vercel.app",
+  "summary": {
+    "total": 11,
+    "passed": 5,
+    "failed": 6,
+    "successRate": "45.5%"
+  },
+  "testedFeatures": [
+    {
+      "name": "Live Site Connection",
+      "category": "Core",
+      "status": "PASSED",
+      "duration": 6134
+    },
+    {
+      "name": "Live APIs",
+      "category": "Core",
+      "status": "PASSED",
+      "duration": 15216
+    },
+    {
+      "name": "Live Navigation",
+      "category": "UI",
+      "status": "FAILED",
+      "error": "this.page.waitFor is not a function"
+    },
+    {
+      "name": "Live Add Project",
+      "category": "UI",
+      "status": "FAILED",
+      "error": "this.page.waitFor is not a function"
+    },
+    {
+      "name": "Live Form Fields",
+      "category": "UI",
+      "status": "FAILED",
+      "error": "Live site: Form field itemName not found"
+    },
+    {
+      "name": "Live Form Submission",
+      "category": "UI",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Live Search",
+      "category": "UI",
+      "status": "FAILED",
+      "error": "this.page.waitFor is not a function"
+    },
+    {
+      "name": "Live Mobile View",
+      "category": "Mobile",
+      "status": "PASSED",
+      "duration": 3972
+    },
+    {
+      "name": "Live Performance",
+      "category": "Performance",
+      "status": "PASSED",
+      "duration": 17793
+    },
+    {
+      "name": "Live Data Persistence",
+      "category": "Data",
+      "status": "FAILED",
+      "error": "this.page.waitFor is not a function"
+    },
+    {
+      "name": "Live Error Handling",
+      "category": "Error Handling",
+      "status": "PASSED",
+      "duration": 4116
+    }
+  ],
+  "errors": [
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255474075&force=1759255474075",
+    "Live Navigation: this.page.waitFor is not a function",
+    "Live Add Project: this.page.waitFor is not a function",
+    "Live Form Fields: Live site: Form field itemName not found",
+    "Live Form Submission: Node is either not clickable or not an Element",
+    "Live Search: this.page.waitFor is not a function",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255479343&force=1759255479343",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255483326&force=1759255483326",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255488318&force=1759255488318",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255492425&force=1759255492425",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255497139&force=1759255497139",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255501130&force=1759255501130",
+    "Live Data Persistence: this.page.waitFor is not a function",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255505452&force=1759255505452"
+  ],
+  "performance": {
+    "loadTime": 4792,
+    "memoryUsage": 58659232,
+    "averageLoadTime": 4333
+  }
+}

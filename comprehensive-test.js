@@ -9,6 +9,11 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// Simple sleep helper to replace deprecated/unsupported page.waitFor/Timeout
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 class ComprehensiveTestSuite {
     constructor() {
         this.browser = null;
@@ -168,7 +173,7 @@ class ComprehensiveTestSuite {
             }
             
             await tabButton.click();
-            await this.page.waitForTimeout(1000);
+            await sleep(1000);
             
             // Verify tab content is active
             const tabContent = await this.page.$(`#${tab.id}.tab-content.active`);
@@ -188,7 +193,7 @@ class ComprehensiveTestSuite {
     
     async testProjectsAddButton() {
         await this.page.click('[data-tab="projects"]');
-        await this.page.waitForTimeout(500);
+        await sleep(500);
         
         const addButton = await this.page.$('.projects-actions .btn-primary');
         if (!addButton) {
@@ -251,7 +256,7 @@ class ComprehensiveTestSuite {
         await submitButton.click();
         
         // Check for validation error
-        await this.page.waitForTimeout(500);
+        await sleep(500);
         const hasError = await this.page.$('.error, .invalid, [class*="error"]');
         if (!hasError) {
             throw new Error('Required field validation not working');
@@ -272,7 +277,7 @@ class ComprehensiveTestSuite {
         await this.page.waitForSelector('#addItemModal', { hidden: true });
         
         // Verify item was added to table
-        await this.page.waitForTimeout(1000);
+        await sleep(1000);
         const itemExists = await this.page.$eval('body', () => {
             return document.body.textContent.includes('Test Project');
         });
@@ -346,7 +351,7 @@ class ComprehensiveTestSuite {
         const searchInput = await this.page.$('#searchItems');
         if (searchInput) {
             await searchInput.type('Test');
-            await this.page.waitForTimeout(1000);
+            await sleep(1000);
             
             // Verify search results
             const results = await this.page.$$('tbody tr');
@@ -368,7 +373,7 @@ class ComprehensiveTestSuite {
             const filterElement = await this.page.$(`#${filter.id}`);
             if (filterElement) {
                 await filterElement.select(filter.value);
-                await this.page.waitForTimeout(500);
+                await sleep(500);
             }
         }
     }
@@ -377,7 +382,7 @@ class ComprehensiveTestSuite {
     
     async testInventoryTab() {
         await this.page.click('[data-tab="inventory"]');
-        await this.page.waitForTimeout(500);
+        await sleep(500);
         
         // Test add inventory item
         const addButton = await this.page.$('.inventory-actions .btn-primary');
@@ -403,7 +408,7 @@ class ComprehensiveTestSuite {
     
     async testCustomersTab() {
         await this.page.click('[data-tab="customers"]');
-        await this.page.waitForTimeout(500);
+        await sleep(500);
         
         // Test add customer
         const addButton = await this.page.$('.customer-actions .btn-primary');
@@ -429,7 +434,7 @@ class ComprehensiveTestSuite {
     
     async testIdeasTab() {
         await this.page.click('[data-tab="ideas"]');
-        await this.page.waitForTimeout(500);
+        await sleep(500);
         
         // Test add idea
         const addButton = await this.page.$('.ideas-actions .btn-primary');
@@ -465,7 +470,7 @@ class ComprehensiveTestSuite {
                 
                 // Upload file
                 await fileInput.uploadFile(testImagePath);
-                await this.page.waitForTimeout(1000);
+                await sleep(1000);
                 
                 // Clean up test file
                 if (fs.existsSync(testImagePath)) {
@@ -501,7 +506,14 @@ class ComprehensiveTestSuite {
     
     async testMobileView() {
         // Switch to mobile viewport
-        await this.page.setViewport({ width: 375, height: 667 });
+        // Emulate iPhone 12 for realistic mobile behavior
+        const devices = puppeteer.devices || {};
+        const iPhone = devices['iPhone 12'] || devices['iPhone X'];
+        if (iPhone) {
+            await this.page.emulate(iPhone);
+        } else {
+            await this.page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+        }
         await this.page.reload({ waitUntil: 'networkidle2' });
         
         // Test mobile navigation
@@ -512,7 +524,7 @@ class ComprehensiveTestSuite {
         
         // Test mobile cards
         await this.page.click('[data-tab="projects"]');
-        await this.page.waitForTimeout(500);
+        await sleep(500);
         
         const mobileCards = await this.page.$('.mobile-cards-container');
         if (!mobileCards) {
@@ -528,7 +540,7 @@ class ComprehensiveTestSuite {
         if (addButton) {
             for (let i = 0; i < 5; i++) {
                 await addButton.click();
-                await this.page.waitForTimeout(100);
+                await sleep(100);
             }
         }
     }
@@ -594,7 +606,7 @@ class ComprehensiveTestSuite {
         // Add multiple items
         for (let i = 0; i < 10; i++) {
             await this.page.click('[data-tab="projects"]');
-            await this.page.waitForTimeout(100);
+            await sleep(100);
             const addButton = await this.page.$('.projects-actions .btn-primary');
             if (addButton) {
                 await addButton.click();
@@ -654,6 +666,41 @@ class ComprehensiveTestSuite {
         
         // Mobile responsiveness
         await this.runTest('Mobile View', () => this.testMobileView(), 'Mobile');
+
+        // Extra mobile flow on iPhone emulator: verify ideas mobile container renders and deletion works
+        await this.runTest('Mobile (iPhone) Ideas Cards', async () => {
+            const devices = puppeteer.devices || {};
+            const iPhone = devices['iPhone 12'] || devices['iPhone X'];
+            if (iPhone) {
+                await this.page.emulate(iPhone);
+            } else {
+                await this.page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+            }
+
+            // Navigate to Ideas tab
+            const ideasBtn = await this.page.$('[data-tab="ideas"]');
+            if (!ideasBtn) throw new Error('Ideas tab not found');
+            await ideasBtn.click();
+            await this.page.waitForSelector('#ideas', { visible: true });
+            await sleep(500);
+
+            // Ensure mobile container exists and has no duplicate cards by id in dataset if present
+            const hasMobileContainer = await this.page.$('#mobileIdeasCards');
+            if (!hasMobileContainer) throw new Error('Mobile ideas container not found');
+
+            const dupInfo = await this.page.evaluate(() => {
+                const cards = Array.from(document.querySelectorAll('#mobileIdeasCards .idea-card'));
+                const titles = cards.map(c => c.querySelector('.idea-card-title')?.textContent || '');
+                const seen = new Set();
+                let duplicates = 0;
+                for (const t of titles) {
+                    if (seen.has(t)) duplicates++;
+                    else seen.add(t);
+                }
+                return { count: cards.length, duplicates };
+            });
+            if (dupInfo.duplicates > 0) throw new Error(`Found ${dupInfo.duplicates} duplicate mobile idea cards`);
+        }, 'Mobile');
         
         // Edge cases
         await this.runTest('Rapid Clicking', () => this.testRapidClicking(), 'Edge Cases');

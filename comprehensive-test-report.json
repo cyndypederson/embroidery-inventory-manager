@@ -1,29 +1,29 @@
 {
-  "timestamp": "2025-09-30T02:19:03.014Z",
+  "timestamp": "2025-09-30T18:27:29.587Z",
   "summary": {
-    "total": 22,
-    "passed": 6,
-    "failed": 16,
-    "successRate": "27.3%"
+    "total": 23,
+    "passed": 15,
+    "failed": 8,
+    "successRate": "65.2%"
   },
   "testedFeatures": [
     {
       "name": "Server Connection",
       "category": "Core",
       "status": "PASSED",
-      "duration": 5420
+      "duration": 7962
     },
     {
       "name": "All Navigation Tabs",
       "category": "Core",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 9596
     },
     {
       "name": "Projects Add Button",
       "category": "Projects",
       "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "error": "Add project button not found"
     },
     {
       "name": "Projects Form Fields",
@@ -53,7 +53,7 @@
       "name": "Projects Edit Fields",
       "category": "Projects",
       "status": "PASSED",
-      "duration": 93
+      "duration": 29
     },
     {
       "name": "Projects Edit Submission",
@@ -70,32 +70,32 @@
     {
       "name": "Projects Search",
       "category": "Projects",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 1058
     },
     {
       "name": "Projects Filters",
       "category": "Projects",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 2052
     },
     {
       "name": "Inventory Tab",
       "category": "Inventory",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 532
     },
     {
       "name": "Customers Tab",
       "category": "Customers",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 1085
     },
     {
       "name": "Ideas Tab",
       "category": "Ideas",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 2818
     },
     {
       "name": "Photo Upload",
@@ -106,26 +106,32 @@
     {
       "name": "Mobile View",
       "category": "Mobile",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 7240
+    },
+    {
+      "name": "Mobile (iPhone) Ideas Cards",
+      "category": "Mobile",
+      "status": "PASSED",
+      "duration": 540
     },
     {
       "name": "Rapid Clicking",
       "category": "Edge Cases",
       "status": "PASSED",
-      "duration": 1
+      "duration": 0
     },
     {
       "name": "Large Data Input",
       "category": "Edge Cases",
       "status": "PASSED",
-      "duration": 0
+      "duration": 1
     },
     {
       "name": "Special Characters",
       "category": "Edge Cases",
       "status": "PASSED",
-      "duration": 1
+      "duration": 0
     },
     {
       "name": "Keyboard Navigation",
@@ -136,45 +142,44 @@
     {
       "name": "Performance",
       "category": "Performance",
-      "status": "FAILED",
-      "error": "this.page.waitForTimeout is not a function"
+      "status": "PASSED",
+      "duration": 4624
     }
   ],
   "errors": [
-    "All Navigation Tabs: this.page.waitForTimeout is not a function",
-    "Projects Add Button: this.page.waitForTimeout is not a function",
+    "Page Error: NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.",
+    "Projects Add Button: Add project button not found",
     "Projects Form Fields: Form field itemName not found",
     "Projects Form Validation: Cannot read properties of null (reading 'evaluate')",
     "Projects Form Submission: No element found for selector: #itemName",
     "Projects Edit Button: Edit button not found",
     "Projects Edit Submission: Node is either not clickable or not an Element",
     "Projects Delete Button: Delete button not found",
-    "Projects Search: this.page.waitForTimeout is not a function",
-    "Projects Filters: this.page.waitForTimeout is not a function",
-    "Inventory Tab: this.page.waitForTimeout is not a function",
-    "Customers Tab: this.page.waitForTimeout is not a function",
-    "Ideas Tab: this.page.waitForTimeout is not a function",
     "Photo Upload: this.page.waitForTimeout is not a function",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/gallery",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/customers",
+    "Request Failed: http://localhost:3000/api/ideas",
+    "Request Failed: http://localhost:3000/api/sales",
+    "Request Failed: http://localhost:3000/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759256837686&force=1759256837686",
+    "Request Failed: http://localhost:3000/api/sales",
+    "Request Failed: http://localhost:3000/api/inventory",
+    "Request Failed: http://localhost:3000/api/inventory",
     "Request Failed: http://localhost:3000/api/customers",
     "Request Failed: http://localhost:3000/api/gallery",
     "Request Failed: http://localhost:3000/api/ideas",
-    "Request Failed: http://localhost:3000/api/inventory",
-    "Request Failed: http://localhost:3000/api/inventory",
-    "Request Failed: http://localhost:3000/api/sales",
+    "Request Failed: http://localhost:3000/logo.png",
+    "Console Error: Connection check failed: Failed to fetch",
     "Console Error: ❌ API data loading failed: Failed to fetch",
-    "Mobile View: this.page.waitForTimeout is not a function",
-    "Request Failed: http://localhost:3000/api/inventory",
-    "Request Failed: http://localhost:3000/api/inventory",
-    "Request Failed: http://localhost:3000/api/sales",
-    "Request Failed: http://localhost:3000/api/gallery",
-    "Request Failed: http://localhost:3000/api/ideas",
-    "Request Failed: http://localhost:3000/api/customers",
-    "Console Error: ❌ API data loading failed: Failed to fetch",
-    "Performance: this.page.waitForTimeout is not a function"
+    "Request Failed: http://localhost:3000/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759256838101&force=1759256838101",
+    "Page Error: NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.",
+    "Request Failed: http://localhost:3000/api/inventory"
   ],
   "warnings": [],
   "performance": {
-    "loadTime": 5564,
-    "memoryUsage": 57495944
+    "loadTime": 3379,
+    "memoryUsage": 58290552,
+    "memoryIncrease": 779364
   }
 }
