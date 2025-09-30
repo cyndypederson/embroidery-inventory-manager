@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-30T18:05:09.415Z",
+  "timestamp": "2025-09-30T20:04:58.207Z",
   "baseUrl": "https://embroidery-inventory-manager.vercel.app",
   "summary": {
     "total": 11,
@@ -12,13 +12,13 @@
       "name": "Live Site Connection",
       "category": "Core",
       "status": "PASSED",
-      "duration": 6134
+      "duration": 5298
     },
     {
       "name": "Live APIs",
       "category": "Core",
       "status": "PASSED",
-      "duration": 15216
+      "duration": 15108
     },
     {
       "name": "Live Navigation",
@@ -54,13 +54,13 @@
       "name": "Live Mobile View",
       "category": "Mobile",
       "status": "PASSED",
-      "duration": 3972
+      "duration": 4252
     },
     {
       "name": "Live Performance",
       "category": "Performance",
       "status": "PASSED",
-      "duration": 17793
+      "duration": 17475
     },
     {
       "name": "Live Data Persistence",
@@ -72,35 +72,35 @@
       "name": "Live Error Handling",
       "category": "Error Handling",
       "status": "PASSED",
-      "duration": 4116
+      "duration": 3863
     }
   ],
   "errors": [
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255474075&force=1759255474075",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262664952&force=1759262664952",
     "Live Navigation: this.page.waitFor is not a function",
     "Live Add Project: this.page.waitFor is not a function",
     "Live Form Fields: Live site: Form field itemName not found",
     "Live Form Submission: Node is either not clickable or not an Element",
     "Live Search: this.page.waitFor is not a function",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255479343&force=1759255479343",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262669084&force=1759262669084",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255483326&force=1759255483326",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262673372&force=1759262673372",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255488318&force=1759255488318",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262678148&force=1759262678148",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255492425&force=1759255492425",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262682725&force=1759262682725",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255497139&force=1759255497139",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262686843&force=1759262686843",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255501130&force=1759255501130",
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262690788&force=1759262690788",
     "Live Data Persistence: this.page.waitFor is not a function",
     "Request Failed: https://embroidery-inventory-manager.vercel.app/api/inventory",
-    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759255505452&force=1759255505452"
+    "Request Failed: https://embroidery-inventory-manager.vercel.app/styles.css?v=1.0.15&cb=1&r=&force=grid&cache=bust&t=1759262694472&force=1759262694472"
   ],
   "performance": {
-    "loadTime": 4792,
-    "memoryUsage": 58659232,
-    "averageLoadTime": 4333
+    "loadTime": 4824,
+    "memoryUsage": 58575772,
+    "averageLoadTime": 4213.666666666667
   }
 }
