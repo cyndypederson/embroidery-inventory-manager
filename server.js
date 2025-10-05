@@ -310,8 +310,21 @@ app.post('/api/gallery', async (req, res) => {
     }
 });
 
+// Server-side caching to prevent repeated database calls
+let ideasCache = null;
+let ideasCacheTime = 0;
+const IDEAS_CACHE_DURATION = 10000; // 10 seconds cache
+
 app.get('/api/ideas', async (req, res) => {
     try {
+        const now = Date.now();
+        
+        // Check if we have valid cached data
+        if (ideasCache && (now - ideasCacheTime) < IDEAS_CACHE_DURATION) {
+            console.log('📖 Server: Using cached ideas data');
+            return res.json(ideasCache);
+        }
+        
         console.log('📖 Server: Fetching ideas from database');
         const database = await connectToDatabase();
         if (!database) {
@@ -319,6 +332,11 @@ app.get('/api/ideas', async (req, res) => {
         }
         const ideas = await database.collection('ideas').find({}).toArray();
         console.log('📖 Server: Found', ideas.length, 'ideas in database');
+        
+        // Update cache
+        ideasCache = ideas;
+        ideasCacheTime = now;
+        
         res.json(ideas);
     } catch (error) {
         console.error('Error fetching ideas:', error);
@@ -341,6 +359,12 @@ app.post('/api/ideas', async (req, res) => {
         } else {
             console.log('💾 Server: No ideas to insert (empty body)');
         }
+        
+        // Clear the cache when data is updated
+        ideasCache = null;
+        ideasCacheTime = 0;
+        console.log('💾 Server: Cleared ideas cache');
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving ideas:', error);

@@ -1621,59 +1621,7 @@ tr:nth-child(even) {
     background: white;
 }
 
-/* Professional Form Layout - ULTRA AGGRESSIVE OVERRIDE */
-.modal-form {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 1.75rem !important;
-    align-items: start !important;
-    margin-top: 1rem !important;
-    width: 100% !important;
-    flex: none !important;
-    flex-direction: unset !important;
-    position: relative !important;
-    box-sizing: border-box !important;
-    min-width: 600px !important;
-    max-width: none !important;
-}
-
-/* DESKTOP OVERRIDE - Force 2 column layout on desktop */
-@media (min-width: 769px) {
-    .modal-form {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 1.75rem !important;
-        align-items: start !important;
-        margin-top: 1rem !important;
-        width: 100% !important;
-        min-width: 600px !important;
-        max-width: none !important;
-    }
-    
-    .modal-form .form-group.full-width {
-        grid-column: 1 / -1 !important;
-        width: 100% !important;
-    }
-    
-    .modal-form .form-group.half-width {
-        grid-column: span 1 !important;
-        width: 100% !important;
-    }
-}
-
-.modal-form .form-group.full-width {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    display: block !important;
-    margin-bottom: 1.5rem !important;
-}
-
-.modal-form .form-group.half-width {
-    grid-column: span 1 !important;
-    width: 100% !important;
-    display: block !important;
-    margin-bottom: 1.5rem !important;
-}
+/* Modal form styles are now handled by inline CSS for consistency */
 
 /* Force all modal form groups to behave properly */
 .modal-form .form-group {
@@ -1779,16 +1727,40 @@ tr:nth-child(even) {
 
 .input-with-button select {
     flex: 1;
+    min-width: 0; /* Allow select to shrink if needed */
 }
 
 .input-with-button .btn {
     flex-shrink: 0;
-    padding: 0.5rem;
-    min-width: 40px;
-    height: 40px;
+    padding: 0.375rem 0.5rem; /* Reduced padding */
+    min-width: 36px; /* Smaller minimum width */
+    max-width: 44px; /* Maximum width constraint */
+    height: 36px; /* Smaller height */
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 0.875rem; /* Slightly smaller font */
+}
+
+/* Mobile-specific input-with-button styling */
+@media (max-width: 768px) {
+    .input-with-button {
+        gap: 0.375rem; /* Smaller gap on mobile */
+    }
+    
+    .input-with-button select {
+        flex: 1;
+        min-width: 0;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .input-with-button .btn {
+        min-width: 40px; /* Slightly larger on mobile for touch */
+        max-width: 48px;
+        height: 40px;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
 }
 
 /* Commission and net amount styling */
@@ -2402,6 +2374,24 @@ tr:nth-child(even) {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
     padding: 1rem 0;
+}
+
+.idea-image {
+    position: relative;
+}
+
+.item-type-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(44, 95, 124, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .idea-card {
@@ -3519,7 +3509,7 @@ body {
 
 /* Touch-friendly buttons */
 @media (max-width: 768px) {
-    .btn {
+    .btn:not(.mobile-add-btn) {
         min-height: 44px;
         min-width: 44px;
         padding: 12px 16px;
@@ -3543,11 +3533,60 @@ body {
     
     /* Enhanced modal for mobile */
     .modal-content {
-        margin: 2% auto;
-        max-height: 96vh;
-        max-height: calc(var(--vh, 1vh) * 96);
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        padding: 1rem;
+        border-radius: 0;
         overflow-y: auto;
+        overflow-x: hidden;
+        position: relative;
+        box-sizing: border-box;
         -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Mobile-friendly form elements */
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+        width: 100% !important;
+        padding: 1rem !important;
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        box-sizing: border-box !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .modal-content textarea {
+        min-height: 120px !important;
+        resize: vertical !important;
+    }
+    
+    .modal-content label {
+        display: block !important;
+        margin-bottom: 0.5rem !important;
+        font-weight: 600 !important;
+        color: #495057 !important;
+        font-size: 1rem !important;
+    }
+    
+    .modal-content .form-group {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    .modal-content .photo-input-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 1rem !important;
+    }
+    
+    .modal-content .btn {
+        width: 100% !important;
+        padding: 1rem !important;
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
     }
     
     /* Mobile-optimized camera */
@@ -3691,6 +3730,20 @@ body {
     .photo-preview {
         max-width: 100%;
         max-height: 200px;
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    
+    /* Mobile image optimization */
+    .gallery-item-image,
+    .idea-image img,
+    .photo-preview img {
+        max-width: 100%;
+        height: auto;
+        object-fit: cover;
+        border-radius: 8px;
     }
     
     /* Mobile-optimized gallery */
@@ -3893,11 +3946,12 @@ body {
         padding: 10px;
     }
     
-    /* iPhone buttons */
-    .btn {
-        padding: 10px 14px;
-        font-size: 14px;
-        min-height: 40px;
+    /* iPhone buttons - ensure minimum touch target */
+    .btn:not(.mobile-add-btn) {
+        padding: 12px 16px;
+        font-size: 16px; /* Prevents zoom on iOS */
+        min-height: 44px;
+        min-width: 44px;
     }
 }
 
@@ -3957,9 +4011,53 @@ body {
         display: none !important;
     }
     
-    /* Hide print and export buttons on mobile */
-    .customer-actions .btn-info,
-    .customer-actions .btn-success {
+    /* Hide desktop customer headers on mobile */
+    .customer-header-content,
+    .customer-toggle,
+    .customer-stats:not(.mobile-customer-header-content .customer-stats) {
+        display: none !important;
+    }
+    
+    /* Hide all desktop customer action buttons on mobile */
+    #customers .customer-actions {
+        display: none !important;
+    }
+    
+    /* Hide the entire customer section header on mobile */
+    #customers .section-header {
+        display: none !important;
+    }
+    
+    /* Hide the entire gallery section header on mobile */
+    #gallery .section-header {
+        display: none !important;
+    }
+    
+    /* Hide gallery desktop buttons on mobile, but keep card action buttons */
+    #gallery .gallery-actions,
+    #gallery .section-header .btn,
+    #gallery .section-header button:not(.mobile-add-btn) {
+        display: none !important;
+    }
+    
+    /* Keep gallery card action buttons visible on mobile */
+    #gallery .gallery-item-actions {
+        display: flex !important;
+    }
+    
+    /* Hide desktop gallery grid on mobile */
+    #gallery .gallery-grid {
+        display: none !important;
+    }
+    
+    
+    /* Hide the entire projects section header on mobile */
+    #projects .section-header {
+        display: none !important;
+    }
+    
+    /* Hide the entire inventory section header on mobile */
+    #inventory .section-header {
         display: none !important;
     }
     
@@ -3969,9 +4067,27 @@ body {
     }
     
     /* Hide Inspiration & Ideas header on mobile */
-    #ideas .section-header h2 {
+    #ideas .section-header {
         display: none !important;
     }
+    
+    /* Hide desktop ideas buttons on mobile, but keep card action buttons */
+    #ideas .ideas-actions,
+    #ideas .section-header .btn,
+    #ideas .section-header button:not(.mobile-add-btn) {
+        display: none !important;
+    }
+    
+    /* Keep idea card action buttons visible on mobile */
+    #ideas .idea-card .idea-actions {
+        display: flex !important;
+    }
+    
+    /* Hide desktop ideas grid on mobile */
+    #ideas .ideas-grid {
+        display: none !important;
+    }
+    
     
     /* Hide export button on ideas tab mobile */
     #ideas .ideas-actions .btn-secondary {
@@ -4089,7 +4205,7 @@ body {
     .mobile-cards-container {
         display: block;
         overflow: visible; /* Remove section scrolling - use page scroll only */
-        padding: 0 1rem;
+        padding: 0;
         margin-bottom: 2rem;
     }
     
@@ -4098,7 +4214,7 @@ body {
         display: grid;
         grid-template-columns: 1fr;
         gap: 1rem;
-        padding: 1rem 0;
+        padding: 1rem;
         min-height: 100%;
     }
     
@@ -4314,11 +4430,14 @@ body {
     /* Better touch targets */
     .nav-btn {
         min-height: 44px;
+        min-width: 44px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 0.25rem;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
     
     .nav-btn i {
@@ -4328,15 +4447,48 @@ body {
 
 /* Mobile form improvements */
 @media (max-width: 768px) {
-    /* .filters {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-        padding: 1rem;
-        background: #f8f9fa;
+    /* Ensure all interactive elements meet minimum touch target size */
+    button, 
+    input[type="button"], 
+    input[type="submit"], 
+    input[type="reset"],
+    select,
+    textarea,
+    .btn,
+    .nav-btn {
+        min-height: 44px;
+        min-width: 44px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Mobile-optimized form inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    textarea,
+    select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px 16px;
         border-radius: 8px;
-        margin-bottom: 1rem;
-    } */
+        border: 2px solid #e9ecef;
+        background: white;
+        -webkit-appearance: none;
+        appearance: none;
+        min-height: 44px;
+    }
+    
+    /* Mobile-optimized select dropdowns */
+    select {
+        background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 16px 12px;
+        padding-right: 40px;
+    }
     
     .filters input,
     .filters select {
@@ -4356,7 +4508,7 @@ body {
     }
 }
 
-/* Mobile modal improvements */
+/* Mobile modal improvements - consolidated with inline styles */
 @media (max-width: 768px) {
     /* Prevent horizontal scroll when modal is open */
     body.modal-open {
@@ -4369,44 +4521,10 @@ body {
         padding: 0;
         background: rgba(0, 0, 0, 0.8);
         overflow: hidden;
+        touch-action: pan-y; /* Allow vertical scrolling */
     }
     
-    .modal-content {
-        margin: 0;
-        width: 100vw;
-        height: 100vh;
-        max-height: 100vh;
-        padding: 0;
-        border-radius: 0;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        box-sizing: border-box;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-    }
-    
-    /* Mobile modal - single column for small screens */
-    .modal-content .modal-form {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 1rem !important;
-        align-items: start !important;
-        margin-top: 1rem !important;
-        width: 100% !important;
-    }
-    
-    .modal-content .modal-form .form-group.full-width {
-        grid-column: 1 !important;
-    }
-    
-    .modal-content .modal-form .form-group.half-width {
-        grid-column: 1 !important;
-    }
-    
+    /* Modal content styles are now handled by inline CSS for consistency */
     .modal-content h3 {
         padding: 1rem 1rem 0.5rem;
         margin: 0;
@@ -4435,21 +4553,6 @@ body {
         border: 1px solid #ddd;
     }
     
-    .modal-form {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 1.75rem !important;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 1rem;
-        background: white;
-        width: 100% !important;
-        box-sizing: border-box;
-        max-width: 100vw;
-        flex: 1 !important;
-        flex-direction: unset !important;
-    }
-    
     /* Mobile form improvements */
     .form-group {
         margin-bottom: 1.5rem;
@@ -4475,6 +4578,19 @@ body {
         background: white;
         transition: border-color 0.3s ease;
         box-sizing: border-box;
+        min-height: 44px; /* Minimum touch target */
+        -webkit-appearance: none; /* Remove iOS styling */
+        appearance: none;
+    }
+    
+    /* Mobile form input focus states */
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #4A90A4;
+        box-shadow: 0 0 0 3px rgba(74, 144, 164, 0.1);
+        transform: none; /* Prevent zoom on focus */
     }
     
     .form-group input:focus,
@@ -4542,7 +4658,7 @@ body {
     }
     
     /* Mobile form actions */
-    /* .form-actions {
+    .form-actions {
         position: sticky;
         bottom: 0;
         background: white;
@@ -4555,7 +4671,7 @@ body {
         width: 100%;
         box-sizing: border-box;
         max-width: 100vw;
-    } */
+    }
     
     .form-actions .btn {
         width: 100%;
@@ -4591,6 +4707,437 @@ body {
         border: 2px solid #17a2b8;
     }
     
+/* Search input fix */
+#searchItems {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+    cursor: text;
+}
+
+/* Mobile add button styling */
+.mobile-add-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+    
+    .mobile-add-btn {
+        width: 100% !important;
+        padding: 1rem !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
+        border: 2px solid #2C5F7C !important;
+        color: white !important;
+        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
+        transition: all 0.3s ease !important;
+        position: relative !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        min-height: auto !important;
+        min-width: auto !important;
+    }
+    
+    .mobile-add-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .mobile-add-btn:hover {
+        background: linear-gradient(135deg, #1e4a5c 0%, #3a7a8a 100%);
+        border-color: #1e4a5c;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(44, 95, 124, 0.4);
+    }
+    
+    .mobile-add-btn:hover::before {
+        left: 100%;
+    }
+    
+    .mobile-add-btn i {
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+    }
+    
+    .mobile-add-btn span {
+        flex: 1;
+        text-align: center;
+        display: block;
+        width: 100%;
+    }
+    
+    /* Force mobile button centering - HIGHEST SPECIFICITY */
+    @media (max-width: 768px) {
+        .mobile-cards-grid .mobile-add-card .mobile-add-btn {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 100% !important;
+            padding: 1rem !important;
+            font-size: 1.1rem !important;
+            min-height: auto !important;
+            background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
+            border: 2px solid #2C5F7C !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            flex: 1 !important;
+        }
+        
+        .mobile-cards-grid .mobile-add-card .mobile-add-btn span {
+            flex: 1 !important;
+            text-align: center !important;
+            display: block !important;
+        }
+        
+        .mobile-cards-grid .mobile-add-card .mobile-add-btn i {
+            margin-right: 0.5rem !important;
+            flex-shrink: 0 !important;
+        }
+        
+        /* Ensure the card container takes full width */
+        .mobile-cards-grid .mobile-add-card {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        .mobile-cards-grid .mobile-add-card .mobile-card-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            grid-template-columns: 1fr !important;
+        }
+        
+        /* Force mobile cards grid to single column */
+        .mobile-cards-grid {
+            grid-template-columns: 1fr !important;
+            display: grid !important;
+            gap: 1rem !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        /* Force mobile add card to take full width */
+        .mobile-cards-grid .mobile-add-card {
+            grid-column: 1 / -1 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        /* Force ALL mobile add buttons to take full width - ULTRA SPECIFIC */
+        .tab-content .mobile-cards-grid .mobile-add-card .mobile-card-content .mobile-add-btn {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 1rem !important;
+            font-size: 1.1rem !important;
+            background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
+            border: 2px solid #2C5F7C !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            flex: 1 !important;
+        }
+    }
+    
+/* ========================================
+   DESKTOP LAYOUT - HIDE MOBILE ELEMENTS
+   ======================================== */
+@media (min-width: 769px) {
+    /* Hide all mobile card containers on desktop */
+    .mobile-cards-container,
+    #mobileInventoryCards,
+    #mobileInventoryItemsCards,
+    #mobileCustomerCards,
+    #mobileWIPCards,
+    #mobileGalleryCards,
+    #mobileSalesCards,
+    #mobileIdeasCards {
+        display: none !important;
+    }
+    
+    /* Ensure desktop grids are visible */
+    #gallery .gallery-grid,
+    #ideas .ideas-grid {
+        display: grid !important;
+    }
+}
+
+/* ========================================
+   MOBILE LAYOUT REWRITE - CLEAN & CONSISTENT
+   ======================================== */
+@media (max-width: 768px) {
+    
+    /* Reset all mobile card containers */
+    .mobile-cards-container {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+    
+    /* Force all parent containers to full width */
+    .tab-content,
+    .tab-content.active,
+    #projects,
+    #inventory,
+    #customers,
+    #wip,
+    #gallery,
+    #sales,
+    #ideas {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+    
+    /* Reset all mobile card grids */
+    .mobile-cards-grid {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem !important;
+        margin: 0 !important;
+        gap: 0 !important;
+        grid-template-columns: none !important;
+    }
+    
+    /* Force specific containers to full width */
+    #mobileInventoryCards,
+    #mobileInventoryItemsCards,
+    #mobileCustomerCards,
+    #mobileWIPCards,
+    #mobileGalleryCards,
+    #mobileSalesCards,
+    #mobileIdeasCards {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem !important;
+        margin: 0 !important;
+        gap: 0 !important;
+        grid-template-columns: none !important;
+    }
+    
+    /* Reset all mobile cards */
+    .mobile-card {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 1rem 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        border: 1px solid #e9ecef !important;
+    }
+    
+    /* Reset mobile card content */
+    .mobile-card-content {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 1rem !important;
+        margin: 0 !important;
+        grid-template-columns: none !important;
+        gap: 0 !important;
+    }
+    
+    /* MOBILE CUSTOMER HEADERS */
+    .mobile-customer-header {
+        margin: 1.5rem 0 1rem 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .mobile-customer-header:first-child {
+        margin-top: 1rem !important;
+    }
+    
+    .mobile-customer-header-content {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 1rem !important;
+        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
+        border: 1px solid #2C5F7C !important;
+        border-radius: 8px !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        user-select: none !important;
+        box-shadow: 0 2px 8px rgba(44, 95, 124, 0.2) !important;
+    }
+    
+    .mobile-customer-header-content:hover {
+        background: linear-gradient(135deg, #1A4A5C 0%, #3A7A94 50%, #5BA6B7 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
+    }
+    
+    .mobile-customer-header-content:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 8px rgba(44, 95, 124, 0.2) !important;
+    }
+    
+    .mobile-customer-header-content .customer-info {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.25rem !important;
+    }
+    
+    .mobile-customer-header-content h3 {
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: white !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+    
+    .mobile-customer-header-content h3 i {
+        color: white !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .mobile-customer-header-content .customer-stats {
+        color: white !important;
+        font-size: 0.8rem !important;
+        font-weight: 400 !important;
+        margin: 0 !important;
+        opacity: 0.9 !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .customer-chevron {
+        transition: transform 0.2s ease !important;
+        margin-right: 0.5rem !important;
+        font-size: 0.8rem !important;
+        color: #6c757d !important;
+    }
+    
+    .mobile-customer-projects {
+        margin-top: 0.5rem !important;
+        padding-left: 0 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .mobile-customer-projects.collapsed {
+        display: none !important;
+    }
+
+    /* MOBILE ADD BUTTONS - COMPLETELY REWRITTEN */
+    .mobile-add-btn {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        height: auto !important;
+        min-height: 50px !important;
+        padding: 1rem !important;
+        margin: 0 !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        color: white !important;
+        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
+        border: 2px solid #2C5F7C !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
+        white-space: nowrap !important;
+        flex: none !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+        flex-basis: auto !important;
+        position: relative !important;
+        overflow: hidden !important;
+        transition: all 0.3s ease !important;
+        cursor: pointer !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+    }
+    
+    .mobile-add-btn:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(44, 95, 124, 0.4) !important;
+    }
+    
+    .mobile-add-btn:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 10px rgba(44, 95, 124, 0.3) !important;
+    }
+    
+    .mobile-add-btn i {
+        margin-right: 0.5rem !important;
+        flex-shrink: 0 !important;
+        font-size: 1rem !important;
+    }
+    
+    .mobile-add-btn span {
+        flex: 1 !important;
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Shimmer effect for add buttons */
+    .mobile-add-btn::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: -100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+        transition: left 0.5s !important;
+    }
+    
+    .mobile-add-btn:hover::before {
+        left: 100% !important;
+    }
+}
+
 /* Custom Confirmation Modal */
 .confirm-modal {
     max-width: 400px;
@@ -4950,30 +5497,7 @@ body {
 
 /* Final desktop override to ensure horizontal filter layout and proper modal sizing */
 @media (min-width: 769px) {
-    /* Override mobile modal styles on desktop */
-    .modal-content {
-        width: 95% !important;
-        max-width: 900px !important;
-        min-width: 650px !important;
-        height: auto !important;
-        max-height: 85vh !important;
-        margin: 3% auto !important;
-        padding: 2rem !important;
-        border-radius: 16px !important;
-        position: relative !important;
-        top: auto !important;
-        left: auto !important;
-        right: auto !important;
-        bottom: auto !important;
-        display: block !important;
-        flex-direction: unset !important;
-    }
-    
-    .modal {
-        padding: 20px !important;
-        background: rgba(0, 0, 0, 0.5) !important;
-        overflow: auto !important;
-    }
+    /* Desktop modal styles are now handled by inline CSS for consistency */
     .filter-row {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
     }
@@ -5311,6 +5835,38 @@ body {
 
 /* Mobile UX improvements */
 @media (max-width: 768px) {
+    /* Performance optimizations for mobile */
+    * {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    
+    /* Allow text selection in input fields */
+    input, textarea, [contenteditable] {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+    }
+    
+    /* Smooth scrolling for mobile */
+    html {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    
+    /* Optimize animations for mobile */
+    * {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+    
     .bulk-actions-container {
         margin: 0.5rem;
         padding: 0.75rem;
@@ -6246,50 +6802,9 @@ body {
     border-radius: 8px;
 }
 
-/* Mobile Modal Improvements */
+/* Mobile Modal Improvements - consolidated with inline styles */
 @media (max-width: 768px) {
-    .modal-content {
-        padding: 1rem;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    .modal-content h3 {
-        font-size: 1.3rem;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #e9ecef;
-    }
-    
-    .modal-form {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 1rem !important;
-    }
-    
-    .modal-form .form-group {
-        margin-bottom: 1rem;
-    }
-    
-    .modal-form .form-group input,
-    .modal-form .form-group select,
-    .modal-form .form-group textarea {
-        font-size: 16px; /* Prevents zoom on iOS */
-        padding: 0.75rem;
-        border-radius: 8px;
-    }
-    
-    .modal-form .form-actions {
-        flex-direction: column;
-        gap: 0.75rem;
-        margin-top: 1.5rem;
-    }
-    
-    .modal-form .form-actions .btn {
-        width: 100%;
-        padding: 0.875rem 1rem;
-        font-size: 1rem;
-    }
+    /* Modal styles are now handled by inline CSS for consistency */
     
     /* Mobile delete buttons in cards */
     .mobile-card-actions {
@@ -6300,10 +6815,58 @@ body {
         margin-top: 1rem;
     }
     
-    .mobile-card-actions .btn {
-        flex: 1;
-        min-width: 80px;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.85rem;
+    .mobile-card-actions .btn,
+    .mobile-card-actions .btn-sm,
+    .mobile-card-actions button {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        padding: 0 !important;
+        margin: 0 2px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 4px !important;
+        font-size: 0.8rem !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+        box-sizing: border-box !important;
+        line-height: 1 !important;
+    }
+    
+    .mobile-card-actions .btn i {
+        margin: 0 !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .mobile-card-actions .btn-edit {
+        background-color: #6c757d !important;
+        border-color: #6c757d !important;
+        color: white !important;
+    }
+    
+    .mobile-card-actions .btn-edit:hover {
+        background-color: #5a6268 !important;
+        border-color: #545b62 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3) !important;
+    }
+    
+    
+    .mobile-card-actions .btn-delete {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: white !important;
+    }
+    
+    .mobile-card-actions .btn-delete:hover {
+        background-color: #c82333 !important;
+        border-color: #bd2130 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3) !important;
     }
 }
