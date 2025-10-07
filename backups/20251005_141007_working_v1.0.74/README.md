@@ -1,0 +1,1 @@
+# embroidery-inventory-manager

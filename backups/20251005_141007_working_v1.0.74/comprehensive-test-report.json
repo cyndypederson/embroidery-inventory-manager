@@ -1,0 +1,188 @@
+{
+  "timestamp": "2025-09-30T21:30:03.297Z",
+  "summary": {
+    "total": 23,
+    "passed": 10,
+    "failed": 13,
+    "successRate": "43.5%"
+  },
+  "testedFeatures": [
+    {
+      "name": "Server Connection",
+      "category": "Core",
+      "status": "PASSED",
+      "duration": 5056
+    },
+    {
+      "name": "All Navigation Tabs",
+      "category": "Core",
+      "status": "PASSED",
+      "duration": 9804
+    },
+    {
+      "name": "Projects Add Button",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Waiting for selector `#addItemModal` failed"
+    },
+    {
+      "name": "Projects Form Fields",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Field itemDescription value not set correctly"
+    },
+    {
+      "name": "Projects Form Validation",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Projects Form Submission",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Projects Edit Button",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Projects Edit Fields",
+      "category": "Projects",
+      "status": "PASSED",
+      "duration": 22
+    },
+    {
+      "name": "Projects Edit Submission",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Projects Delete Button",
+      "category": "Projects",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Projects Search",
+      "category": "Projects",
+      "status": "PASSED",
+      "duration": 1050
+    },
+    {
+      "name": "Projects Filters",
+      "category": "Projects",
+      "status": "PASSED",
+      "duration": 2042
+    },
+    {
+      "name": "Inventory Tab",
+      "category": "Inventory",
+      "status": "PASSED",
+      "duration": 542
+    },
+    {
+      "name": "Customers Tab",
+      "category": "Customers",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Ideas Tab",
+      "category": "Ideas",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Photo Upload",
+      "category": "Media",
+      "status": "PASSED",
+      "duration": 518
+    },
+    {
+      "name": "Mobile View",
+      "category": "Mobile",
+      "status": "PASSED",
+      "duration": 11183
+    },
+    {
+      "name": "Mobile (iPhone) Ideas Cards",
+      "category": "Mobile",
+      "status": "PASSED",
+      "duration": 542
+    },
+    {
+      "name": "Rapid Clicking",
+      "category": "Edge Cases",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Large Data Input",
+      "category": "Edge Cases",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Special Characters",
+      "category": "Edge Cases",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    },
+    {
+      "name": "Keyboard Navigation",
+      "category": "Edge Cases",
+      "status": "PASSED",
+      "duration": 7
+    },
+    {
+      "name": "Performance",
+      "category": "Performance",
+      "status": "FAILED",
+      "error": "Node is either not clickable or not an Element"
+    }
+  ],
+  "errors": [
+    "Page Error: NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.",
+    "Projects Add Button: Waiting for selector `#addItemModal` failed",
+    "Projects Form Fields: Field itemDescription value not set correctly",
+    "Projects Form Validation: Node is either not clickable or not an Element",
+    "Projects Form Submission: Node is either not clickable or not an Element",
+    "Projects Edit Button: Node is either not clickable or not an Element",
+    "Projects Edit Submission: Node is either not clickable or not an Element",
+    "Projects Delete Button: Node is either not clickable or not an Element",
+    "Customers Tab: Node is either not clickable or not an Element",
+    "Ideas Tab: Node is either not clickable or not an Element",
+    "Request Failed: http://localhost:3002/api/inventory",
+    "Request Failed: http://localhost:3002/api/inventory",
+    "Request Failed: http://localhost:3002/api/gallery",
+    "Request Failed: http://localhost:3002/api/customers",
+    "Request Failed: http://localhost:3002/api/ideas",
+    "Request Failed: http://localhost:3002/api/inventory",
+    "Request Failed: http://localhost:3002/api/sales",
+    "Console Error: Connection check failed: Failed to fetch",
+    "Console Error: ❌ API data loading failed: Failed to fetch",
+    "Request Failed: http://localhost:3002/styles.css?v=1.0.18&cb=1&r=&force=grid&cache=bust&t=1759267787671&force=1759267787671",
+    "Rapid Clicking: Node is either not clickable or not an Element",
+    "Large Data Input: Node is either not clickable or not an Element",
+    "Special Characters: Node is either not clickable or not an Element",
+    "Page Error: NotFoundError: Failed to execute 'insertBefore' on 'Node': The node before which the new node is to be inserted is not a child of this node.",
+    "Request Failed: http://localhost:3002/api/ideas",
+    "Request Failed: http://localhost:3002/api/inventory",
+    "Request Failed: http://localhost:3002/api/sales",
+    "Request Failed: http://localhost:3002/api/inventory",
+    "Request Failed: http://localhost:3002/api/customers",
+    "Request Failed: http://localhost:3002/api/gallery",
+    "Console Error: ❌ API data loading failed: Failed to fetch",
+    "Performance: Node is either not clickable or not an Element"
+  ],
+  "warnings": [],
+  "performance": {
+    "loadTime": 4096,
+    "memoryUsage": 43445740
+  }
+}

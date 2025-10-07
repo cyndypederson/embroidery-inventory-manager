@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0, private, no-transform">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="1.0.0">
-    <title>CyndyP StitchCraft Inventory - v1.0.76 - CACHE BUST</title>
+    <meta name="version" content="1.0.15">
+    <title>CyndyP StitchCraft Inventory - v1.0.27 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -35,7 +35,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.76&t=202510072332&cb=2&r=&force=clear&duplicate=fix" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.27&t=202509302356&cb=1&r=&force=grid&cache=bust" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -53,62 +53,7 @@
         })();
     </script>
     <style>
-        /* Mobile-first modal design - inline CSS to override any caching issues */
-        
-        /* Force single column layout on mobile devices */
-        @media (max-width: 768px) {
-            .modal-form,
-            #editItemForm,
-            #addItemForm,
-            #addIdeaForm,
-            #addPhotoForm,
-            #addCustomerForm,
-            #editCustomerForm,
-            #addSaleForm,
-            #editSaleForm {
-                display: grid !important;
-                grid-template-columns: 1fr !important;
-                gap: 1rem !important;
-            }
-            
-            .modal-form .form-group,
-            #editItemForm .form-group,
-            #addItemForm .form-group,
-            #addIdeaForm .form-group,
-            #addPhotoForm .form-group,
-            #addCustomerForm .form-group,
-            #editCustomerForm .form-group,
-            #addSaleForm .form-group,
-            #editSaleForm .form-group {
-                display: block !important;
-                width: 100% !important;
-                grid-column: 1 / -1 !important;
-                margin-bottom: 1rem !important;
-            }
-            
-            .modal-form .form-group.half-width,
-            #editItemForm .form-group.half-width,
-            #addItemForm .form-group.half-width,
-            #addIdeaForm .form-group.half-width,
-            #addPhotoForm .form-group.half-width,
-            #addCustomerForm .form-group.half-width,
-            #editCustomerForm .form-group.half-width,
-            #addSaleForm .form-group.half-width,
-            #editSaleForm .form-group.half-width {
-                grid-column: 1 / -1 !important;
-                width: 100% !important;
-            }
-        }
-        .modal-content {
-            max-width: 95vw;
-            width: 95vw;
-            margin: 2% auto;
-            padding: 1rem;
-            max-height: 96vh;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        
+        /* Force modal grid layout - inline CSS to override any caching issues */
         .modal-form,
         #editItemForm,
         #addItemForm,
@@ -119,164 +64,120 @@
         #addSaleForm,
         #editSaleForm {
             display: grid !important;
-            grid-template-columns: 1fr !important;
-            gap: 1rem !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 1.75rem !important;
+            align-items: start !important;
             margin-top: 1rem !important;
             width: 100% !important;
+            min-width: 600px !important;
+            flex: none !important;
+            flex-direction: unset !important;
+            position: relative !important;
+            box-sizing: border-box !important;
         }
         
-        .modal-form .form-group,
-        #editItemForm .form-group,
-        #addItemForm .form-group,
-        #addIdeaForm .form-group,
-        #addPhotoForm .form-group,
-        #addCustomerForm .form-group,
-        #editCustomerForm .form-group,
-        #addSaleForm .form-group,
-        #editSaleForm .form-group {
+        /* Force modal content to be wider for proper grid layout */
+        .modal-content {
+            max-width: 1000px !important;
+            min-width: 800px !important;
+            width: 90% !important;
+        }
+        
+        /* Force grid to use fractional units by removing width constraints */
+        .modal-form,
+        #editItemForm,
+        #addItemForm,
+        #addIdeaForm,
+        #addPhotoForm,
+        #addCustomerForm,
+        #editCustomerForm,
+        #addSaleForm,
+        #editSaleForm {
+            width: auto !important;
+            min-width: 700px !important;
+            max-width: none !important;
+        }
+        
+        /* ULTRA HIGH SPECIFICITY - Force fractional units */
+        .modal-content .modal-form,
+        .modal-content #addItemForm,
+        .modal-content #editItemForm {
+            grid-template-columns: 1fr 1fr !important;
+            display: grid !important;
+        }
+        
+        /* Ensure half-width form groups don't take full width */
+        .modal-form .form-group.half-width,
+        #editItemForm .form-group.half-width,
+        #addItemForm .form-group.half-width,
+        #addIdeaForm .form-group.half-width,
+        #addPhotoForm .form-group.half-width,
+        #addCustomerForm .form-group.half-width,
+        #editCustomerForm .form-group.half-width,
+        #addSaleForm .form-group.half-width,
+        #editSaleForm .form-group.half-width {
+            width: auto !important;
+            max-width: none !important;
+        }
+        .modal-form .form-group.full-width,
+        #editItemForm .form-group.full-width,
+        #addItemForm .form-group.full-width,
+        #addIdeaForm .form-group.full-width,
+        #addPhotoForm .form-group.full-width,
+        #addCustomerForm .form-group.full-width,
+        #editCustomerForm .form-group.full-width,
+        #addSaleForm .form-group.full-width,
+        #editSaleForm .form-group.full-width {
+            grid-column: 1 / -1 !important;
+            width: 100% !important;
+        }
+        .modal-form .form-group.half-width,
+        #editItemForm .form-group.half-width,
+        #addItemForm .form-group.half-width,
+        #addIdeaForm .form-group.half-width,
+        #addPhotoForm .form-group.half-width,
+        #addCustomerForm .form-group.half-width,
+        #editCustomerForm .form-group.half-width,
+        #addSaleForm .form-group.half-width,
+        #editSaleForm .form-group.half-width {
+            grid-column: span 1 !important;
+            width: 100% !important;
+        }
+        
+        /* Override any mobile styles that might be interfering */
+        @media (max-width: 768px) {
+            .modal-form {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 1.75rem !important;
+                align-items: start !important;
+                margin-top: 1rem !important;
+                width: 100% !important;
+                flex: none !important;
+                flex-direction: unset !important;
+            }
+            .modal-form .form-group.full-width {
+                grid-column: 1 / -1 !important;
+                width: 100% !important;
+            }
+            .modal-form .form-group.half-width {
+                grid-column: span 1 !important;
+                width: 100% !important;
+            }
+        }
+        
+        /* Force all form groups to use proper grid layout */
+        .modal .form-group {
             display: block !important;
             width: 100% !important;
-            margin-bottom: 1rem !important;
-            grid-column: 1 / -1 !important;
+            margin-bottom: 1.5rem !important;
         }
         
-        .modal-form .form-group input,
-        .modal-form .form-group select,
-        .modal-form .form-group textarea,
-        #editItemForm .form-group input,
-        #editItemForm .form-group select,
-        #editItemForm .form-group textarea,
-        #addItemForm .form-group input,
-        #addItemForm .form-group select,
-        #addItemForm .form-group textarea,
-        #addIdeaForm .form-group input,
-        #addIdeaForm .form-group select,
-        #addIdeaForm .form-group textarea,
-        #addPhotoForm .form-group input,
-        #addPhotoForm .form-group select,
-        #addPhotoForm .form-group textarea,
-        #addCustomerForm .form-group input,
-        #addCustomerForm .form-group select,
-        #addCustomerForm .form-group textarea,
-        #editCustomerForm .form-group input,
-        #editCustomerForm .form-group select,
-        #editCustomerForm .form-group textarea,
-        #addSaleForm .form-group input,
-        #addSaleForm .form-group select,
-        #addSaleForm .form-group textarea,
-        #editSaleForm .form-group input,
-        #editSaleForm .form-group select,
-        #editSaleForm .form-group textarea {
+        .modal .form-group input,
+        .modal .form-group select,
+        .modal .form-group textarea {
             width: 100% !important;
             box-sizing: border-box !important;
-            font-size: 16px !important; /* Prevents zoom on iOS */
-            padding: 0.75rem !important;
-            border-radius: 8px !important;
-        }
-        
-        .modal-form .form-actions,
-        #editItemForm .form-actions,
-        #addItemForm .form-actions,
-        #addIdeaForm .form-actions,
-        #addPhotoForm .form-actions,
-        #addCustomerForm .form-actions,
-        #editCustomerForm .form-actions,
-        #addSaleForm .form-actions,
-        #editSaleForm .form-actions {
-            grid-column: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-        
-        .modal-form .form-actions .btn,
-        #editItemForm .form-actions .btn,
-        #addItemForm .form-actions .btn,
-        #addIdeaForm .form-actions .btn,
-        #addPhotoForm .form-actions .btn,
-        #addCustomerForm .form-actions .btn,
-        #editCustomerForm .form-actions .btn,
-        #addSaleForm .form-actions .btn,
-        #editSaleForm .form-actions .btn {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            font-size: 1rem;
-        }
-        
-        /* Desktop styles - only apply on larger screens */
-        @media (min-width: 769px) {
-            .modal-content {
-                max-width: 900px;
-                min-width: 650px;
-                width: 90%;
-                padding: 2rem;
-            }
-            
-            .modal-form,
-            #editItemForm,
-            #addItemForm,
-            #addIdeaForm,
-            #addPhotoForm,
-            #addCustomerForm,
-            #editCustomerForm,
-            #addSaleForm,
-            #editSaleForm {
-                grid-template-columns: 1fr 1fr;
-                gap: 1.75rem;
-            }
-            
-            .modal-form .form-group.full-width,
-            #editItemForm .form-group.full-width,
-            #addItemForm .form-group.full-width,
-            #addIdeaForm .form-group.full-width,
-            #addPhotoForm .form-group.full-width,
-            #addCustomerForm .form-group.full-width,
-            #editCustomerForm .form-group.full-width,
-            #addSaleForm .form-group.full-width,
-            #editSaleForm .form-group.full-width {
-                grid-column: 1 / -1;
-            }
-            
-            .modal-form .form-group.half-width,
-            #editItemForm .form-group.half-width,
-            #addItemForm .form-group.half-width,
-            #addIdeaForm .form-group.half-width,
-            #addPhotoForm .form-group.half-width,
-            #addCustomerForm .form-group.half-width,
-            #editCustomerForm .form-group.half-width,
-            #addSaleForm .form-group.half-width,
-            #editSaleForm .form-group.half-width {
-                grid-column: span 1;
-            }
-            
-            .modal-form .form-actions,
-            #editItemForm .form-actions,
-            #addItemForm .form-actions,
-            #addIdeaForm .form-actions,
-            #addPhotoForm .form-actions,
-            #addCustomerForm .form-actions,
-            #editCustomerForm .form-actions,
-            #addSaleForm .form-actions,
-            #editSaleForm .form-actions {
-                grid-column: 1 / -1;
-                flex-direction: row;
-                justify-content: flex-end;
-                gap: 1rem;
-            }
-            
-            .modal-form .form-actions .btn,
-            #editItemForm .form-actions .btn,
-            #addItemForm .form-actions .btn,
-            #addIdeaForm .form-actions .btn,
-            #addPhotoForm .form-actions .btn,
-            #addCustomerForm .form-actions .btn,
-            #editCustomerForm .form-actions .btn,
-            #addSaleForm .form-actions .btn,
-            #editSaleForm .form-actions .btn {
-                width: auto;
-                padding: 0.875rem 1.5rem;
-            }
         }
     </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -293,7 +194,7 @@
                 </div>
                 <div class="header-right">
                     <div class="version-display" id="versionDisplay">
-                        <i class="fas fa-tag"></i> v1.0.0
+                        <i class="fas fa-tag"></i> v1.0.8
                     </div>
                     <div class="connection-status" id="connectionStatusContainer">
                         <span id="connectionStatus" class="status-indicator">
@@ -377,10 +278,14 @@
                 <div class="table-container">
                     <table id="inventoryTable">
                         <thead>
-                            <tr id="projectsTableHeader">
+                            <tr>
                                 <th>Project</th>
+                                <th>Category</th>
+                                <th>Qty</th>
                                 <th>Status</th>
                                 <th>Due Date</th>
+                                <th>Notes</th>
+                                <th>Link</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -644,15 +549,9 @@
                         <button class="btn btn-primary" onclick="generateInvoice()">
                             <i class="fas fa-file-invoice"></i> Generate Invoice
                         </button>
-                    <button class="btn btn-success" onclick="openPrintInvoiceModal()">
-                        <i class="fas fa-print"></i> Print Invoice
-                    </button>
-                    <button class="btn btn-outline" onclick="toggleDetailedView()" id="toggleViewBtn">
-                        <i class="fas fa-list"></i> Detailed View
-                    </button>
-                    <button class="btn btn-info" onclick="generateTestInvoice()" title="Generate a test invoice with sample data">
-                        <i class="fas fa-flask"></i> Generate Test Invoice
-                    </button>
+                        <button class="btn btn-info" onclick="generateTestInvoice()" title="Generate a test invoice with sample data">
+                            <i class="fas fa-flask"></i> Generate Test Invoice
+                        </button>
                         <button class="btn btn-info" onclick="viewInvoices()">
                             <i class="fas fa-list"></i> View Invoices
                         </button>
@@ -1098,10 +997,10 @@
                     <label for="itemPhoto">Photo</label>
                     <div class="photo-input-container">
                         <input type="file" id="itemPhoto" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForProject()" title="Take Photo with Camera">
+                        <button type="button" class="btn btn-outline" onclick="openCameraForInventory()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForProject()" title="Analyze Photo to Auto-Fill Fields" id="analyzeProjectBtn" disabled>
+                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForInventory()" title="Analyze Photo to Auto-Fill Fields" id="analyzeInventoryBtn" disabled>
                             <i class="fas fa-search"></i> Analyze Photo
                         </button>
                     </div>
@@ -1330,7 +1229,19 @@
                     <label for="projectNotes">Notes</label>
                     <textarea id="projectNotes" placeholder="Special instructions, color preferences, size requirements, etc." maxlength="500" rows="3"></textarea>
                 </div>
-                <!-- Projects don't need images - they're tracked through inventory, ideas, and gallery -->
+                <div class="form-group full-width">
+                    <label for="projectPhoto">Photo</label>
+                    <div class="photo-input-container">
+                        <input type="file" id="projectPhoto" accept="image/*">
+                        <button type="button" class="btn btn-outline" onclick="openCameraForProject()" title="Take Photo with Camera">
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForProject()" title="Analyze Photo to Auto-Fill Fields" id="analyzeProjectBtn" disabled>
+                            <i class="fas fa-search"></i> Analyze Photo
+                        </button>
+                    </div>
+                    <small>Add a photo of your project. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addProjectModal')">Cancel</button>
                     <button type="button" class="btn btn-info" onclick="copyFromLastProject()" title="Copy from last added project">
@@ -1592,10 +1503,6 @@
             <h3>Add Photo to Gallery</h3>
             <form id="addPhotoForm" class="modal-form" novalidate>
                 <div class="form-group full-width">
-                    <label for="photoTitle">Photo Title *</label>
-                    <input type="text" id="photoTitle" required maxlength="100" placeholder="e.g., Custom Embroidered T-Shirt">
-                </div>
-                <div class="form-group full-width">
                     <label for="photoFile">Photo *</label>
                     <div class="photo-input-container">
                         <input type="file" id="photoFile" accept="image/*" required>
@@ -1604,6 +1511,10 @@
                         </button>
                     </div>
                     <small>Upload a photo or take one with your camera.</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="photoTitle">Photo Title *</label>
+                    <input type="text" id="photoTitle" required maxlength="100" placeholder="e.g., Custom Embroidered T-Shirt">
                 </div>
                 <div class="form-group half-width">
                     <label for="photoItem">Related Item</label>
@@ -1630,58 +1541,6 @@
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addPhotoModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Photo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="editPhotoModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('editPhotoModal')">&times;</span>
-            <h3>Edit Photo</h3>
-            <form id="editPhotoForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="editPhotoTitle">Photo Title *</label>
-                    <input type="text" id="editPhotoTitle" required maxlength="100" placeholder="e.g., Custom T-Shirt Design">
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPhotoDescription">Description</label>
-                    <textarea id="editPhotoDescription" rows="3" maxlength="500" placeholder="Describe the work, techniques used, etc."></textarea>
-                </div>
-                <div class="form-group half-width">
-                    <label for="editPhotoCategory">Category</label>
-                    <select id="editPhotoCategory">
-                        <option value="apparel">Apparel</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="gifts">Gifts</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="editPhotoStatus">Status</label>
-                    <select id="editPhotoStatus">
-                        <option value="completed">Completed</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="sample">Sample</option>
-                    </select>
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPhotoImage">Update Image (optional)</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="editPhotoImage" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForEditPhoto()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPhotoNotes">Notes</label>
-                    <textarea id="editPhotoNotes" rows="2" maxlength="300" placeholder="Additional notes about this photo"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('editPhotoModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Photo</button>
                 </div>
             </form>
         </div>
@@ -1768,7 +1627,13 @@
                     <input type="text" id="editProjectDescription" required placeholder="Project description">
                 </div>
                 
-                <!-- Projects don't need images - they're tracked through inventory, ideas, and gallery -->
+                <!-- Image Preview Section for Projects -->
+                <div class="form-group full-width" id="editProjectImageSection" style="display: none;">
+                    <label>Current Image</label>
+                    <div id="editProjectImagePreview" class="image-preview-container">
+                        <img id="editProjectImageDisplay" src="" alt="Project Image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
+                    </div>
+                </div>
                 
                 <div class="form-group half-width">
                     <label for="editProjectQuantity">Quantity</label>
@@ -2168,69 +2033,6 @@
         </div>
     </div>
 
-    <!-- Print Invoice Modal -->
-    <div id="printInvoiceModal" class="modal">
-        <div class="modal-content print-invoice-modal">
-            <span class="close" onclick="closeModal('printInvoiceModal')">&times;</span>
-            <h3><i class="fas fa-print"></i> Print Invoice</h3>
-            
-            <form id="printInvoiceForm" class="modal-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="printVendorName">Vendor Name *</label>
-                        <input type="text" id="printVendorName" name="vendorName" required 
-                               placeholder="e.g., First Avenue Shop">
-                    </div>
-                    <div class="form-group">
-                        <label for="printInvoiceDate">Date *</label>
-                        <input type="date" id="printInvoiceDate" name="invoiceDate" required>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="printVendorLogo">Vendor Logo URL (optional)</label>
-                    <input type="url" id="printVendorLogo" name="vendorLogo" 
-                           placeholder="https://example.com/logo.png">
-                </div>
-                
-                <div class="form-group">
-                    <label>Invoice Items *</label>
-                    <div id="printInvoiceItems" class="invoice-items-container">
-                        <div class="invoice-item-row">
-                            <input type="text" name="itemDescription[]" placeholder="Item description" required>
-                            <input type="number" name="itemQuantity[]" placeholder="Qty" min="1" value="1" required>
-                            <input type="number" name="itemCost[]" placeholder="Cost" min="0" step="0.01" required>
-                            <button type="button" class="btn btn-sm btn-outline" onclick="removeInvoiceItem(this)">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline btn-sm" onclick="addInvoiceItem()">
-                        <i class="fas fa-plus"></i> Add Item
-                    </button>
-                </div>
-                
-                <div class="form-group">
-                    <label for="printNotes">Notes (optional)</label>
-                    <textarea id="printNotes" name="notes" rows="3" 
-                              placeholder="Additional notes for the vendor..."></textarea>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-outline" onclick="closeModal('printInvoiceModal')">
-                        Cancel
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="previewPrintInvoice()">
-                        <i class="fas fa-eye"></i> Preview
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-print"></i> Print Invoice
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script>
         // NUCLEAR CACHE BUSTING - Force reload of CSS and JS on every page load
         (function() {
@@ -2238,7 +2040,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.0 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.12 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2268,15 +2070,15 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.74') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.12') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
             }, 1000);
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.74');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.15');
         })();
     </script>
-    <script src="script.js?v=1.0.76&t=202510072332&cb=3&r=&force=clear&duplicate=fix" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.27&t=202509302356&cb=1&r=" id="js-cache-bust"></script>
 </body>
 </html>

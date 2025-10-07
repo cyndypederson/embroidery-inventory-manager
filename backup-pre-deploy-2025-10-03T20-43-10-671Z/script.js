@@ -1155,7 +1155,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.76'
+                appVersion: '1.0.27'
             }
         };
         
@@ -2695,7 +2695,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.76'; // Current app version
+                const currentVersion = '1.0.27'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -2935,14 +2935,14 @@ class FormManager {
         }
         
         // Length validation
-        if (field.minLength && field.minLength > 0) {
+        if (field.minLength) {
             rules.push({
                 validator: (value) => this.validationRules.get('minLength').validator(value, field.minLength),
                 message: this.validationRules.get('minLength').message(field.minLength)
             });
         }
         
-        if (field.maxLength && field.maxLength > 0) {
+        if (field.maxLength) {
             rules.push({
                 validator: (value) => this.validationRules.get('maxLength').validator(value, field.maxLength),
                 message: this.validationRules.get('maxLength').message(field.maxLength)
@@ -4276,14 +4276,13 @@ document.addEventListener('DOMContentLoaded', function() {
     registerServiceWorker();
     setupMobileFeatures();
     setupMobileModalEnhancements();
-    setupMobileGalleryUpload();
 });
 
 function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.76';
+        const currentVersion = '1.0.27';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -4319,33 +4318,16 @@ function initializeApp() {
     document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
     document.getElementById('editSaleForm').addEventListener('submit', handleEditSale);
     document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
-    
-    // Mobile-specific file input enhancements
-    const photoFileInput = document.getElementById('photoFile');
-    if (photoFileInput) {
-        // Add mobile-friendly event listeners
-        photoFileInput.addEventListener('change', function(e) {
-            console.log('Photo file input changed:', e.target.files.length, 'files');
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                console.log('File selected:', file.name, file.size, file.type);
-            }
-        });
-        
-        // Ensure proper touch handling on mobile
-        if ('ontouchstart' in window) {
-            photoFileInput.addEventListener('touchstart', function(e) {
-                console.log('Touch start on file input');
-            });
-            
-            photoFileInput.addEventListener('touchend', function(e) {
-                console.log('Touch end on file input');
-            });
-        }
-    }
     document.getElementById('addIdeaForm').addEventListener('submit', handleAddIdea);
     
-    // Separate modal form listeners
+    // Edit form event listeners with error handling
+    const editForm = document.getElementById('editItemForm');
+    if (editForm) {
+        editForm.addEventListener('submit', handleEditItem);
+        console.log('Edit form event listener added');
+    }
+    
+    // New separate modal form listeners
     const editProjectForm = document.getElementById('editProjectForm');
     if (editProjectForm) {
         editProjectForm.addEventListener('submit', handleEditProject);
@@ -4356,27 +4338,40 @@ function initializeApp() {
     if (editInventoryForm) {
         editInventoryForm.addEventListener('submit', handleEditInventory);
         console.log('Edit inventory form event listener added');
+        
+        // Also add click listener to the submit button for debugging
+        const submitButton = document.getElementById('editItemSubmitButton');
+        if (submitButton) {
+            submitButton.addEventListener('click', function(e) {
+                console.log('🔘 Submit button clicked!', e);
+                console.log('📋 Form element:', editForm);
+                console.log('📋 Form validity:', editForm.checkValidity());
+            });
+            console.log('Submit button click listener added');
+        } else {
+            console.error('Submit button not found!');
+        }
+    } else {
+        console.error('Edit form not found!');
     }
     
-    // Close button event listeners are handled by onclick attributes in HTML
+    // Add close button event listener for edit modal
+    const editModalClose = document.querySelector('#editItemModal .close');
+    if (editModalClose) {
+        editModalClose.addEventListener('click', function() {
+            console.log('Edit modal close button clicked');
+            closeModal('editItemModal');
+        });
+    }
 
     // Set today's date for sale date
     document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
     
     // Add event listeners for quantity and price calculation
-    const itemQuantity = document.getElementById('itemQuantity');
-    const itemPrice = document.getElementById('itemPrice');
-    const editProjectQuantity = document.getElementById('editProjectQuantity');
-    const editProjectPrice = document.getElementById('editProjectPrice');
-    const editInventoryQuantity = document.getElementById('editInventoryQuantity');
-    const editInventoryPrice = document.getElementById('editInventoryPrice');
-    
-    if (itemQuantity) itemQuantity.addEventListener('input', calculateTotalValue);
-    if (itemPrice) itemPrice.addEventListener('input', calculateTotalValue);
-    if (editProjectQuantity) editProjectQuantity.addEventListener('input', calculateEditProjectTotalValue);
-    if (editProjectPrice) editProjectPrice.addEventListener('input', calculateEditProjectTotalValue);
-    if (editInventoryQuantity) editInventoryQuantity.addEventListener('input', calculateEditInventoryTotalValue);
-    if (editInventoryPrice) editInventoryPrice.addEventListener('input', calculateEditInventoryTotalValue);
+    document.getElementById('itemQuantity').addEventListener('input', calculateTotalValue);
+    document.getElementById('itemPrice').addEventListener('input', calculateTotalValue);
+    document.getElementById('editItemQuantity').addEventListener('input', calculateEditTotalValue);
+    document.getElementById('editItemPrice').addEventListener('input', calculateEditTotalValue);
     
     // Check connection status
     checkConnectionStatus();
@@ -4488,48 +4483,15 @@ function calculateEditInventoryTotalValue() {
     document.getElementById('editInventoryTotalPrice').value = totalValue.toFixed(2);
 }
 
-function calculateEditProjectTotalValue() {
-    const quantity = parseInt(document.getElementById('editProjectQuantity').value) || 0;
-    const price = parseFloat(document.getElementById('editProjectPrice').value) || 0;
-    const totalValue = quantity * price;
+function editItem(index) {
+    console.log('📦 editItem called with index:', index); // Debug log
     
-    const totalPriceElement = document.getElementById('editProjectTotalPrice');
-    if (totalPriceElement) {
-        totalPriceElement.value = totalValue.toFixed(2);
-    }
-}
-
-function editItem(itemIdOrIndex) {
-    console.log('📦 editItem called with ID/Index:', itemIdOrIndex); // Debug log
-    
-    let item;
-    let actualIndex;
-    
-    // Handle both ID and index parameters
-    if (typeof itemIdOrIndex === 'string' || typeof itemIdOrIndex === 'number' && itemIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        actualIndex = inventory.findIndex(i => i.id === itemIdOrIndex);
-        if (actualIndex >= 0) {
-            item = inventory[actualIndex];
-        }
-    } else {
-        // It's an index (small number)
-        actualIndex = parseInt(itemIdOrIndex);
-        if (actualIndex >= 0 && actualIndex < inventory.length) {
-            item = inventory[actualIndex];
-        }
-    }
-    
-    if (!item) {
-        console.error('Item not found with parameter:', itemIdOrIndex);
-        return;
-    }
-    
+    const item = inventory[index];
     console.log('📝 Item to edit:', item); // Debug log
     console.log('📝 Item type:', item.type); // Debug log
     
     // Populate the edit form
-    document.getElementById('editItemIndex').value = actualIndex;
+    document.getElementById('editItemIndex').value = index;
     document.getElementById('editItemDescription').value = item.description || item.name || '';
     document.getElementById('editItemLocation').value = item.location || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
@@ -4569,8 +4531,8 @@ function editItem(itemIdOrIndex) {
     imageDisplay.src = '';
     imageSection.style.display = 'none';
     
-    // Show image section for projects and inventory items with images
-    if (item.type === 'project' || !item.type || (item.imageData || item.photo?.dataUrl)) {
+    // Only show image section for projects, not for inventory items
+    if (item.type === 'project' || !item.type) {
         if (item.imageData || item.photo?.dataUrl) {
             const imageData = item.imageData || item.photo?.dataUrl;
             if (imageData && imageData.trim() !== '' && imageData !== 'undefined') {
@@ -4673,7 +4635,27 @@ function editProject(index) {
         }, 100);
     }
     
-    // Projects don't need images - they're tracked through inventory, ideas, and gallery
+    // Display existing image if available
+    const imageSection = document.getElementById('editProjectImageSection');
+    const imageDisplay = document.getElementById('editProjectImageDisplay');
+    
+    // Clear any previous image and hide section by default
+    imageDisplay.src = '';
+    imageSection.style.display = 'none';
+    
+    if (item.imageData || item.photo?.dataUrl) {
+        const imageData = item.imageData || item.photo?.dataUrl;
+        if (imageData && imageData.trim() !== '' && imageData !== 'undefined') {
+            imageDisplay.src = imageData;
+            imageSection.style.display = 'block';
+            console.log('📸 Displaying existing image in edit project modal');
+        } else {
+            console.log('📸 Image data is empty or invalid, hiding section');
+        }
+    } else {
+        imageSection.style.display = 'none';
+        console.log('📸 No image to display in edit project modal');
+    }
     
     // Show the project modal
     document.getElementById('editProjectModal').style.display = 'block';
@@ -4725,6 +4707,9 @@ async function handleEditProject(e) {
     
     // Refresh displays
     loadInventoryTable();
+    if (window.innerWidth <= 768) {
+        loadMobileInventoryCards();
+    }
     
     // Close modal
     closeModal('editProjectModal');
@@ -4776,6 +4761,9 @@ async function handleEditInventory(e) {
     
     // Refresh displays
     loadInventoryItemsTable();
+    if (window.innerWidth <= 768) {
+        loadMobileInventoryItemsCards();
+    }
     
     // Close modal
     closeModal('editInventoryModal');
@@ -4900,33 +4888,8 @@ async function checkConnectionStatus() {
     }
 }
 
-// Add caching to prevent repeated API calls
-let lastAPILoad = 0;
-const API_CACHE_DURATION = 10000; // 10 seconds cache
-let isLoadingAPI = false;
-
 async function loadDataFromAPI() {
-    console.log('📡 loadDataFromAPI called - isLoadingAPI:', isLoadingAPI, 'lastAPILoad:', lastAPILoad, 'inventory.length:', inventory.length);
-    
-    // Prevent multiple simultaneous API calls
-    if (isLoadingAPI) {
-        console.log('📡 API load already in progress, skipping...');
-        return;
-    }
-    
-    // Check cache
-    const now = Date.now();
-    if (now - lastAPILoad < API_CACHE_DURATION && inventory.length > 0) {
-        console.log('📡 Using cached API data...');
-        return;
-    }
-    
-    console.log('📡 Making fresh API calls...');
-    isLoadingAPI = true;
-    lastAPILoad = now;
-    
     try {
-        console.log('📡 Loading data from API...');
         const [inventoryRes, customersRes, salesRes, galleryRes, ideasRes] = await Promise.all([
             fetch('/api/inventory'),
             fetch('/api/customers'),
@@ -4957,13 +4920,6 @@ async function loadDataFromAPI() {
         gallery = await galleryRes.json();
         ideas = await ideasRes.json();
         
-        // Assign to window object for mobile cards
-        window.inventory = inventory;
-        window.customers = customers;
-        window.sales = sales;
-        window.gallery = gallery;
-        window.ideas = ideas;
-        
         console.log('✅ Data loaded from API successfully:');
         console.log('  📦 Inventory items:', inventory.length);
         console.log('  👥 Customers:', customers.length);
@@ -4978,8 +4934,6 @@ async function loadDataFromAPI() {
         console.log('🔄 Falling back to localStorage...');
         loadDataFromLocalStorage();
         updateConnectionStatus('disconnected');
-    } finally {
-        isLoadingAPI = false;
     }
 }
 
@@ -4996,14 +4950,6 @@ function loadDataFromLocalStorage() {
     sales = JSON.parse(localStorage.getItem('embroiderySales')) || [];
     gallery = JSON.parse(localStorage.getItem('embroideryGallery')) || [];
     ideas = JSON.parse(localStorage.getItem('embroideryIdeas')) || [];
-    
-    // Assign to window object for mobile cards
-    window.inventory = inventory;
-    window.customers = customers;
-    window.sales = sales;
-    window.gallery = gallery;
-    window.ideas = ideas;
-    
     loadData();
 }
 
@@ -5020,7 +4966,22 @@ function updateConnectionStatus(status) {
 
 // Clear all mobile cards to prevent cross-contamination
 function clearAllMobileCards() {
-    MobileCardManager.clearAll();
+    const mobileContainers = [
+        'mobileInventoryCards',
+        'mobileInventoryItemsCards', 
+        'mobileCustomerCards',
+        'mobileWIPCards',
+        'mobileGalleryCards',
+        'mobileSalesCards',
+        'mobileIdeasCards'
+    ];
+    
+    mobileContainers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+        }
+    });
 }
 
 function switchTab(tabName) {
@@ -5062,7 +5023,7 @@ function switchTab(tabName) {
     if (tabName === 'projects') {
         loadInventoryTable(); // Projects table
         // Load mobile cards for projects
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileInventoryCards();
         }
         // Hide pagination for projects - not needed
@@ -5071,11 +5032,29 @@ function switchTab(tabName) {
             projectsPagination.style.display = 'none';
         }
     } else if (tabName === 'inventory') {
-        // Load inventory items table (data should already be loaded)
-        loadInventoryItemsTable(); // Inventory items table
-        // Load mobile cards for inventory items
-        if (isMobile()) {
-            loadMobileInventoryItemsCards();
+        // Ensure data is loaded before loading the table
+        if (!inventory || inventory.length === 0) {
+            loadDataFromAPI().then(() => {
+                loadInventoryItemsTable(); // Inventory items table
+                // Load mobile cards for inventory items
+                if (window.innerWidth <= 768) {
+                    loadMobileInventoryItemsCards();
+                }
+            }).catch(() => {
+                loadDataFromLocalStorage().then(() => {
+                    loadInventoryItemsTable(); // Inventory items table
+                    // Load mobile cards for inventory items
+                    if (window.innerWidth <= 768) {
+                        loadMobileInventoryItemsCards();
+                    }
+                });
+            });
+        } else {
+            loadInventoryItemsTable(); // Inventory items table
+            // Load mobile cards for inventory items
+            if (window.innerWidth <= 768) {
+                loadMobileInventoryItemsCards();
+            }
         }
         // Hide pagination for inventory - not needed
         const inventoryPagination = document.getElementById('inventoryPagination');
@@ -5083,30 +5062,66 @@ function switchTab(tabName) {
             inventoryPagination.style.display = 'none';
         }
     } else if (tabName === 'customers') {
-        // Load customers table (data should already be loaded)
-        loadCustomersTable();
-        // Load mobile cards for customers
-        if (isMobile()) {
-            loadMobileCustomerCards();
+        // Ensure data is loaded before loading the table
+        if (!customers || customers.length === 0) {
+            loadDataFromAPI().then(() => {
+                loadCustomersTable();
+                // Load mobile cards for customers
+                if (window.innerWidth <= 768) {
+                    loadMobileCustomerCards();
+                }
+            }).catch(() => {
+                loadDataFromLocalStorage().then(() => {
+                    loadCustomersTable();
+                    // Load mobile cards for customers
+                    if (window.innerWidth <= 768) {
+                        loadMobileCustomerCards();
+                    }
+                });
+            });
+        } else {
+            loadCustomersTable();
+            // Load mobile cards for customers
+            if (window.innerWidth <= 768) {
+                loadMobileCustomerCards();
+            }
         }
     } else if (tabName === 'wip') {
         loadWIPTab();
         // Load mobile cards for WIP
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileWIPCards();
         }
     } else if (tabName === 'gallery') {
         loadGallery();
         // Load mobile cards for gallery
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileGalleryCards();
         }
     } else if (tabName === 'sales') {
-        // Load sales table (data should already be loaded)
-        loadSalesTable();
-        // Load mobile cards for sales
-        if (isMobile()) {
-            loadMobileSalesCards();
+        // Ensure data is loaded before loading the table
+        if (!sales || sales.length === 0) {
+            loadDataFromAPI().then(() => {
+                loadSalesTable();
+                // Load mobile cards for sales
+                if (window.innerWidth <= 768) {
+                    loadMobileSalesCards();
+                }
+            }).catch(() => {
+                loadDataFromLocalStorage().then(() => {
+                    loadSalesTable();
+                    // Load mobile cards for sales
+                    if (window.innerWidth <= 768) {
+                        loadMobileSalesCards();
+                    }
+                });
+            });
+        } else {
+            loadSalesTable();
+            // Load mobile cards for sales
+            if (window.innerWidth <= 768) {
+                loadMobileSalesCards();
+            }
         }
         // Show bulk actions integrated with sales actions
         if (bulkContainer) {
@@ -5132,25 +5147,13 @@ function switchTab(tabName) {
     } else if (tabName === 'ideas') {
         loadIdeasGrid();
         // Load mobile cards for ideas
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileIdeasCards();
         }
     }
 }
 
-// Add throttling to loadData to prevent excessive calls
-let lastLoadData = 0;
-const LOAD_DATA_THROTTLE = 1000; // 1 second throttle
-
 function loadData() {
-    const now = Date.now();
-    if (now - lastLoadData < LOAD_DATA_THROTTLE) {
-        console.log('📊 loadData throttled, skipping...');
-        return;
-    }
-    lastLoadData = now;
-    
-    console.log('📊 Loading all data...');
     cleanCopyText();
     loadInventoryTable(); // Projects table
     loadInventoryItemsTable(); // Inventory items table
@@ -5163,40 +5166,7 @@ function loadData() {
     updateLocationFilters();
     updateCustomerFilters();
     
-    // Load mobile cards for the currently active tab on initial page load
-    if (isMobile()) {
-        const activeTab = document.querySelector('.nav-btn.active')?.getAttribute('data-tab') || 'projects';
-        console.log('📱 Loading mobile cards for active tab on initial load:', activeTab);
-        
-        // Load mobile cards for the active tab by calling the appropriate function
-        switch(activeTab) {
-            case 'projects':
-                loadMobileInventoryCards();
-                break;
-            case 'inventory':
-                loadMobileInventoryItemsCards();
-                break;
-            case 'customers':
-                loadMobileCustomerCards();
-                break;
-            case 'wip':
-                loadMobileWIPCards();
-                break;
-            case 'gallery':
-                loadMobileGalleryCards();
-                break;
-            case 'sales':
-                loadMobileSalesCards();
-                break;
-            case 'ideas':
-                loadMobileIdeasCards();
-                break;
-            default:
-                // Fallback to projects tab
-                loadMobileInventoryCards();
-                break;
-        }
-    }
+    // Mobile cards are loaded when switching to specific tabs, not during data loading
 }
 
 function cleanCopyText() {
@@ -5518,21 +5488,12 @@ function setupViewSynchronization() {
         }
     });
     
-    // Listen for focus events to refresh when user returns to tab (with throttling)
-    let lastFocusRefresh = 0;
-    const FOCUS_REFRESH_INTERVAL = 30000; // 30 seconds minimum between refreshes
-    
+    // Listen for focus events to refresh when user returns to tab
     window.addEventListener('focus', function() {
-        const now = Date.now();
-        if (now - lastFocusRefresh > FOCUS_REFRESH_INTERVAL) {
-            lastFocusRefresh = now;
-            // Only refresh if data is empty or very old
-            if (!inventory || inventory.length === 0 || !customers || customers.length === 0) {
+        // Refresh data when user returns to the tab
         loadDataFromAPI().catch(() => {
             loadDataFromLocalStorage();
         });
-            }
-        }
     });
 }
 
@@ -5655,61 +5616,10 @@ function updateEditStatusOptions() {
     }
 }
 
-// Update table headers based on view mode
-function updateTableHeaders(showDetailed = false) {
-    const headerRow = document.getElementById('projectsTableHeader');
-    if (!headerRow) return;
-    
-    if (showDetailed) {
-        // Full detailed view for editing
-        headerRow.innerHTML = `
-            <th>Project</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th>Status</th>
-            <th>Due Date</th>
-            <th>Notes</th>
-            <th>Link</th>
-            <th>Actions</th>
-        `;
-    } else {
-        // Simplified home view
-        headerRow.innerHTML = `
-            <th>Project</th>
-            <th>Status</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-        `;
-    }
-}
-
-// Toggle between simplified and detailed view
-let isDetailedView = false;
-function toggleDetailedView() {
-    isDetailedView = !isDetailedView;
-    const toggleBtn = document.getElementById('toggleViewBtn');
-    
-    if (isDetailedView) {
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Simple View';
-        toggleBtn.classList.remove('btn-outline');
-        toggleBtn.classList.add('btn-primary');
-    } else {
-        toggleBtn.innerHTML = '<i class="fas fa-list"></i> Detailed View';
-        toggleBtn.classList.remove('btn-primary');
-        toggleBtn.classList.add('btn-outline');
-    }
-    
-    // Reload the table with the new view mode
-    loadInventoryTable(isDetailedView);
-}
-
 // Projects Management (Customer Work)
-function loadInventoryTable(showDetailed = false) {
+function loadInventoryTable() {
     const tbody = document.getElementById('inventoryTableBody');
     tbody.innerHTML = '';
-    
-    // Update table headers based on view mode
-    updateTableHeaders(showDetailed);
     
     // Filter for projects only (not inventory items)
     const projectItems = inventory.filter(item => item.type === 'project' || !item.type);
@@ -5730,6 +5640,7 @@ function loadInventoryTable(showDetailed = false) {
                 (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
             );
         }
+        console.log(`Project: ${item.name}, Filtered index: ${filteredIndex}, Original index: ${originalIndex}`);
         groupedItems[customer].push({ item, index: originalIndex });
     });
     
@@ -5742,11 +5653,6 @@ function loadInventoryTable(showDetailed = false) {
     
     sortedCustomers.forEach(customer => {
         const customerItems = groupedItems[customer];
-        
-        // Skip customers with no projects (shouldn't happen but safety check)
-        if (!customerItems || customerItems.length === 0) {
-            return;
-        }
         
         // Create customer header row
         const headerRow = document.createElement('tr');
@@ -5762,9 +5668,8 @@ function loadInventoryTable(showDetailed = false) {
         const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
-        const colspan = showDetailed ? 8 : 4;
         headerRow.innerHTML = `
-            <td colspan="${colspan}">
+            <td colspan="8">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -5777,15 +5682,25 @@ function loadInventoryTable(showDetailed = false) {
         `;
         tbody.appendChild(headerRow);
         
-        // Hide pagination completely - not needed for projects
-        const paginationContainer = document.getElementById('projectsPagination');
-        if (paginationContainer) {
-            paginationContainer.style.display = 'none';
-        }
+        // Create customer group container
+        const groupRow = document.createElement('tr');
+        groupRow.className = 'customer-group';
+        groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+        groupRow.style.display = 'none';
+        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
+        tbody.appendChild(groupRow);
+        
+    // Hide pagination completely - not needed for projects
+    const paginationContainer = document.getElementById('projectsPagination');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
     
-    // Add individual project rows for this customer directly to the tbody
+    // Add individual project rows
+    const projectsContainer = groupRow.querySelector('.customer-projects');
     customerItems.forEach(({ item, index }) => {
-            const projectRow = document.createElement('tr');
+            console.log(`Creating project row for: ${item.name}, using index: ${index}`);
+            const projectRow = document.createElement('div');
             projectRow.className = 'project-row';
             
             // Format due date with urgency styling
@@ -5848,645 +5763,1027 @@ function loadInventoryTable(showDetailed = false) {
             const typeDisplay = item.type === 'inventory' ? 'Inventory' : 'Project';
             const typeClass = item.type === 'inventory' ? 'type-inventory' : 'type-project';
             
-            if (showDetailed) {
-                // Full detailed view for editing
-                projectRow.innerHTML = `
-                    <td class="project-name"><strong>${item.name}</strong></td>
-                    <td class="project-category">${categoryDisplay}</td>
-                    <td class="project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></td>
-                    <td class="project-status">
-                        <span class="status-badge status-${item.status}">${item.status}</span>
-                        <div class="quick-actions">${quickActions}</div>
-                    </td>
-                    <td class="project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></td>
-                    <td class="project-notes">${notesDisplay}</td>
-                    <td class="project-pattern">${patternLinkButton}</td>
-                    <td class="project-actions">
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-            } else {
-                // Simplified home view
-                projectRow.innerHTML = `
-                    <td class="project-name"><strong>${item.name}</strong></td>
-                    <td class="project-status">
-                        <span class="status-badge status-${item.status}">${item.status}</span>
-                        <div class="quick-actions">${quickActions}</div>
-                    </td>
-                    <td class="project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></td>
-                    <td class="project-actions">
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-            }
-            // Start collapsed by default
-            projectRow.style.display = 'none';
-            tbody.appendChild(projectRow);
+            projectRow.innerHTML = `
+                <div class="project-cell project-name"><strong>${item.name}</strong></div>
+                <div class="project-cell project-category">${categoryDisplay}</div>
+                <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
+                <div class="project-cell project-status">
+                    <span class="status-badge status-${item.status}">${item.status}</span>
+                    <div class="quick-actions">${quickActions}</div>
+                </div>
+                <div class="project-cell project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></div>
+                <div class="project-cell project-notes">${notesDisplay}</div>
+                <div class="project-cell project-pattern">${patternLinkButton}</div>
+                <div class="project-cell project-actions">
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            projectsContainer.appendChild(projectRow);
         });
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
-// CLEAN MOBILE CARD SYSTEM - REWRITTEN FROM SCRATCH
-const MobileCardManager = {
-    // Clear all mobile containers
-    clearAll() {
-        const containers = [
-            'mobileInventoryCards',
-            'mobileInventoryItemsCards', 
-            'mobileCustomerCards',
-            'mobileWIPCards',
-            'mobileGalleryCards',
-            'mobileSalesCards',
-            'mobileIdeasCards'
-        ];
-        
-        containers.forEach(id => {
-            const container = document.getElementById(id);
-            if (container) {
-    container.innerHTML = '';
-            }
-        });
-    },
+// Mobile card functions
+function loadMobileInventoryCards() {
+    const container = document.getElementById('mobileInventoryCards');
+    if (!container) return;
     
-    // Create a simple add button
-    createAddButton(text, onclick) {
-        const buttonCard = document.createElement('div');
-        buttonCard.className = 'mobile-card mobile-add-card';
-        buttonCard.innerHTML = `
+    // Clear container first
+    container.innerHTML = '';
+    
+    // Filter for projects only (not inventory items)
+    const projectItems = inventory.filter(item => item.type === 'project' || !item.type);
+    
+    // Always add "Add Project" button at the top
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="openAddItemModal()">
+                <i class="fas fa-plus"></i><span>Add New Project</span>
+            </button>
+        </div>
+    `;
+    container.appendChild(addButtonCard);
+    
+    if (projectItems.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
             <div class="mobile-card-content">
-                <button class="btn btn-primary mobile-add-btn" onclick="${onclick}">
-                    <i class="fas fa-plus"></i><span>${text}</span>
-                </button>
+                <div class="empty-state">
+                    <i class="fas fa-project-diagram"></i>
+                    <h3>No Projects Yet</h3>
+                    <p>Start creating your first embroidery project!</p>
+                </div>
             </div>
         `;
-        return buttonCard;
-    },
+        container.appendChild(emptyStateCard);
+        return;
+    }
     
-    // Create a simple data card
-    createDataCard(title, subtitle, details, editFunction, deleteFunction, imageData = null) {
+    // Group items by customer
+    const groupedItems = {};
+    projectItems.forEach((item, filteredIndex) => {
+        // Skip if item is null or malformed
+        if (!item || typeof item !== 'object') {
+            console.warn('Skipping invalid item in mobile inventory:', item);
+            return;
+        }
+        
+        const customer = item.customer || 'No Customer';
+        if (!groupedItems[customer]) {
+            groupedItems[customer] = [];
+        }
+        // Find the original inventory index
+        let originalIndex = inventory.findIndex(invItem => invItem === item);
+        if (originalIndex === -1) {
+            originalIndex = inventory.findIndex(invItem => 
+                (invItem._id && item._id && invItem._id === item._id) || 
+                (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
+            );
+        }
+        groupedItems[customer].push({ item, index: originalIndex });
+    });
+    
+    // Sort customers alphabetically, with "No Customer" at the end
+    const sortedCustomers = Object.keys(groupedItems).sort((a, b) => {
+        if (a === 'No Customer') return 1;
+        if (b === 'No Customer') return -1;
+        return a.localeCompare(b);
+    });
+    
+    sortedCustomers.forEach(customer => {
+        const customerItems = groupedItems[customer];
+        
+        // Create customer header card
+        const customerHeaderCard = document.createElement('div');
+        customerHeaderCard.className = 'mobile-card mobile-customer-card';
+        
+        // Calculate customer stats
+        const totalProjects = customerItems.length;
+        const pendingCount = customerItems.filter(({ item }) => item.status === 'pending').length;
+        const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress' || item.status === 'work-in-progress').length;
+        const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
+        const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
+        
+        // Safely escape customer name for HTML attributes
+        const safeCustomerName = customer ? customer.replace(/'/g, "\\'") : 'No Customer';
+        const safeCustomerId = customer ? customer.replace(/\s+/g, '-').replace(/['"]/g, '').toLowerCase() : 'no-customer';
+        
+        
+        customerHeaderCard.innerHTML = `
+            <div class="mobile-customer-header" data-customer="${customer}">
+                <h3 class="mobile-customer-name">
+                    <i class="fas fa-chevron-right mobile-customer-toggle" id="toggle-${safeCustomerId}"></i>
+                    ${customer || 'No Customer'}
+                </h3>
+                <span class="mobile-card-status status-customer">${totalProjects} Projects</span>
+            </div>
+            <div class="mobile-customer-stats">
+                <div class="mobile-stat">
+                    <div class="mobile-stat-number">${completedCount}</div>
+                    <div class="mobile-stat-label">Completed</div>
+                </div>
+                <div class="mobile-stat">
+                    <div class="mobile-stat-number">${inProgressCount}</div>
+                    <div class="mobile-stat-label">In Progress</div>
+                </div>
+                <div class="mobile-stat">
+                    <div class="mobile-stat-number">${pendingCount}</div>
+                    <div class="mobile-stat-label">Pending</div>
+                </div>
+            </div>
+            <div class="mobile-customer-projects" id="mobile-projects-${safeCustomerId}">
+                <!-- Individual project cards will be added here -->
+            </div>
+        `;
+        container.appendChild(customerHeaderCard);
+        
+        // Touch event handling will be added via event delegation after the loop
+        
+        // Create projects container
+        const projectsContainer = customerHeaderCard.querySelector('.mobile-customer-projects');
+        
+        // Add individual item cards to the projects container
+        customerItems.forEach(({ item, index }) => {
             const card = document.createElement('div');
-        card.className = 'mobile-card';
+            card.className = 'mobile-card mobile-project-card';
+            
+            // Format due date
+            let dueDate = 'No due date';
+            let dueDateClass = '';
+            if (item.dueDate) {
+                const dueDateObj = new Date(item.dueDate);
+                const today = new Date();
+                const diffTime = dueDateObj - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                dueDate = dueDateObj.toLocaleDateString();
+                
+                if (diffDays < 0) {
+                    dueDateClass = 'overdue';
+                    dueDate += ' (Overdue)';
+                } else if (diffDays <= 3) {
+                    dueDateClass = 'due-soon';
+                    dueDate += ` (${diffDays} day${diffDays !== 1 ? 's' : ''} left)`;
+                }
+            }
+            
+            // Truncate notes for display
+            const notes = item.notes || '';
+            const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
+            
             card.innerHTML = `
+                <div class="mobile-card-header">
+                    <h4 class="mobile-card-title">${item.name}</h4>
+                    <span class="mobile-card-status status-${item.status}">${item.status}</span>
+                </div>
                 <div class="mobile-card-content">
-                ${imageData ? `<div class="mobile-card-image"><img src="${imageData}" alt="${title}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 0.5rem;"></div>` : ''}
-                <h3>${title}</h3>
-                <p><strong>${subtitle}</strong></p>
-                ${details}
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Category</div>
+                        <div class="mobile-card-value">${item.category || 'No category'}</div>
+                    </div>
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Quantity</div>
+                        <div class="mobile-card-value">${item.quantity || 1}</div>
+                    </div>
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Due Date</div>
+                        <div class="mobile-card-value ${dueDateClass}">${dueDate}</div>
+                    </div>
+                    <div class="mobile-card-field">
+                        <div class="mobile-card-label">Notes</div>
+                        <div class="mobile-card-value">${truncatedNotes || 'No notes'}</div>
+                    </div>
+                </div>
                 <div class="mobile-card-actions">
-                    <button class="btn btn-sm btn-edit" onclick="${editFunction}" title="Edit">
+                    <button class="btn btn-secondary btn-sm" onclick="editProject(${index})" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-delete" onclick="${deleteFunction}" title="Delete">
+                    <button class="btn btn-info btn-sm" onclick="copyItem(${index})" title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteItem(${index})" title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
-                </div>
             `;
-        return card;
-    },
+            
+            projectsContainer.appendChild(card);
+        });
+    });
     
-    // Load projects
-    loadProjects() {
-        const container = document.getElementById('mobileInventoryCards');
-    if (!container) return;
+    // Add event delegation for touch events to prevent duplicate listeners
+    setupMobileCustomerTouchEvents(container);
+}
 
-    container.innerHTML = '';
+// Setup touch events for mobile customer headers using event delegation
+function setupMobileCustomerTouchEvents(container) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
     
-        // Add button
-        container.appendChild(this.createAddButton('Add New Project', 'openAddProjectModal()'));
-        
-        // Get projects
-        const projects = (window.inventory || []).filter(item => item.type === 'project' || !item.type);
-        
-        if (projects.length === 0) {
-            const emptyCard = document.createElement('div');
-            emptyCard.className = 'mobile-card';
-            emptyCard.innerHTML = `
-                <div class="mobile-card-content">
-            <div class="empty-state">
-                        <i class="fas fa-project-diagram"></i>
-                        <h3>No Projects Yet</h3>
-                        <p>Start creating your first embroidery project!</p>
-                    </div>
-            </div>
-        `;
-            container.appendChild(emptyCard);
-        } else {
-            // Group projects by customer
-            const projectsByCustomer = {};
-            projects.forEach(project => {
-                const customer = project.customer || 'No Customer';
-                if (!projectsByCustomer[customer]) {
-                    projectsByCustomer[customer] = [];
-                }
-                projectsByCustomer[customer].push(project);
-            });
-            
-            // Sort customers alphabetically
-            const sortedCustomers = Object.keys(projectsByCustomer).sort();
-            
-            // Create customer groups
-            sortedCustomers.forEach(customer => {
-                // Add customer header with collapsible functionality
-                const customerHeader = document.createElement('div');
-                customerHeader.className = 'mobile-customer-header';
-                const sanitizedCustomer = customer.replace(/[^a-zA-Z0-9]/g, '-');
-                
-                // Calculate project status breakdown
-                const customerProjects = projectsByCustomer[customer];
-                const statusCounts = {
-                    pending: customerProjects.filter(p => p.status === 'pending').length,
-                    inProgress: customerProjects.filter(p => p.status === 'in progress').length,
-                    completed: customerProjects.filter(p => p.status === 'completed').length,
-                    sold: customerProjects.filter(p => p.status === 'sold').length
-                };
-                
-                const statusText = `${customerProjects.length} project${customerProjects.length !== 1 ? 's' : ''} (${statusCounts.pending} pending, ${statusCounts.inProgress} in progress, ${statusCounts.completed} completed, ${statusCounts.sold} sold)`;
-                
-                customerHeader.innerHTML = `
-                    <div class="mobile-customer-header-content" onclick="toggleCustomerGroup('${sanitizedCustomer}')" data-customer="${sanitizedCustomer}">
-                        <div class="customer-info">
-                            <h3>
-                                <i class="fas fa-chevron-right customer-chevron"></i>
-                                <i class="fas fa-user"></i> ${customer}
-                            </h3>
-                            <div class="customer-stats">${statusText}</div>
-            </div>
-            </div>
-        `;
-                container.appendChild(customerHeader);
-                
-                // Add collapsible container for projects
-                const projectsContainer = document.createElement('div');
-                projectsContainer.className = 'mobile-customer-projects';
-                projectsContainer.id = `customer-projects-${customer.replace(/[^a-zA-Z0-9]/g, '-')}`;
-                projectsContainer.style.display = 'none'; // Start collapsed
-                
-                // Add projects for this customer
-                projectsByCustomer[customer].forEach((project, customerIndex) => {
-                    const originalIndex = projects.findIndex(p => p === project);
-                    const details = `
-                        <p><strong>Status:</strong> ${project.status || 'Unknown'}</p>
-                        <p><strong>Value:</strong> $${(project.totalValue || 0).toFixed(2)}</p>
-                        <p><strong>Priority:</strong> ${project.priority || 'Medium'}</p>
-                    `;
-                    projectsContainer.appendChild(this.createDataCard(
-                        project.description || 'Untitled Project',
-                        'Project',
-                        details,
-                        `editProject(${originalIndex})`,
-                        `deleteProject(${originalIndex})`
-                    ));
-                });
-                
-                container.appendChild(projectsContainer);
-            });
+    container.addEventListener('touchstart', (e) => {
+        const customerHeader = e.target.closest('.mobile-customer-header');
+        if (customerHeader && e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
         }
-    },
+    }, { passive: true });
     
-    // Load customers
-    loadCustomers() {
-        const container = document.getElementById('mobileCustomerCards');
+    container.addEventListener('touchend', (e) => {
+        const customerHeader = e.target.closest('.mobile-customer-header');
+        if (customerHeader && e.changedTouches && e.changedTouches.length > 0) {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndTime = Date.now();
+            
+            const deltaX = Math.abs(touchEndX - touchStartX);
+            const deltaY = Math.abs(touchEndY - touchStartY);
+            const deltaTime = touchEndTime - touchStartTime;
+            
+            // Only trigger toggle if it's a tap (small movement, short duration)
+            if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
+                const customerName = customerHeader.getAttribute('data-customer');
+                toggleMobileCustomerGroup(customerName);
+            }
+        }
+    }, { passive: true });
+}
+
+// Mobile inventory items cards
+function loadMobileInventoryItemsCards() {
+    const container = document.getElementById('mobileInventoryItemsCards');
     if (!container) return;
 
+    // Clear container first
     container.innerHTML = '';
     
-        // Add button
-        container.appendChild(this.createAddButton('Add New Customer', 'openAddCustomerModal()'));
-        
-        // Get customers
-        const customers = window.customers || [];
-        
-        if (customers.length === 0) {
-            const emptyCard = document.createElement('div');
-            emptyCard.className = 'mobile-card';
-            emptyCard.innerHTML = `
+    // Filter for inventory items only
+    const inventoryItems = inventory.filter(item => item.type === 'inventory');
+
+    // Always add "Add Inventory" button at the top
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="openAddInventoryModal()">
+                <i class="fas fa-plus"></i><span>Add New Inventory</span>
+            </button>
+        </div>
+    `;
+    container.appendChild(addButtonCard);
+    
+    if (inventoryItems.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
             <div class="mobile-card-content">
-            <div class="empty-state">
-                        <i class="fas fa-users"></i>
-                        <h3>No Customers Yet</h3>
-                        <p>Start adding your embroidery customers!</p>
+                <div class="empty-state">
+                    <i class="fas fa-boxes"></i>
+                    <h3>No Inventory Items</h3>
+                    <p>Start building your inventory by adding supplies and materials.</p>
                 </div>
             </div>
         `;
-            container.appendChild(emptyCard);
-        } else {
-            customers.forEach((customer, index) => {
-                const details = `
-                    <p><strong>Location:</strong> ${customer.location || 'No location'}</p>
-                    <p><strong>Contact:</strong> ${customer.contact || 'No contact info'}</p>
-                `;
-                container.appendChild(this.createDataCard(
-                    customer.name || 'Unnamed Customer',
-                    'Customer',
-                    details,
-                    `editCustomer(${index})`,
-                    `deleteCustomer(${index})`
-                ));
-            });
-        }
-    },
-    
-    // Load inventory items
-    loadInventoryItems() {
-        const container = document.getElementById('mobileInventoryItemsCards');
-    if (!container) return;
+        container.appendChild(emptyStateCard);
+        return;
+    }
 
-    container.innerHTML = '';
-    
-        // Add button
-        container.appendChild(this.createAddButton('Add New Inventory', 'openAddInventoryModal()'));
+    // Sort by name
+    inventoryItems.sort((a, b) => a.name.localeCompare(b.name));
+
+    inventoryItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
         
-        // Get inventory items
-        const items = (window.inventory || []).filter(item => item.type === 'inventory');
-        
-        if (items.length === 0) {
-            const emptyCard = document.createElement('div');
-            emptyCard.className = 'mobile-card';
-            emptyCard.innerHTML = `
-                <div class="mobile-card-content">
-            <div class="empty-state">
-                        <i class="fas fa-boxes"></i>
-                        <h3>No Inventory Items Yet</h3>
-                        <p>Start adding your embroidery supplies and materials!</p>
+        // Find the original inventory index
+        let originalIndex = inventory.findIndex(invItem => invItem === item);
+        if (originalIndex === -1) {
+            originalIndex = inventory.findIndex(invItem =>
+                (invItem._id && item._id && invItem._id === item._id) ||
+                (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
+            );
+        }
+
+        // Format status with proper styling
+        const statusClass = item.status ? `status-${item.status}` : 'status-available';
+        const statusText = item.status || 'Available';
+
+        // Truncate notes for display
+        const notes = item.notes || '';
+        const truncatedNotes = notes.length > 30 ? notes.substring(0, 30) + '...' : notes;
+
+        card.innerHTML = `
+            <div class="mobile-card-header">
+                <h4 class="mobile-card-title">${item.name}</h4>
+                <span class="mobile-card-status ${statusClass}">${statusText}</span>
             </div>
+            <div class="mobile-card-content">
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Quantity</div>
+                    <div class="mobile-card-value">${item.quantity || 1}</div>
+                </div>
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Category</div>
+                    <div class="mobile-card-value">${item.category || 'No category'}</div>
+                </div>
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Location</div>
+                    <div class="mobile-card-value">${item.location || 'No location'}</div>
+                </div>
+                <div class="mobile-card-field">
+                    <div class="mobile-card-label">Notes</div>
+                    <div class="mobile-card-value">${truncatedNotes || 'No notes'}</div>
+                </div>
+            </div>
+            <div class="mobile-card-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editInventoryItem(${originalIndex})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-info btn-sm" onclick="copyItem(${originalIndex})" title="Copy">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteItem(${originalIndex})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         `;
-            container.appendChild(emptyCard);
-        } else {
-            items.forEach((item, index) => {
-                const details = `
-                    <p><strong>Quantity:</strong> ${item.quantity || 0}</p>
-                    <p><strong>Unit Price:</strong> $${(item.unitPrice || 0).toFixed(2)}</p>
-                    <p><strong>Total Value:</strong> $${(item.totalValue || 0).toFixed(2)}</p>
-                `;
-                container.appendChild(this.createDataCard(
-                    item.description || 'Untitled Item',
-                    'Inventory Item',
-                    details,
-                    `editInventoryItem(${index})`,
-                    `deleteInventoryItem(${index})`
-                ));
-            });
-        }
-    },
+
+        container.appendChild(card);
+    });
+}
+
+// Mobile card layouts for other tabs
+function loadMobileWIPCards() {
+    const container = document.getElementById('mobileWIPCards');
+    if (!container) return;
+
+    // Clear container first
+    container.innerHTML = '';
     
-    // Load gallery
-    loadGallery() {
+    const wipItems = inventory.filter(item => 
+        item.status === 'in-progress' || 
+        item.status === 'work-in-progress' || 
+        item.status === 'pending'
+    );
+
+    // Always add "Add Project" button at the top
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="openAddItemModal()">
+                <i class="fas fa-plus"></i><span>Add New Project</span>
+            </button>
+        </div>
+    `;
+    container.appendChild(addButtonCard);
+    
+    if (wipItems.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="empty-state">
+                    <i class="fas fa-tools"></i>
+                    <h3>No Work in Progress</h3>
+                    <p>All caught up! No items currently in progress.</p>
+                </div>
+            </div>
+        `;
+        container.appendChild(emptyStateCard);
+        return;
+    }
+
+    wipItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'wip-item';
+        
+        const originalIndex = inventory.findIndex(invItem => invItem === item);
+        
+        // Format due date
+        let dueDate = 'No due date';
+        if (item.dueDate) {
+            const dueDateObj = new Date(item.dueDate);
+            const today = new Date();
+            const diffTime = dueDateObj - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            dueDate = dueDateObj.toLocaleDateString();
+            
+            if (diffDays < 0) {
+                dueDate += ' (Overdue)';
+            } else if (diffDays <= 3) {
+                dueDate += ` (${diffDays} day${diffDays !== 1 ? 's' : ''} left)`;
+            }
+        }
+
+        card.innerHTML = `
+            <div class="wip-item-header">
+                <h4 class="wip-item-title">${item.name}</h4>
+                <span class="wip-item-status status-${item.status}">${item.status}</span>
+            </div>
+            <div class="wip-item-details">
+                <div><strong>Customer:</strong> ${item.customer || 'No Customer'}</div>
+                <div><strong>Category:</strong> ${item.category || 'No Category'}</div>
+                <div><strong>Due Date:</strong> ${dueDate}</div>
+                <div><strong>Priority:</strong> ${item.priority || 'Medium'}</div>
+            </div>
+            <div class="wip-item-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editProject(${originalIndex})" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-success btn-sm" onclick="markAsCompleted(${originalIndex})" title="Mark Complete">
+                    <i class="fas fa-check"></i> Complete
+                </button>
+                <button class="btn btn-info btn-sm" onclick="copyItem(${originalIndex})" title="Copy">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+// Debouncing for mobile functions
+let mobileGalleryTimeout;
+let mobileIdeasTimeout;
+
+function loadMobileGalleryCards() {
     const container = document.getElementById('mobileGalleryCards');
     if (!container) return;
 
+    // Clear any pending timeout
+    if (mobileGalleryTimeout) {
+        clearTimeout(mobileGalleryTimeout);
+    }
+
+    // Debounce the loading
+    mobileGalleryTimeout = setTimeout(() => {
+        console.log('🖼️ Loading mobile gallery cards, current count:', container.children.length);
         container.innerHTML = '';
         
-        // Add button
-        container.appendChild(this.createAddButton('Add Photo', 'openAddPhotoModal()'));
-        
-        // Get gallery items
-        const gallery = window.gallery || [];
-        
-        if (gallery.length === 0) {
-            const emptyCard = document.createElement('div');
-            emptyCard.className = 'mobile-card';
-            emptyCard.innerHTML = `
-                <div class="mobile-card-content">
-            <div class="empty-state">
-                <i class="fas fa-images"></i>
-                        <h3>No Photos Yet</h3>
-                        <p>Start building your embroidery gallery!</p>
+        const galleryItems = gallery || [];
+        console.log('🖼️ Gallery items to load (raw):', galleryItems.length);
+
+        // De-duplicate by id (fallback to composite key) to avoid duplicate cards on mobile
+        const seenGallery = new Set();
+        const uniqueGallery = galleryItems.filter(item => {
+            if (!item) return false;
+            const key = item.id || `${item.imageData || ''}|${item.name || ''}|${item.dateAdded || ''}`;
+            if (seenGallery.has(key)) return false;
+            seenGallery.add(key);
+            return true;
+        });
+        console.log('🖼️ Gallery items to load (unique):', uniqueGallery.length);
+
+    // Always add "Add Photo" button at the top
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="openAddPhotoModal()">
+                <i class="fas fa-plus"></i><span>Add Photo</span>
+            </button>
+        </div>
+    `;
+    container.appendChild(addButtonCard);
+    
+    if (galleryItems.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="empty-state">
+                    <i class="fas fa-images"></i>
+                    <h3>No Gallery Items</h3>
+                    <p>Start building your gallery by adding photos of completed projects.</p>
                 </div>
             </div>
         `;
-            container.appendChild(emptyCard);
-        } else {
-            gallery.forEach((photo, index) => {
-                const details = `
-                    <p><strong>Status:</strong> ${photo.status || 'Unknown'}</p>
-                    <p><strong>Date:</strong> ${new Date(photo.dateAdded).toLocaleDateString()}</p>
-                `;
-                container.appendChild(this.createDataCard(
-                    photo.title || 'Untitled Photo',
-                    'Gallery Item',
-                    details,
-                    `editPhoto(${index})`,
-                    `deletePhoto(${index})`,
-                    photo.imageData
-                ));
-            });
-        }
-    },
-    
-    // Load ideas
-    loadIdeas() {
-        const container = document.getElementById('mobileIdeasCards');
-        if (!container) return;
+        container.appendChild(emptyStateCard);
+        return;
+    }
 
+    uniqueGallery.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'gallery-item';
+        
+        const imageDisplay = item.imageData ? 
+            `<img src="${item.imageData}" alt="${item.name || 'Gallery Item'}" class="gallery-item-image">` :
+            `<div class="gallery-item-image" style="display: flex; align-items: center; justify-content: center; color: #999;">
+                <i class="fas fa-image" style="font-size: 2rem;"></i>
+            </div>`;
+
+        card.innerHTML = `
+            ${imageDisplay}
+            <div class="gallery-item-content">
+                <h4 class="gallery-item-title">${item.name || 'Untitled'}</h4>
+                <div class="gallery-item-category">${item.category || 'No Category'}</div>
+                <div class="gallery-item-actions">
+                    <button class="btn btn-info btn-sm" onclick="viewGalleryItem(${index})" title="View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="editGalleryItem(${index})" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteGalleryItem(${index})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+    }, 100); // 100ms debounce
+}
+
+function loadMobileIdeasCards() {
+    const container = document.getElementById('mobileIdeasCards');
+    if (!container) return;
+
+    // Clear any pending timeout
+    if (mobileIdeasTimeout) {
+        clearTimeout(mobileIdeasTimeout);
+    }
+
+    // Debounce the loading
+    mobileIdeasTimeout = setTimeout(() => {
+        console.log('💡 Loading mobile ideas cards, current count:', container.children.length);
         container.innerHTML = '';
         
-        // Add button
-        container.appendChild(this.createAddButton('Add New Idea', 'openAddIdeaModal()'));
-        
-        // Combine ideas and inventory items with images
-        const allItems = [];
-        
-        // Add ideas
-        const ideas = window.ideas || [];
-        ideas.forEach((idea, index) => {
-            allItems.push({
-                ...idea,
-                type: 'idea',
-                index: index,
-                displayTitle: idea.title || 'Untitled Idea',
-                displayDescription: idea.description || 'No description',
-                displayCategory: idea.category || 'No category',
-                imageData: idea.imageData || idea.imageUrl,
-                editFunction: `editIdea(${index})`,
-                deleteFunction: `deleteIdea(${index})`
-            });
+        const ideasItems = ideas || [];
+        console.log('💡 Ideas items to load (raw):', ideasItems.length);
+
+        // De-duplicate by stable id to avoid duplicate cards on mobile
+        const seenIdeaIds = new Set();
+        const uniqueIdeas = ideasItems.filter(item => {
+            if (!item || !item.id) return false;
+            if (seenIdeaIds.has(item.id)) return false;
+            seenIdeaIds.add(item.id);
+            return true;
         });
-        
-        // Add inventory items with images
-        const inventory = window.inventory || [];
-        inventory.forEach((item, index) => {
-            if (item.imageData || item.photo?.dataUrl) {
-                const imageData = item.imageData || item.photo?.dataUrl;
-                allItems.push({
-                    ...item,
-                    type: 'inventory',
-                    index: index,
-                    displayTitle: item.name || item.description || 'Untitled Item',
-                    displayDescription: item.description || 'No description',
-                    displayCategory: item.category || 'Inventory',
-                    imageData: imageData,
-                    editFunction: `editItem(${index})`,
-                    deleteFunction: `deleteItem(${index})`
-                });
-            }
-        });
-        
-        if (allItems.length === 0) {
-            const emptyCard = document.createElement('div');
-            emptyCard.className = 'mobile-card';
-            emptyCard.innerHTML = `
-                <div class="mobile-card-content">
-                    <div class="empty-state">
-                        <i class="fas fa-lightbulb"></i>
-                        <h3>No Ideas Yet</h3>
-                        <p>Start capturing your creative ideas and inspiration.</p>
-                    </div>
+        console.log('💡 Ideas items to load (unique):', uniqueIdeas.length);
+
+    // Always add "Add Idea" button at the top
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="openAddIdeaModal()">
+                <i class="fas fa-plus"></i><span>Add Idea</span>
+            </button>
+        </div>
+    `;
+    container.appendChild(addButtonCard);
+    
+    if (ideasItems.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="empty-state">
+                    <i class="fas fa-lightbulb"></i>
+                    <h3>No Ideas Yet</h3>
+                    <p>Start capturing your creative ideas and inspiration.</p>
                 </div>
-            `;
-            container.appendChild(emptyCard);
-        } else {
-            allItems.forEach((item) => {
-                const details = `
-                    <p><strong>Type:</strong> ${item.type === 'idea' ? 'Idea' : 'Inventory Item'}</p>
-                    <p><strong>Description:</strong> ${item.displayDescription}</p>
-                    <p><strong>Category:</strong> ${item.displayCategory}</p>
-                `;
-                container.appendChild(this.createDataCard(
-                    item.displayTitle,
-                    item.type === 'idea' ? 'Idea' : 'Inventory',
-                    details,
-                    item.editFunction,
-                    item.deleteFunction,
-                    item.imageData
-                ));
-            });
-        }
+            </div>
+        `;
+        container.appendChild(emptyStateCard);
+        return;
     }
-};
 
-function loadMobileInventoryCards() {
-    MobileCardManager.loadProjects();
-}
+    uniqueIdeas.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'idea-card';
+        
+        const description = item.description || 'No description available';
+        const truncatedDescription = description.length > 100 ? description.substring(0, 100) + '...' : description;
 
-function loadMobileInventoryItemsCards() {
-    MobileCardManager.loadInventoryItems();
-}
+        const imageDisplay = item.imageData || item.imageUrl ? 
+            `<div class="idea-image">
+                <img src="${item.imageData || item.imageUrl}" alt="${item.title}" onclick="viewIdeaImage('${item.id}')">
+            </div>` : 
+            `<div class="idea-image">
+                <div class="no-image"><i class="fas fa-image"></i></div>
+            </div>`;
 
-function loadMobileWIPCards() {
-    // WIP is handled by projects for now
-    MobileCardManager.loadProjects();
+        card.innerHTML = `
+            ${imageDisplay}
+            <div class="idea-card-header">
+                <h4 class="idea-card-title">${item.title}</h4>
+                <span class="idea-card-status status-${item.status}">${item.status}</span>
+            </div>
+            <div class="idea-card-description">${truncatedDescription}</div>
+            <div class="idea-card-actions">
+                <button class="btn btn-info btn-sm" onclick="viewIdea(${index})" title="View">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="editIdea(${index})" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-success btn-sm" onclick="convertIdeaToProject(${index})" title="Convert to Project">
+                    <i class="fas fa-plus"></i> Convert
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteIdea('${item.id}')" title="Delete">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+    }, 100); // 100ms debounce
 }
 
 function loadMobileCustomerCards() {
-    MobileCardManager.loadCustomers();
-}
+    const container = document.getElementById('mobileCustomerCards');
+    if (!container) return;
 
+    // Clear container first
+    container.innerHTML = '';
+    
+    const customerItems = customers || [];
 
-function loadMobileGalleryCards() {
-    MobileCardManager.loadGallery();
+    // Always add "Add Customer" button at the top
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="openAddCustomerModal()">
+                <i class="fas fa-plus"></i><span>Add Customer</span>
+            </button>
+        </div>
+    `;
+    container.appendChild(addButtonCard);
+
+    if (customerItems.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <h3>No Customers Yet</h3>
+                    <p>Start building your customer base by adding new customers.</p>
+                </div>
+            </div>
+        `;
+        container.appendChild(emptyStateCard);
+        return;
+    }
+
+    customerItems.forEach((customer, index) => {
+        // Skip if customer is null or doesn't have a name
+        if (!customer || !customer.name) {
+            console.warn('Skipping invalid customer:', customer);
+            return;
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'customer-card';
+        
+        // Calculate customer stats
+        const customerProjects = inventory.filter(item => item.customer === customer.name);
+        const totalSpent = customerProjects.reduce((sum, project) => sum + (parseFloat(project.price) || 0), 0);
+
+        card.innerHTML = `
+            <div class="customer-card-header">
+                <h4 class="customer-card-name">${customer.name}</h4>
+                <span class="customer-card-location">${customer.location || 'No Location'}</span>
+            </div>
+            <div class="customer-card-details">
+                <div><strong>Contact:</strong> ${customer.contact || 'No Contact'}</div>
+                <div><strong>Projects:</strong> ${customerProjects.length}</div>
+                <div><strong>Total Spent:</strong> $${totalSpent.toFixed(2)}</div>
+                <div><strong>Status:</strong> ${customer.status || 'Active'}</div>
+            </div>
+            <div class="customer-card-actions mobile-card-actions">
+                <button class="btn btn-info btn-sm" onclick="viewCustomerProjects('${customer.name}')" title="View Projects">
+                    <i class="fas fa-eye"></i> Projects
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="editCustomer(${index})" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="createProjectForCustomer('${customer.name}')" title="New Project">
+                    <i class="fas fa-plus"></i> Project
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${index})" title="Delete">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
 }
 
 function loadMobileSalesCards() {
-    // Sales not implemented yet
     const container = document.getElementById('mobileSalesCards');
     if (!container) return;
 
     container.innerHTML = '';
 
+    // Always add "Record Sale" button at the top
     const addButtonCard = document.createElement('div');
     addButtonCard.className = 'mobile-card mobile-add-card';
     addButtonCard.innerHTML = `
         <div class="mobile-card-content">
             <button class="btn btn-primary mobile-add-btn" onclick="openAddSaleModal()">
-                <i class="fas fa-plus"></i><span>Add New Sale</span>
-                </button>
-            </div>
-        `;
+                <i class="fas fa-plus"></i><span>Record Sale</span>
+            </button>
+        </div>
+    `;
     container.appendChild(addButtonCard);
     
-    const emptyCard = document.createElement('div');
-    emptyCard.className = 'mobile-card';
-    emptyCard.innerHTML = `
+    if (sales.length === 0) {
+        // Add empty state message below the button
+        const emptyStateCard = document.createElement('div');
+        emptyStateCard.className = 'mobile-card';
+        emptyStateCard.innerHTML = `
             <div class="mobile-card-content">
-            <div class="empty-state">
-                <i class="fas fa-dollar-sign"></i>
-                <h3>No Sales Yet</h3>
-                <p>Start recording your embroidery sales!</p>
+                <div class="empty-state">
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>No Sales Yet</h3>
+                    <p>Record your first sale to get started!</p>
                 </div>
             </div>
         `;
-    container.appendChild(emptyCard);
-}
+        container.appendChild(emptyStateCard);
+        return;
+    }
 
-function loadMobileIdeasCards() {
-    MobileCardManager.loadIdeas();
-}
-
-// Toggle customer group visibility
-function toggleCustomerGroup(customerName) {
-    // Handle both desktop and mobile versions
-    const sanitizedCustomerName = customerName.replace(/\s+/g, '-').toLowerCase();
-    
-    // Desktop version - show/hide project rows for this customer
-    const desktopHeader = document.querySelector(`[data-customer="${customerName}"]`);
-    const desktopChevron = desktopHeader ? desktopHeader.querySelector('.customer-toggle') : null;
-    
-    // Find all project rows for this customer
-    const projectRows = document.querySelectorAll('.project-row');
-    let customerProjectRows = [];
-    
-    // Filter project rows that belong to this customer
-    projectRows.forEach(row => {
-        const projectName = row.querySelector('.project-name strong')?.textContent;
-        if (projectName) {
-            // Check if this project belongs to the customer
-            let matchingProject;
-            if (customerName === 'No Customer') {
-                // For "No Customer", find projects where customer is null, undefined, or empty
-                matchingProject = inventory.find(item => item.name === projectName && (!item.customer || item.customer === ''));
-            } else {
-                // For regular customers, match exactly
-                matchingProject = inventory.find(item => item.name === projectName && item.customer === customerName);
-            }
-            if (matchingProject) {
-                customerProjectRows.push(row);
-            }
-        }
+    // De-duplicate by id (fallback to composite key)
+    const seenSales = new Set();
+    const uniqueSales = (sales || []).filter(sale => {
+        if (!sale) return false;
+        const key = sale.id || `${sale.itemName || ''}|${sale.customer || ''}|${sale.date || ''}|${sale.price || sale.salePrice || ''}`;
+        if (seenSales.has(key)) return false;
+        seenSales.add(key);
+        return true;
     });
-    
-    // Mobile version - look for mobile container
-    const mobileContainer = document.getElementById('mobileInventoryCards');
-    const mobileHeaderContent = mobileContainer ? mobileContainer.querySelector(`[data-customer="${customerName}"]`) : null;
-    const mobileChevron = mobileHeaderContent ? mobileHeaderContent.querySelector('.customer-chevron') : null;
-    const mobileProjectsContainer = document.getElementById(`customer-projects-${sanitizedCustomerName}`);
-    
-    // Handle desktop version - toggle project row visibility
-    if (customerProjectRows.length > 0 && desktopChevron) {
-        const firstRow = customerProjectRows[0];
-        const isVisible = firstRow.style.display !== 'none';
-        
-        if (isVisible) {
-            // Collapse - hide all project rows for this customer
-            customerProjectRows.forEach(row => {
-                row.style.display = 'none';
-            });
-            desktopChevron.className = 'fas fa-chevron-right customer-toggle';
-        } else {
-            // Expand - show all project rows for this customer
-            customerProjectRows.forEach(row => {
-                row.style.display = 'table-row';
-            });
-            desktopChevron.className = 'fas fa-chevron-down customer-toggle';
+
+    uniqueSales.forEach((sale, index) => {
+        // Skip if sale is null or malformed
+        if (!sale) {
+            console.warn('Skipping invalid sale:', sale);
+            return;
         }
+        
+        const listedPrice = sale.listedPrice || sale.price || 0;
+        const salePrice = sale.salePrice || sale.price || 0;
+        const discount = listedPrice - salePrice;
+        const discountPercent = listedPrice > 0 ? ((discount / listedPrice) * 100).toFixed(1) : 0;
+
+        let priceDisplay = `$${salePrice.toFixed(2)}`;
+        if (listedPrice !== salePrice && discount > 0) {
+            priceDisplay = `
+                <div class="price-info">
+                    <span class="sale-price">$${salePrice.toFixed(2)}</span>
+                    <span class="original-price">$${listedPrice.toFixed(2)}</span>
+                    <span class="discount-badge discount">${discountPercent}% off</span>
+                </div>
+            `;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
+        card.innerHTML = `
+            <div class="mobile-card-header">
+                <h3 class="mobile-card-title">${sale.itemName}</h3>
+                <span class="mobile-card-status status-${sale.saleChannel}">${sale.saleChannel}</span>
+            </div>
+            <div class="mobile-card-content">
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Customer:</span>
+                    <span class="mobile-card-value">${sale.customer}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Price:</span>
+                    <span class="mobile-card-value">${priceDisplay}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Commission:</span>
+                    <span class="mobile-card-value">${sale.commissionPercent || 0}% ($${(sale.commissionAmount || 0).toFixed(2)})</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-label">Date:</span>
+                    <span class="mobile-card-value">${new Date(sale.date).toLocaleDateString()}</span>
+                </div>
+                ${sale.notes ? `
+                    <div class="mobile-card-field">
+                        <span class="mobile-card-label">Notes:</span>
+                        <span class="mobile-card-value">${sale.notes}</span>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="mobile-card-actions">
+                <button class="btn btn-secondary" onclick="editSale(${index})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-danger" onclick="deleteSale(${index})">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+// Mobile-only function for toggling customer groups
+function toggleMobileCustomerGroup(customer) {
+    // Validate customer parameter
+    if (!customer || typeof customer !== 'string') {
+        console.warn('Invalid customer parameter for toggleMobileCustomerGroup:', customer);
+        return;
     }
     
-    // Handle mobile version
-    if (mobileProjectsContainer && mobileChevron) {
-        const isVisible = mobileProjectsContainer.style.display !== 'none';
+    const safeCustomerId = customer.replace(/\s+/g, '-').replace(/['"]/g, '').toLowerCase();
+    const projectsId = `mobile-projects-${safeCustomerId}`;
+    const toggleId = `toggle-${safeCustomerId}`;
+    
+    const projectsContainer = document.getElementById(projectsId);
+    const toggleIcon = document.getElementById(toggleId);
+    
+    if (projectsContainer && toggleIcon) {
+        const isExpanded = projectsContainer.classList.contains('expanded');
         
-        if (isVisible) {
+        if (isExpanded) {
             // Collapse
-            mobileProjectsContainer.style.display = 'none';
-            mobileChevron.className = 'fas fa-chevron-right customer-chevron';
-            mobileChevron.style.transform = 'rotate(0deg)';
+            projectsContainer.classList.remove('expanded');
+            toggleIcon.classList.remove('expanded');
         } else {
-            // Expand
-            mobileProjectsContainer.style.display = 'block';
-            mobileChevron.className = 'fas fa-chevron-down customer-chevron';
-            mobileChevron.style.transform = 'rotate(0deg)';
+            // Expand - collapse all other groups first
+            document.querySelectorAll('.mobile-customer-projects.expanded').forEach(container => {
+                container.classList.remove('expanded');
+            });
+            document.querySelectorAll('.mobile-customer-toggle.expanded').forEach(icon => {
+                icon.classList.remove('expanded');
+            });
+            
+            // Expand this group
+            projectsContainer.classList.add('expanded');
+            toggleIcon.classList.add('expanded');
         }
     }
 }
-
-// Mobile card delete functions consolidated into main delete functions above
-
 
 // Mobile modal enhancements
 function setupMobileModalEnhancements() {
     // Only apply on mobile devices
-    if (!isMobile()) return;
+    if (window.innerWidth > 768) return;
     
-    // Mobile modal enhancements for touch devices
-    console.log('📱 Mobile modal enhancements setup complete');
+    // Add mobile-specific modal behavior
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        // Use MutationObserver to watch for style changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const isVisible = modal.style.display === 'block' || modal.style.display === 'flex';
+                    if (isVisible) {
+                        document.body.classList.add('modal-open');
+                    } else {
+                        document.body.classList.remove('modal-open');
+                    }
+                }
+            });
+        });
+        
+        observer.observe(modal, { attributes: true });
+    });
+    
+    // Enhanced form validation for mobile (non-intrusive)
+    const forms = document.querySelectorAll('.modal-form');
+    forms.forEach(form => {
+        // Only add visual feedback, don't interfere with form submission
+        const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (!this.value.trim()) {
+                    this.style.borderColor = '#dc3545';
+                    this.style.backgroundColor = '#fff5f5';
+                } else {
+                    this.style.borderColor = '#28a745';
+                    this.style.backgroundColor = '#f8fff8';
+                }
+            });
+            
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#4A90A4';
+                this.style.backgroundColor = 'white';
+            });
+        });
+    });
 }
 
-function openAddInventoryModal() {
-    const modal = document.getElementById('addInventoryModal');
-    const form = document.getElementById('addInventoryForm');
-    
-    if (form) {
-        form.reset();
+// Mobile notification system
+function showMobileNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotification = document.querySelector('.mobile-notification');
+    if (existingNotification) {
+        existingNotification.remove();
     }
     
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
+    const notification = document.createElement('div');
+    notification.className = `mobile-notification mobile-notification-${type}`;
+    notification.innerHTML = `
+        <div class="mobile-notification-content">
+            <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }
+    }, 3000);
+}
+
+function toggleCustomerGroup(customer) {
+    const groupId = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+    const groupRow = document.getElementById(groupId);
+    const toggleIcon = event.target.closest('.customer-header').querySelector('.customer-toggle');
+    
+    // If we're expanding this group, collapse all others first
+    if (groupRow.style.display === 'none') {
+        // Collapse all other customer groups
+        const allCustomerGroups = document.querySelectorAll('.customer-group');
+        const allToggleIcons = document.querySelectorAll('.customer-toggle');
         
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="number"], textarea, select');
-            if (firstInput) {
-                firstInput.focus();
+        allCustomerGroups.forEach(group => {
+            if (group.id !== groupId) {
+                group.style.display = 'none';
             }
-        }, 100);
+        });
         
-        console.log('Add Inventory modal opened');
+        allToggleIcons.forEach(icon => {
+            if (icon !== toggleIcon) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        });
+        
+        // Now expand the selected group
+        groupRow.style.display = 'table-row';
+        toggleIcon.classList.remove('fa-chevron-right');
+        toggleIcon.classList.add('fa-chevron-down');
     } else {
-        console.error('Add Inventory modal not found');
+        // Just collapse the current group
+        groupRow.style.display = 'none';
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-right');
     }
+}
+
+// Dedicated Inventory Modal Functions
+function openAddInventoryModal() {
+    document.getElementById('addInventoryForm').reset();
+    document.getElementById('addInventoryModal').style.display = 'block';
 }
 
 // Dedicated Project Modal Functions  
 function openAddProjectModal() {
-    const modal = document.getElementById('addProjectModal');
-    const form = document.getElementById('addProjectForm');
-    
-    if (form) {
-        form.reset();
-    }
-    
+    document.getElementById('addProjectForm').reset();
     populateCustomerSelect('projectCustomer');
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="number"], textarea, select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Project modal opened');
-    } else {
-        console.error('Add Project modal not found');
-    }
+    document.getElementById('addProjectModal').style.display = 'block';
 }
 
 // Legacy function for backward compatibility
@@ -6625,7 +6922,19 @@ async function handleAddProject(e) {
         photo: null
     };
     
-    // Projects don't need images - they're tracked through inventory, ideas, and gallery
+    // Handle photo upload
+    const photoInput = document.getElementById('projectPhoto');
+    if (photoInput.files && photoInput.files[0]) {
+        try {
+            const photoData = await processPhoto(photoInput.files[0]);
+            projectData.photo = photoData;
+            projectData.imageData = photoData.dataUrl;
+        } catch (error) {
+            console.error('Error processing photo:', error);
+            alert('Error processing photo. Please try again.');
+            return;
+        }
+    }
     
     // Add to inventory array (projects are stored in the same array)
     inventory.push(projectData);
@@ -6792,7 +7101,14 @@ async function saveItemWithPhoto(item) {
             closeModal('addItemModal');
             
             // Force close on mobile if needed
-            // Modal closed successfully
+            if (window.innerWidth <= 768) {
+                const modal = document.getElementById('addItemModal');
+                if (modal && modal.style.display !== 'none') {
+                    console.log('🔄 Force closing modal on mobile');
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            }
             
             showNotification('Item added successfully!', 'success');
             console.log('✅ Item added and modal should be closed');
@@ -6878,7 +7194,7 @@ function loadInventoryItemsTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
     
     // Hide pagination for inventory - not needed
     const inventoryPagination = document.getElementById('inventoryPagination');
@@ -6949,35 +7265,12 @@ function loadCustomersTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddCustomerModal() {
-    const modal = document.getElementById('addCustomerModal');
-    const form = document.getElementById('addCustomerForm');
-    
-    if (form) {
-        form.reset();
-    }
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="email"], input[type="tel"], textarea');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Customer modal opened');
-    } else {
-        console.error('Add Customer modal not found');
-    }
+    document.getElementById('addCustomerForm').reset();
+    document.getElementById('addCustomerModal').style.display = 'block';
 }
 
 function handleAddCustomer(e) {
@@ -7090,241 +7383,6 @@ function handleEditCustomer(e) {
     
     showNotification('Customer updated successfully!', 'success');
 }
-
-// Print Invoice Functions
-function openPrintInvoiceModal() {
-    if (!checkAuthentication()) {
-        sessionStorage.setItem('requestedTab', 'sales');
-        showAuthModal();
-        return;
-    }
-    
-    // Set today's date
-    document.getElementById('printInvoiceDate').value = new Date().toISOString().split('T')[0];
-    
-    // Clear the form
-    document.getElementById('printInvoiceForm').reset();
-    document.getElementById('printInvoiceDate').value = new Date().toISOString().split('T')[0];
-    
-    // Ensure at least one item row exists
-    const itemsContainer = document.getElementById('printInvoiceItems');
-    if (itemsContainer.children.length === 0) {
-        addInvoiceItem();
-    }
-    
-    document.getElementById('printInvoiceModal').style.display = 'block';
-}
-
-function addInvoiceItem() {
-    const container = document.getElementById('printInvoiceItems');
-    const itemRow = document.createElement('div');
-    itemRow.className = 'invoice-item-row';
-    
-    itemRow.innerHTML = `
-        <input type="text" name="itemDescription[]" placeholder="Item description" required>
-        <input type="number" name="itemQuantity[]" placeholder="Qty" min="1" value="1" required>
-        <input type="number" name="itemCost[]" placeholder="Cost" min="0" step="0.01" required>
-        <button type="button" class="btn btn-sm btn-outline" onclick="removeInvoiceItem(this)">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
-    
-    container.appendChild(itemRow);
-}
-
-function removeInvoiceItem(button) {
-    const container = document.getElementById('printInvoiceItems');
-    if (container.children.length > 1) {
-        button.parentElement.remove();
-    } else {
-        showNotification('At least one item is required', 'warning');
-    }
-}
-
-function previewPrintInvoice() {
-    const form = document.getElementById('printInvoiceForm');
-    if (!form) {
-        showNotification('Form not found', 'error');
-        return;
-    }
-    
-    const formData = new FormData(form);
-    
-    // Validate required fields
-    const vendorName = formData.get('vendorName');
-    const invoiceDate = formData.get('invoiceDate');
-    
-    if (!vendorName || !invoiceDate) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Collect items
-    const items = [];
-    const descriptions = formData.getAll('itemDescription[]');
-    const quantities = formData.getAll('itemQuantity[]');
-    const costs = formData.getAll('itemCost[]');
-    
-    for (let i = 0; i < descriptions.length; i++) {
-        if (descriptions[i] && quantities[i] && costs[i]) {
-            items.push({
-                description: descriptions[i],
-                quantity: parseInt(quantities[i]),
-                cost: parseFloat(costs[i])
-            });
-        }
-    }
-    
-    if (items.length === 0) {
-        showNotification('Please add at least one item', 'error');
-        return;
-    }
-    
-    // Close the modal first
-    closeModal('printInvoiceModal');
-    
-    // Generate preview
-    generatePrintInvoicePreview(vendorName, invoiceDate, items, formData.get('vendorLogo'), formData.get('notes'));
-}
-
-function generatePrintInvoicePreview(vendorName, invoiceDate, items, vendorLogo, notes) {
-    // Calculate totals
-    let subtotal = 0;
-    items.forEach(item => {
-        subtotal += item.quantity * item.cost;
-    });
-    
-    // Create preview HTML
-    const previewHTML = `
-        <div class="print-invoice-header">
-            <div>
-                <h1 class="print-invoice-title">CyndyP Stitchcraft</h1>
-                <p class="print-invoice-date">Invoice Date: ${new Date(invoiceDate).toLocaleDateString()}</p>
-            </div>
-            <div class="print-vendor-info">
-                ${vendorLogo ? `<img src="${vendorLogo}" alt="${vendorName} Logo" class="print-vendor-logo">` : ''}
-                <h2 class="print-vendor-name">${vendorName}</h2>
-            </div>
-        </div>
-        
-        <div class="print-invoice-items">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="item-description">Description</th>
-                        <th class="item-quantity">Qty</th>
-                        <th class="item-cost">Unit Cost</th>
-                        <th class="item-total">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => `
-                        <tr>
-                            <td class="item-description">${item.description}</td>
-                            <td class="item-quantity">${item.quantity}</td>
-                            <td class="item-cost">$${item.cost.toFixed(2)}</td>
-                            <td class="item-total">$${(item.quantity * item.cost).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="print-invoice-total">
-            <div class="total-amount">Total: $${subtotal.toFixed(2)}</div>
-        </div>
-        
-        ${notes ? `
-            <div class="print-invoice-notes">
-                <h4>Notes:</h4>
-                <p>${notes}</p>
-            </div>
-        ` : ''}
-        
-        <div class="print-invoice-signature">
-            <div>
-                <div class="print-signature-line"></div>
-                <div class="print-signature-label">CyndyP Stitchcraft Signature</div>
-            </div>
-            <div>
-                <div class="print-signature-line"></div>
-                <div class="print-signature-label">${vendorName} Signature</div>
-            </div>
-        </div>
-    `;
-    
-    // Show preview
-    const preview = document.getElementById('printInvoicePreview');
-    if (!preview) {
-        // Create preview element if it doesn't exist
-        const previewElement = document.createElement('div');
-        previewElement.id = 'printInvoicePreview';
-        previewElement.className = 'print-invoice-preview';
-        document.body.appendChild(previewElement);
-    }
-    
-    document.getElementById('printInvoicePreview').innerHTML = previewHTML;
-    document.getElementById('printInvoicePreview').style.display = 'block';
-    
-    // Scroll to preview
-    document.getElementById('printInvoicePreview').scrollIntoView({ behavior: 'smooth' });
-}
-
-function printInvoice() {
-    const form = document.getElementById('printInvoiceForm');
-    const formData = new FormData(form);
-    
-    // Validate required fields
-    const vendorName = formData.get('vendorName');
-    const invoiceDate = formData.get('invoiceDate');
-    
-    if (!vendorName || !invoiceDate) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Collect items
-    const items = [];
-    const descriptions = formData.getAll('itemDescription[]');
-    const quantities = formData.getAll('itemQuantity[]');
-    const costs = formData.getAll('itemCost[]');
-    
-    for (let i = 0; i < descriptions.length; i++) {
-        if (descriptions[i] && quantities[i] && costs[i]) {
-            items.push({
-                description: descriptions[i],
-                quantity: parseInt(quantities[i]),
-                cost: parseFloat(costs[i])
-            });
-        }
-    }
-    
-    if (items.length === 0) {
-        showNotification('Please add at least one item', 'error');
-        return;
-    }
-    
-    // Generate and print
-    generatePrintInvoicePreview(vendorName, invoiceDate, items, formData.get('vendorLogo'), formData.get('notes'));
-    
-    // Wait a moment for the preview to render, then print
-    setTimeout(() => {
-        window.print();
-    }, 500);
-}
-
-// Add form submission handler for print invoice
-document.addEventListener('DOMContentLoaded', function() {
-    const printInvoiceForm = document.getElementById('printInvoiceForm');
-    if (printInvoiceForm) {
-        printInvoiceForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            printInvoice();
-        });
-    }
-});
-
-// Function to add a project to the invoice
 
 // Sales Management
 function updateExistingSalesWithCommission() {
@@ -7451,41 +7509,14 @@ function loadSalesTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddSaleModal() {
-    const modal = document.getElementById('addSaleModal');
-    const form = document.getElementById('addSaleForm');
-    
     populateItemSelect('saleItem');
-    
-    if (form) {
-        form.reset();
-        const saleDateInput = document.getElementById('saleDate');
-        if (saleDateInput) {
-            saleDateInput.value = new Date().toISOString().split('T')[0];
-        }
-    }
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="number"], select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Sale modal opened');
-    } else {
-        console.error('Add Sale modal not found');
-    }
+    document.getElementById('addSaleForm').reset();
+    document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('addSaleModal').style.display = 'block';
 }
 
 function toggleEditSaleItemType() {
@@ -7980,14 +8011,20 @@ function markAsSold(index) {
     }
 }
 
-// Test function removed - no longer needed
+function testDeleteClick(index) {
+    console.log('🧪 TEST: Delete button click detected!');
+    console.log('🧪 TEST: Index received:', index);
+    console.log('🧪 TEST: About to call deleteItem function...');
+}
 
 // Custom confirmation modal functions
 let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
     // Check if we're on mobile
-    if (isMobile()) {
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
         // Use mobile-friendly confirmation
         showMobileConfirmation(title, message, onConfirm);
         return;
@@ -8038,17 +8075,17 @@ function closeConfirmModal() {
     document.body.classList.remove('modal-open');
 }
 
-async function deleteItem(itemIdOrIndex) {
-    console.log('🗑️ Delete item function called with ID/Index:', itemIdOrIndex);
+async function deleteItem(index) {
+    console.log('🗑️ Delete item function called with index:', index);
     
-    // Check if parameter is valid
-    if (itemIdOrIndex === undefined || itemIdOrIndex === null) {
-        console.error('❌ Invalid parameter provided to deleteItem:', itemIdOrIndex);
-        showNotification('Error: Invalid item parameter', 'error');
+    // Check if index is valid
+    if (index === undefined || index === null || isNaN(index)) {
+        console.error('❌ Invalid index provided to deleteItem:', index);
+        showNotification('Error: Invalid item index', 'error');
         return;
     }
     
-    console.log('✅ Parameter is valid, showing confirmation modal...');
+    console.log('✅ Index is valid, showing confirmation modal...');
     
     // Use custom confirmation modal instead of browser confirm
     showConfirmModal(
@@ -8056,32 +8093,17 @@ async function deleteItem(itemIdOrIndex) {
         'Are you sure you want to delete this item? This action cannot be undone.',
         async () => {
             console.log('👤 User confirmed deletion');
-            await proceedWithDeletion(itemIdOrIndex);
+            await proceedWithDeletion(index);
         }
     );
 }
 
-async function proceedWithDeletion(itemIdOrIndex) {
+async function proceedWithDeletion(index) {
     // Store expanded customer groups before deleting
     const expandedCustomers = getExpandedCustomerGroups();
     
-    // Handle both ID and index parameters
-    let itemRemoved = false;
-    if (typeof itemIdOrIndex === 'string' || typeof itemIdOrIndex === 'number' && itemIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        const beforeCount = inventory.length;
-        inventory = inventory.filter(item => item.id !== itemIdOrIndex);
-        itemRemoved = inventory.length < beforeCount;
-    } else {
-        // It's an index (small number)
-        const index = parseInt(itemIdOrIndex);
-        if (index >= 0 && index < inventory.length) {
-            inventory.splice(index, 1);
-            itemRemoved = true;
-        }
-    }
-    
-    if (itemRemoved) {
+    if (index >= 0 && index < inventory.length) {
+        inventory.splice(index, 1);
         
         // Try to save data, but don't let localStorage errors prevent deletion
         try {
@@ -8310,43 +8332,21 @@ function createProjectForCustomer(customerName) {
     showNotification(`Creating new project for ${customerName}`, 'info');
 }
 
-function deleteCustomer(customerIdOrIndex) {
+function deleteCustomer(index) {
     showConfirmModal(
         'Delete Customer',
         'Are you sure you want to delete this customer? This will also delete all associated items.',
         () => {
-        let customerName;
-        let customerRemoved = false;
-        
-        // Handle both ID and index parameters
-        if (typeof customerIdOrIndex === 'string' || typeof customerIdOrIndex === 'number' && customerIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            const customer = customers.find(c => c.id === customerIdOrIndex);
-            if (customer) {
-                customerName = customer.name;
-                customers = customers.filter(c => c.id !== customerIdOrIndex);
-                customerRemoved = true;
-            }
-        } else {
-            // It's an index (small number)
-            const index = parseInt(customerIdOrIndex);
-            if (index >= 0 && index < customers.length) {
-                customerName = customers[index].name;
-                customers.splice(index, 1);
-                customerRemoved = true;
-            }
-        }
-        
-        if (customerRemoved && customerName) {
+            const customerName = customers[index].name;
             inventory = inventory.filter(item => item.customer !== customerName);
             sales = sales.filter(sale => sale.customer !== customerName);
+            customers.splice(index, 1);
             saveData();
             loadCustomersTable();
             loadInventoryTable();
             loadSalesTable();
             showNotification('Customer and associated data deleted!', 'success');
         }
-    }
     );
 }
 
@@ -8601,26 +8601,16 @@ function handleEditSale(e) {
     showNotification('Sale updated successfully!', 'success');
 }
 
-function deleteSale(saleIdOrIndex) {
+function deleteSale(index) {
     showConfirmModal(
         'Delete Sale',
         'Are you sure you want to delete this sale record?',
         () => {
-        // Handle both ID and index parameters
-        if (typeof saleIdOrIndex === 'string' || typeof saleIdOrIndex === 'number' && saleIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            sales = sales.filter(sale => sale.id !== saleIdOrIndex);
-        } else {
-            // It's an index (small number)
-            const index = parseInt(saleIdOrIndex);
-            if (index >= 0 && index < sales.length) {
-                sales.splice(index, 1);
-            }
+            sales.splice(index, 1);
+            saveData();
+            loadSalesTable();
+            showNotification('Sale record deleted!', 'success');
         }
-        saveData();
-        loadSalesTable();
-        showNotification('Sale record deleted!', 'success');
-    }
     );
 }
 
@@ -9440,7 +9430,7 @@ function loadWIPTab() {
     updateWIPStats(wipItems);
     loadWIPGrid(wipItems);
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function updateWIPStats(wipItems) {
@@ -9650,7 +9640,7 @@ function loadGallery() {
             </div>
         `;
         
-        // Desktop table loaded
+        // Mobile cards are loaded in switchTab function
         return;
     }
     
@@ -9679,56 +9669,13 @@ function loadGallery() {
         galleryGrid.appendChild(photoElement);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddPhotoModal() {
-    const modal = document.getElementById('addPhotoModal');
-    const form = document.getElementById('addPhotoForm');
-    
     populateItemSelect('photoItem');
-    
-    if (form) {
-        form.reset();
-    }
-    
-    if (modal) {
-        // Reset modal title and button text for adding new photo
-        const modalTitle = document.querySelector('#addPhotoModal h3');
-        if (modalTitle) {
-            modalTitle.textContent = 'Add New Photo';
-        }
-        
-        const submitButton = document.querySelector('#addPhotoForm button[type="submit"]');
-        if (submitButton) {
-            submitButton.textContent = 'Add Photo';
-        }
-        
-        // Clear any editing index
-        document.getElementById('addPhotoForm').dataset.editingIndex = '';
-        
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="file"], textarea, select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Photo modal opened');
-    } else {
-        console.error('Add Photo modal not found');
-    }
-}
-
-function openAddGalleryModal() {
-    // Alias for openAddPhotoModal since gallery and photo are the same
-    openAddPhotoModal();
+    document.getElementById('addPhotoForm').reset();
+    document.getElementById('addPhotoModal').style.display = 'block';
 }
 
 async function handleAddPhoto(e) {
@@ -9739,18 +9686,6 @@ async function handleAddPhoto(e) {
     
     if (!file) {
         showNotification('Please select a photo', 'error');
-        return;
-    }
-    
-    // Mobile-specific validation
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        showNotification('File too large. Please select an image smaller than 10MB.', 'error');
-        return;
-    }
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        showNotification('Please select a valid image file', 'error');
         return;
     }
     
@@ -9872,176 +9807,34 @@ async function deleteGalleryItem(index) {
     await deletePhoto(index); // Use the existing deletePhoto function
 }
 
-async function deletePhoto(photoIdOrIndex) {
+async function deletePhoto(index) {
     showConfirmModal(
         'Delete Photo',
         'Are you sure you want to delete this photo from the gallery?',
         async () => {
-        // Handle both ID and index parameters
-        if (typeof photoIdOrIndex === 'string' || typeof photoIdOrIndex === 'number' && photoIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            gallery = gallery.filter(photo => photo.id !== photoIdOrIndex);
-        } else {
-            // It's an index (small number)
-            const index = parseInt(photoIdOrIndex);
-            if (index >= 0 && index < gallery.length) {
-                gallery.splice(index, 1);
-            }
+            gallery.splice(index, 1);
+            await saveData();
+            loadGallery();
+            showNotification('Photo deleted from gallery!', 'success');
         }
-        await saveData();
-        loadGallery();
-        showNotification('Photo deleted from gallery!', 'success');
-    }
     );
 }
 
-async function editPhoto(photoIdOrIndex) {
-    console.log('🔧 editPhoto called with parameter:', photoIdOrIndex);
-    
-    let photo;
-    let actualIndex;
-    
-    // Handle both ID and index parameters
-    if (typeof photoIdOrIndex === 'string' || typeof photoIdOrIndex === 'number' && photoIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        console.log('🔧 Treating as ID');
-        actualIndex = gallery.findIndex(p => p.id === photoIdOrIndex);
-        if (actualIndex >= 0) {
-            photo = gallery[actualIndex];
+async function editPhoto(index) {
+    // For now, just show a simple edit dialog
+    const photo = gallery[index];
+    const newTitle = prompt('Edit photo title:', photo.title || '');
+    if (newTitle !== null) {
+        photo.title = newTitle;
+        const newDescription = prompt('Edit photo description:', photo.description || '');
+        if (newDescription !== null) {
+            photo.description = newDescription;
         }
-    } else {
-        // It's an index (small number)
-        console.log('🔧 Treating as index');
-        actualIndex = parseInt(photoIdOrIndex);
-        if (actualIndex >= 0 && actualIndex < gallery.length) {
-            photo = gallery[actualIndex];
-        }
+        await saveData();
+        loadGallery();
+        showNotification('Photo updated!', 'success');
     }
-    
-    if (!photo) {
-        console.error('❌ Photo not found with parameter:', photoIdOrIndex);
-        return;
-    }
-    
-    console.log('✅ Found photo:', photo.title);
-    
-    // Populate the edit form
-    document.getElementById('editPhotoTitle').value = photo.title || '';
-    document.getElementById('editPhotoDescription').value = photo.description || '';
-    document.getElementById('editPhotoCategory').value = photo.category || '';
-    document.getElementById('editPhotoStatus').value = photo.status || 'completed';
-    document.getElementById('editPhotoNotes').value = photo.notes || '';
-    
-    // Display existing image if available
-    if (photo.imageData) {
-        const imagePreview = document.getElementById('editPhoto_preview');
-        if (imagePreview) {
-            imagePreview.remove(); // Remove existing preview
-        }
-        
-        // Create new image preview
-        const preview = document.createElement('div');
-        preview.id = 'editPhoto_preview';
-        preview.style.cssText = 'margin-top: 10px; text-align: center;';
-        preview.innerHTML = `
-            <img src="${photo.imageData}" alt="Current image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
-            <p style="margin-top: 5px; font-size: 0.9em; color: #666;">Current image</p>
-        `;
-        
-        // Insert after the image input container
-        const imageInput = document.getElementById('editPhotoImage');
-        const formGroup = imageInput ? imageInput.closest('.form-group') : null;
-        if (formGroup) {
-            formGroup.appendChild(preview);
-        }
-    }
-    
-    // Update modal title for editing
-    const modalTitle = document.querySelector('#editPhotoModal h3');
-    if (modalTitle) {
-        modalTitle.textContent = 'Update Photo';
-    }
-    
-    // Update submit button text
-    const submitButton = document.querySelector('#editPhotoForm button[type="submit"]');
-    if (submitButton) {
-        submitButton.textContent = 'Update Photo';
-    }
-    
-    // Store the photo index for updating
-    document.getElementById('editPhotoForm').dataset.editingIndex = actualIndex;
-    document.getElementById('editPhotoModal').style.display = 'block';
-    console.log('✅ Edit photo modal should be visible now');
 }
-
-// Handle edit photo form submission
-document.addEventListener('DOMContentLoaded', function() {
-    const editPhotoForm = document.getElementById('editPhotoForm');
-    if (editPhotoForm) {
-        editPhotoForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const editingIndex = this.dataset.editingIndex;
-            if (editingIndex === undefined) {
-                showNotification('Error: No photo selected for editing', 'error');
-                return;
-            }
-            
-            const photo = gallery[editingIndex];
-            if (!photo) {
-                showNotification('Error: Photo not found', 'error');
-                return;
-            }
-            
-            // Update photo data
-            photo.title = document.getElementById('editPhotoTitle').value;
-            photo.description = document.getElementById('editPhotoDescription').value;
-            photo.category = document.getElementById('editPhotoCategory').value;
-            photo.status = document.getElementById('editPhotoStatus').value;
-            photo.notes = document.getElementById('editPhotoNotes').value;
-            photo.lastModified = new Date().toISOString();
-            
-            // Handle new image if provided
-            const imageFile = document.getElementById('editPhotoImage').files[0];
-            if (imageFile) {
-                try {
-                    const reader = new FileReader();
-                    reader.onload = async function(e) {
-                        photo.imageData = e.target.result;
-                        await saveData();
-                        loadGallery();
-                        closeModal('editPhotoModal');
-                        showNotification('Photo updated successfully!', 'success');
-                    };
-                    reader.readAsDataURL(imageFile);
-                } catch (error) {
-                    console.error('Error processing new image:', error);
-                    showNotification('Error processing new image. Photo updated without image change.', 'warning');
-                    await saveData();
-                    loadGallery();
-                    closeModal('editPhotoModal');
-                    showNotification('Photo updated successfully!', 'success');
-                }
-            } else {
-                // No new image, just save the changes
-                await saveData();
-                loadGallery();
-                closeModal('editPhotoModal');
-                showNotification('Photo updated successfully!', 'success');
-            }
-            
-            // Reset form
-            this.reset();
-            delete this.dataset.editingIndex;
-            
-            // Clear image preview
-            const imagePreview = document.getElementById('editPhoto_preview');
-            if (imagePreview) {
-                imagePreview.remove();
-            }
-        });
-    }
-});
 
 // Mobile Confirmation Dialog
 function showMobileConfirmation(title, message, onConfirm, onCancel = null) {
@@ -10166,39 +9959,8 @@ document.head.appendChild(style);
 
 // Ideas Management Functions
 function openAddIdeaModal() {
-    const modal = document.getElementById('addIdeaModal');
-    if (modal) {
-        // Reset modal title and button text for adding new idea
-        const modalTitle = document.querySelector('#addIdeaModal h3');
-        if (modalTitle) {
-            modalTitle.textContent = 'Add New Idea';
-        }
-        
-        const submitButton = document.querySelector('#addIdeaForm button[type="submit"]');
-        if (submitButton) {
-            submitButton.textContent = 'Add Idea';
-        }
-        
-        // Clear any editing ID
-        document.getElementById('addIdeaForm').dataset.editingId = '';
-        
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on the title input after a short delay
-        setTimeout(() => {
-            const titleInput = document.getElementById('ideaTitle');
-            if (titleInput) {
-                titleInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Idea modal opened');
-    } else {
-        console.error('Add Idea modal not found');
-    }
+    document.getElementById('addIdeaModal').style.display = 'block';
+    document.getElementById('ideaTitle').focus();
 }
 
 async function handleAddIdea(event) {
@@ -10242,16 +10004,10 @@ async function handleAddIdea(event) {
     };
     
     if (isEditing) {
-        // Update existing idea - preserve existing image data if no new image is provided
+        // Update existing idea
         const ideaIndex = ideas.findIndex(i => i.id === isEditing);
         if (ideaIndex !== -1) {
-            const existingImageData = ideas[ideaIndex].imageData || ideas[ideaIndex].imageUrl;
-            const updatedIdeaData = { ...ideaData };
-            // Only set imageData to null if we're actually processing a new image
-            if (!imageFile || imageFile.size === 0) {
-                updatedIdeaData.imageData = existingImageData;
-            }
-            ideas[ideaIndex] = { ...ideas[ideaIndex], ...updatedIdeaData };
+            ideas[ideaIndex] = { ...ideas[ideaIndex], ...ideaData };
         }
     } else {
         // Add new idea
@@ -10277,8 +10033,14 @@ async function handleAddIdea(event) {
             return;
         }
         
-        // Process image on all devices (mobile and desktop)
-        if (imageFile) {
+        // On mobile, skip FileReader for photo library images to prevent hanging
+        if (window.innerWidth <= 768) {
+            console.log('🎯 Mobile detected - skipping image processing, saving idea without image...');
+            await saveData();
+            loadIdeasGrid();
+            closeModal('addIdeaModal');
+            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+        } else {
             // Desktop: use FileReader with improved error handling
             const reader = new FileReader();
             
@@ -10340,23 +10102,15 @@ async function handleAddIdea(event) {
             };
             
             reader.readAsDataURL(imageFile);
-        } else {
-            console.log('🎯 No image file, empty file, or file too large - saving data directly...');
-            console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null');
-            
-            if (imageFile && imageFile.size >= 10000000) {
-                showNotification('Image file too large. Maximum size is 10MB.', 'warning');
-            }
-            
-            await saveData();
-            console.log('🎯 Data saved, loading ideas grid...');
-            loadIdeasGrid();
-            closeModal('addIdeaModal');
-            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
         }
     } else {
-        // No image file - save data directly
-        console.log('🎯 No image file - saving data directly...');
+        console.log('🎯 No image file, empty file, or file too large - saving data directly...');
+        console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null');
+        
+        if (imageFile && imageFile.size >= 10000000) {
+            showNotification('Image file too large. Maximum size is 10MB.', 'warning');
+        }
+        
         await saveData();
         console.log('🎯 Data saved, loading ideas grid...');
         loadIdeasGrid();
@@ -10383,45 +10137,7 @@ function loadIdeasGrid() {
     const grid = document.getElementById('ideasGrid');
     if (!grid) return;
     
-    // Combine ideas and inventory items with images
-    const allItems = [];
-    
-    // Add ideas
-    ideas.forEach(idea => {
-        allItems.push({
-            ...idea,
-            type: 'idea',
-            displayTitle: idea.title,
-            displayDescription: idea.description || 'No description',
-            displayCategory: idea.category,
-            displayStatus: idea.status,
-            displayPriority: idea.priority,
-            imageData: idea.imageData || idea.imageUrl,
-            editFunction: `editIdea('${idea.id}')`,
-            deleteFunction: `deleteIdea('${idea.id}')`
-        });
-    });
-    
-    // Add inventory items with images
-    inventory.forEach((item, index) => {
-        if (item.imageData || item.photo?.dataUrl) {
-            const imageData = item.imageData || item.photo?.dataUrl;
-            allItems.push({
-                ...item,
-                type: 'inventory',
-                displayTitle: item.name || item.description || 'Untitled Item',
-                displayDescription: item.description || 'No description',
-                displayCategory: item.category || 'Inventory',
-                displayStatus: item.status || 'inventory',
-                displayPriority: item.priority || 'medium',
-                imageData: imageData,
-                editFunction: `editItem(${index})`,
-                deleteFunction: `deleteItem(${index})`
-            });
-        }
-    });
-    
-    if (allItems.length === 0) {
+    if (ideas.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-lightbulb"></i>
@@ -10433,38 +10149,35 @@ function loadIdeasGrid() {
             </div>
         `;
         
-        // Desktop table loaded
+        // Mobile cards are loaded in switchTab function
         return;
     }
     
-    grid.innerHTML = allItems.map(item => {
-        return `
-        <div class="idea-card" data-category="${item.displayCategory}" data-status="${item.displayStatus}">
+    grid.innerHTML = ideas.map(idea => `
+        <div class="idea-card" data-category="${idea.category}" data-status="${idea.status}">
             <div class="idea-image">
-                ${item.imageData ? 
-                    `<img src="${item.imageData}" alt="${item.displayTitle}" onclick="viewIdeaImage('${item.id || item.displayTitle}')">` : 
+                ${idea.imageData || idea.imageUrl ? 
+                    `<img src="${idea.imageData || idea.imageUrl}" alt="${idea.title}" onclick="viewIdeaImage('${idea.id}')">` : 
                     `<div class="no-image"><i class="fas fa-image"></i></div>`
                 }
-                <div class="idea-status status-${item.displayStatus}">${item.displayStatus.replace('-', ' ')}</div>
-                <div class="item-type-badge">${item.type === 'idea' ? 'Idea' : 'Inventory'}</div>
+                <div class="idea-status status-${idea.status}">${idea.status.replace('-', ' ')}</div>
             </div>
             <div class="idea-content">
-                <h3 class="idea-title">${item.displayTitle}</h3>
-                <p class="idea-description">${item.displayDescription}</p>
+                <h3 class="idea-title">${idea.title}</h3>
+                <p class="idea-description">${idea.description || 'No description'}</p>
                 <div class="idea-meta">
-                    <span class="idea-category">${item.displayCategory}</span>
-                    <span class="idea-priority priority-${item.displayPriority}">${item.displayPriority}</span>
+                    <span class="idea-category">${idea.category}</span>
+                    <span class="idea-priority priority-${idea.priority}">${idea.priority}</span>
                 </div>
                 <div class="idea-actions">
-                    <button class="btn btn-small" onclick="${item.editFunction}"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn btn-small btn-danger" onclick="${item.deleteFunction}"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-small" onclick="editIdea('${idea.id}')"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteIdea('${idea.id}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
-        `;
-    }).join('');
+    `).join('');
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function filterIdeas() {
@@ -10492,32 +10205,9 @@ function filterIdeas() {
     });
 }
 
-function editIdea(ideaIdOrIndex) {
-    console.log('🔧 editIdea called with parameter:', ideaIdOrIndex);
-    console.log('🔧 Current ideas array length:', ideas.length);
-    
-    let idea;
-    
-    // Handle both ID and index parameters
-    if (typeof ideaIdOrIndex === 'string' || typeof ideaIdOrIndex === 'number' && ideaIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        console.log('🔧 Treating as ID');
-        idea = ideas.find(i => i.id === ideaIdOrIndex);
-    } else {
-        // It's an index (small number)
-        console.log('🔧 Treating as index');
-        const index = parseInt(ideaIdOrIndex);
-        if (index >= 0 && index < ideas.length) {
-            idea = ideas[index];
-        }
-    }
-    
-    if (!idea) {
-        console.error('❌ Idea not found with parameter:', ideaIdOrIndex);
-        return;
-    }
-    
-    console.log('✅ Found idea:', idea.title);
+function editIdea(ideaId) {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
     
     // Populate form with existing data
     document.getElementById('ideaTitle').value = idea.title;
@@ -10528,47 +10218,9 @@ function editIdea(ideaIdOrIndex) {
     document.getElementById('ideaPriority').value = idea.priority;
     document.getElementById('ideaNotes').value = idea.notes || '';
     
-    // Display existing image if available
-    if (idea.imageData || idea.imageUrl) {
-        const imageData = idea.imageData || idea.imageUrl;
-        const imagePreview = document.getElementById('ideaImage_preview');
-        if (imagePreview) {
-            imagePreview.remove(); // Remove existing preview
-        }
-        
-        // Create new image preview
-        const preview = document.createElement('div');
-        preview.id = 'ideaImage_preview';
-        preview.style.cssText = 'margin-top: 10px; text-align: center;';
-        preview.innerHTML = `
-            <img src="${imageData}" alt="Current image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
-            <p style="margin-top: 5px; font-size: 0.9em; color: #666;">Current image</p>
-        `;
-        
-        // Insert after the image input container
-        const imageInput = document.getElementById('ideaImage');
-        const formGroup = imageInput.closest('.form-group');
-        if (formGroup) {
-            formGroup.appendChild(preview);
-        }
-    }
-    
-    // Update modal title for editing
-    const modalTitle = document.querySelector('#addIdeaModal h3');
-    if (modalTitle) {
-        modalTitle.textContent = 'Update Idea';
-    }
-    
-    // Update submit button text
-    const submitButton = document.querySelector('#addIdeaForm button[type="submit"]');
-    if (submitButton) {
-        submitButton.textContent = 'Update Idea';
-    }
-    
     // Store the idea ID for updating
-    document.getElementById('addIdeaForm').dataset.editingId = idea.id;
+    document.getElementById('addIdeaForm').dataset.editingId = ideaId;
     document.getElementById('addIdeaModal').style.display = 'block';
-    console.log('✅ Edit modal should be visible now');
 }
 
 function viewIdea(index) {
@@ -10628,8 +10280,8 @@ function convertIdeaToProject(index) {
     }
 }
 
-function deleteIdea(ideaIdOrIndex) {
-    console.log('🗑️ deleteIdea called with ID/Index:', ideaIdOrIndex);
+function deleteIdea(ideaId) {
+    console.log('🗑️ deleteIdea called with ID:', ideaId);
     console.log('🗑️ Current ideas count before delete:', ideas.length);
     console.log('🗑️ Ideas before delete:', ideas.map(i => ({ id: i.id, title: i.title })));
     
@@ -10642,24 +10294,7 @@ function deleteIdea(ideaIdOrIndex) {
         console.log('🗑️ Set isModifying = true');
         
         const beforeCount = ideas.length;
-        
-        // Handle both ID and index parameters
-        if (typeof ideaIdOrIndex === 'string' || typeof ideaIdOrIndex === 'number' && ideaIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            ideas = ideas.filter(i => i.id !== ideaIdOrIndex);
-        } else {
-            // It's an index (small number)
-            const index = parseInt(ideaIdOrIndex);
-            if (index >= 0 && index < ideas.length) {
-                ideas.splice(index, 1);
-            } else {
-                console.error('🚨 ERROR: Invalid index:', index);
-                showNotification('Error: Invalid item index. Please refresh the page.', 'error');
-                window.isModifying = false;
-                return;
-            }
-        }
-        
+        ideas = ideas.filter(i => i.id !== ideaId);
         const afterCount = ideas.length;
         
         console.log('🗑️ Ideas count after delete:', afterCount);
@@ -10679,14 +10314,14 @@ function deleteIdea(ideaIdOrIndex) {
         
         // Proactively refresh UI on both desktop and mobile
         try { if (typeof loadIdeas === 'function') loadIdeas(); } catch(e) { /* no-op */ }
-        // Mobile cards are loaded in switchTab function only
-        
+        try { if (typeof loadMobileIdeasCards === 'function') loadMobileIdeasCards(); } catch(e) { /* no-op */ }
+
         // Clear the flag after a delay
         setTimeout(() => {
             console.log('🗑️ Clearing isModifying flag');
             window.isModifying = false;
         }, 500);
-    }
+        }
     );
 }
 
@@ -10731,16 +10366,6 @@ function openCameraForInventory() {
     openCamera();
 }
 
-function openCameraForProject() {
-    currentCameraContext = 'project';
-    openCamera();
-}
-
-function openCameraForNewProject() {
-    currentCameraContext = 'newProject';
-    openCamera();
-}
-
 function openCameraForIdeas() {
     currentCameraContext = 'ideas';
     openCamera();
@@ -10749,28 +10374,6 @@ function openCameraForIdeas() {
 function openCameraForGallery() {
     currentCameraContext = 'gallery';
     openCamera();
-}
-
-// Mobile-friendly gallery upload helper
-function setupMobileGalleryUpload() {
-    const photoFileInput = document.getElementById('photoFile');
-    if (photoFileInput && 'ontouchstart' in window) {
-        // Add visual feedback for mobile users
-        photoFileInput.addEventListener('focus', function() {
-            this.style.borderColor = '#4A90A4';
-            this.style.backgroundColor = '#f0f8ff';
-        });
-        
-        photoFileInput.addEventListener('blur', function() {
-            this.style.borderColor = '#4A90A4';
-            this.style.backgroundColor = '#f8f9fa';
-        });
-        
-        // Add mobile-specific styling
-        photoFileInput.style.cursor = 'pointer';
-        photoFileInput.style.minHeight = '44px';
-        photoFileInput.style.minWidth = '44px';
-    }
 }
 
 function openCamera() {
@@ -10950,7 +10553,12 @@ function viewPhoto(photoUrl, photoTitle = 'Photo') {
     document.getElementById('photoViewModal').style.display = 'block';
 }
 
-// This function is now handled by the main deletePhoto function above
+function deletePhoto() {
+    // This would need to be implemented based on how photos are stored
+    // For now, just close the modal
+    closeModal('photoViewModal');
+    showNotification('Photo deleted successfully!', 'success');
+}
 
 // Enhanced file input handling with preview
 function setupPhotoPreviews() {
@@ -11124,7 +10732,7 @@ function setupMobileFeatures() {
 
 function showInstallPrompt() {
     // Only show install banner on mobile devices (screen width <= 768px)
-    if (!isMobile()) {
+    if (window.innerWidth > 768) {
         // Remove any existing install banner if we're on desktop
         const existingBanner = document.querySelector('.install-banner');
         if (existingBanner) {
@@ -11167,20 +10775,6 @@ function dismissInstallBanner() {
     }
 }
 
-// Mobile detection utility - centralized for consistency
-function isMobile() {
-    return window.innerWidth <= 768;
-}
-
-// Enhanced mobile detection with device type
-function getDeviceType() {
-    const width = window.innerWidth;
-    if (width <= 480) return 'mobile-small';
-    if (width <= 768) return 'mobile';
-    if (width <= 1024) return 'tablet';
-    return 'desktop';
-}
-
 // Enhanced photo capture with mobile gestures
 function setupMobilePhotoGestures() {
     const cameraModal = document.getElementById('cameraModal');
@@ -11214,28 +10808,6 @@ function setupMobilePhotoGestures() {
 
 // ===== ENHANCED DATA STRUCTURES =====
 
-// ===== PHOTO PROCESSING =====
-
-async function processPhoto(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const photoData = {
-                dataUrl: e.target.result,
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                timestamp: new Date().toISOString()
-            };
-            resolve(photoData);
-        };
-        reader.onerror = function(error) {
-            reject(error);
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
 // ===== OCR PHOTO ANALYSIS SYSTEM =====
 
 // OCR Analysis Functions
@@ -11252,22 +10824,6 @@ function analyzePhotoForInventory() {
     
     analyzePhotoWithOCR(file, 'inventory');
 }
-
-function analyzePhotoForProject() {
-    // OCR for edit project modal
-    
-    const fileInput = document.getElementById('itemPhoto');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        showNotification('Please select a photo first', 'error');
-        return;
-    }
-    
-    analyzePhotoWithOCR(file, 'project');
-}
-
-// Projects don't need photo analysis - they're tracked through inventory, ideas, and gallery
 
 function analyzePhotoForGallery() {
     // OCR now works on mobile with improved error handling
@@ -11677,7 +11233,6 @@ function setupOCRFunctionality() {
     // Enable analyze buttons when photos are selected
     const photoInputs = [
         { input: 'itemPhoto', button: 'analyzeInventoryBtn' },
-        { input: 'itemPhoto', button: 'analyzeProjectBtn' },
         { input: 'photoFile', button: 'analyzeGalleryBtn' },
         { input: 'ideaImage', button: 'analyzeIdeasBtn' }
     ];

@@ -1,6 +1,6 @@
 {
   "name": "embroidery-inventory-manager",
-  "version": "1.0.76",
+  "version": "1.0.74",
   "description": "A web-based inventory management system for embroidery businesses",
   "main": "server.js",
   "scripts": {
@@ -43,7 +43,6 @@
   "devDependencies": {
     "nodemon": "^3.0.1",
     "pm2": "^6.0.11",
-    "puppeteer": "^24.22.3",
-    "vercel": "^48.2.0"
+    "puppeteer": "^24.22.3"
   }
 }

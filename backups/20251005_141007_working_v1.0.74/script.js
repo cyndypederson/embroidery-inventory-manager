@@ -1155,7 +1155,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.76'
+                appVersion: '1.0.74'
             }
         };
         
@@ -2695,7 +2695,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.76'; // Current app version
+                const currentVersion = '1.0.74'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -2935,14 +2935,14 @@ class FormManager {
         }
         
         // Length validation
-        if (field.minLength && field.minLength > 0) {
+        if (field.minLength) {
             rules.push({
                 validator: (value) => this.validationRules.get('minLength').validator(value, field.minLength),
                 message: this.validationRules.get('minLength').message(field.minLength)
             });
         }
         
-        if (field.maxLength && field.maxLength > 0) {
+        if (field.maxLength) {
             rules.push({
                 validator: (value) => this.validationRules.get('maxLength').validator(value, field.maxLength),
                 message: this.validationRules.get('maxLength').message(field.maxLength)
@@ -4276,14 +4276,13 @@ document.addEventListener('DOMContentLoaded', function() {
     registerServiceWorker();
     setupMobileFeatures();
     setupMobileModalEnhancements();
-    setupMobileGalleryUpload();
 });
 
 function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.76';
+        const currentVersion = '1.0.74';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -4319,30 +4318,6 @@ function initializeApp() {
     document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
     document.getElementById('editSaleForm').addEventListener('submit', handleEditSale);
     document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
-    
-    // Mobile-specific file input enhancements
-    const photoFileInput = document.getElementById('photoFile');
-    if (photoFileInput) {
-        // Add mobile-friendly event listeners
-        photoFileInput.addEventListener('change', function(e) {
-            console.log('Photo file input changed:', e.target.files.length, 'files');
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                console.log('File selected:', file.name, file.size, file.type);
-            }
-        });
-        
-        // Ensure proper touch handling on mobile
-        if ('ontouchstart' in window) {
-            photoFileInput.addEventListener('touchstart', function(e) {
-                console.log('Touch start on file input');
-            });
-            
-            photoFileInput.addEventListener('touchend', function(e) {
-                console.log('Touch end on file input');
-            });
-        }
-    }
     document.getElementById('addIdeaForm').addEventListener('submit', handleAddIdea);
     
     // Separate modal form listeners
@@ -5655,61 +5630,10 @@ function updateEditStatusOptions() {
     }
 }
 
-// Update table headers based on view mode
-function updateTableHeaders(showDetailed = false) {
-    const headerRow = document.getElementById('projectsTableHeader');
-    if (!headerRow) return;
-    
-    if (showDetailed) {
-        // Full detailed view for editing
-        headerRow.innerHTML = `
-            <th>Project</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th>Status</th>
-            <th>Due Date</th>
-            <th>Notes</th>
-            <th>Link</th>
-            <th>Actions</th>
-        `;
-    } else {
-        // Simplified home view
-        headerRow.innerHTML = `
-            <th>Project</th>
-            <th>Status</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-        `;
-    }
-}
-
-// Toggle between simplified and detailed view
-let isDetailedView = false;
-function toggleDetailedView() {
-    isDetailedView = !isDetailedView;
-    const toggleBtn = document.getElementById('toggleViewBtn');
-    
-    if (isDetailedView) {
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Simple View';
-        toggleBtn.classList.remove('btn-outline');
-        toggleBtn.classList.add('btn-primary');
-    } else {
-        toggleBtn.innerHTML = '<i class="fas fa-list"></i> Detailed View';
-        toggleBtn.classList.remove('btn-primary');
-        toggleBtn.classList.add('btn-outline');
-    }
-    
-    // Reload the table with the new view mode
-    loadInventoryTable(isDetailedView);
-}
-
 // Projects Management (Customer Work)
-function loadInventoryTable(showDetailed = false) {
+function loadInventoryTable() {
     const tbody = document.getElementById('inventoryTableBody');
     tbody.innerHTML = '';
-    
-    // Update table headers based on view mode
-    updateTableHeaders(showDetailed);
     
     // Filter for projects only (not inventory items)
     const projectItems = inventory.filter(item => item.type === 'project' || !item.type);
@@ -5730,6 +5654,7 @@ function loadInventoryTable(showDetailed = false) {
                 (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
             );
         }
+        console.log(`Project: ${item.name}, Filtered index: ${filteredIndex}, Original index: ${originalIndex}`);
         groupedItems[customer].push({ item, index: originalIndex });
     });
     
@@ -5742,11 +5667,6 @@ function loadInventoryTable(showDetailed = false) {
     
     sortedCustomers.forEach(customer => {
         const customerItems = groupedItems[customer];
-        
-        // Skip customers with no projects (shouldn't happen but safety check)
-        if (!customerItems || customerItems.length === 0) {
-            return;
-        }
         
         // Create customer header row
         const headerRow = document.createElement('tr');
@@ -5762,9 +5682,8 @@ function loadInventoryTable(showDetailed = false) {
         const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
-        const colspan = showDetailed ? 8 : 4;
         headerRow.innerHTML = `
-            <td colspan="${colspan}">
+            <td colspan="8">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -5777,15 +5696,25 @@ function loadInventoryTable(showDetailed = false) {
         `;
         tbody.appendChild(headerRow);
         
-        // Hide pagination completely - not needed for projects
-        const paginationContainer = document.getElementById('projectsPagination');
-        if (paginationContainer) {
-            paginationContainer.style.display = 'none';
-        }
+        // Create customer group container
+        const groupRow = document.createElement('tr');
+        groupRow.className = 'customer-group';
+        groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+        groupRow.style.display = 'none';
+        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
+        tbody.appendChild(groupRow);
+        
+    // Hide pagination completely - not needed for projects
+    const paginationContainer = document.getElementById('projectsPagination');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
     
-    // Add individual project rows for this customer directly to the tbody
+    // Add individual project rows
+    const projectsContainer = groupRow.querySelector('.customer-projects');
     customerItems.forEach(({ item, index }) => {
-            const projectRow = document.createElement('tr');
+            console.log(`Creating project row for: ${item.name}, using index: ${index}`);
+            const projectRow = document.createElement('div');
             projectRow.className = 'project-row';
             
             // Format due date with urgency styling
@@ -5848,70 +5777,39 @@ function loadInventoryTable(showDetailed = false) {
             const typeDisplay = item.type === 'inventory' ? 'Inventory' : 'Project';
             const typeClass = item.type === 'inventory' ? 'type-inventory' : 'type-project';
             
-            if (showDetailed) {
-                // Full detailed view for editing
-                projectRow.innerHTML = `
-                    <td class="project-name"><strong>${item.name}</strong></td>
-                    <td class="project-category">${categoryDisplay}</td>
-                    <td class="project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></td>
-                    <td class="project-status">
-                        <span class="status-badge status-${item.status}">${item.status}</span>
-                        <div class="quick-actions">${quickActions}</div>
-                    </td>
-                    <td class="project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></td>
-                    <td class="project-notes">${notesDisplay}</td>
-                    <td class="project-pattern">${patternLinkButton}</td>
-                    <td class="project-actions">
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-            } else {
-                // Simplified home view
-                projectRow.innerHTML = `
-                    <td class="project-name"><strong>${item.name}</strong></td>
-                    <td class="project-status">
-                        <span class="status-badge status-${item.status}">${item.status}</span>
-                        <div class="quick-actions">${quickActions}</div>
-                    </td>
-                    <td class="project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></td>
-                    <td class="project-actions">
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-            }
-            // Start collapsed by default
-            projectRow.style.display = 'none';
-            tbody.appendChild(projectRow);
+            projectRow.innerHTML = `
+                <div class="project-cell project-name"><strong>${item.name}</strong></div>
+                <div class="project-cell project-category">${categoryDisplay}</div>
+                <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
+                <div class="project-cell project-status">
+                    <span class="status-badge status-${item.status}">${item.status}</span>
+                    <div class="quick-actions">${quickActions}</div>
+                </div>
+                <div class="project-cell project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></div>
+                <div class="project-cell project-notes">${notesDisplay}</div>
+                <div class="project-cell project-pattern">${patternLinkButton}</div>
+                <div class="project-cell project-actions">
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            projectsContainer.appendChild(projectRow);
         });
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 // CLEAN MOBILE CARD SYSTEM - REWRITTEN FROM SCRATCH
@@ -6343,82 +6241,40 @@ function loadMobileIdeasCards() {
 }
 
 // Toggle customer group visibility
-function toggleCustomerGroup(customerName) {
-    // Handle both desktop and mobile versions
-    const sanitizedCustomerName = customerName.replace(/\s+/g, '-').toLowerCase();
-    
-    // Desktop version - show/hide project rows for this customer
-    const desktopHeader = document.querySelector(`[data-customer="${customerName}"]`);
-    const desktopChevron = desktopHeader ? desktopHeader.querySelector('.customer-toggle') : null;
-    
-    // Find all project rows for this customer
-    const projectRows = document.querySelectorAll('.project-row');
-    let customerProjectRows = [];
-    
-    // Filter project rows that belong to this customer
-    projectRows.forEach(row => {
-        const projectName = row.querySelector('.project-name strong')?.textContent;
-        if (projectName) {
-            // Check if this project belongs to the customer
-            let matchingProject;
-            if (customerName === 'No Customer') {
-                // For "No Customer", find projects where customer is null, undefined, or empty
-                matchingProject = inventory.find(item => item.name === projectName && (!item.customer || item.customer === ''));
-            } else {
-                // For regular customers, match exactly
-                matchingProject = inventory.find(item => item.name === projectName && item.customer === customerName);
-            }
-            if (matchingProject) {
-                customerProjectRows.push(row);
-            }
-        }
-    });
-    
-    // Mobile version - look for mobile container
+function toggleCustomerGroup(sanitizedCustomerName) {
+    const projectsContainer = document.getElementById(`customer-projects-${sanitizedCustomerName}`);
+    // Only look within the mobile container to avoid conflicts with desktop headers
     const mobileContainer = document.getElementById('mobileInventoryCards');
-    const mobileHeaderContent = mobileContainer ? mobileContainer.querySelector(`[data-customer="${customerName}"]`) : null;
-    const mobileChevron = mobileHeaderContent ? mobileHeaderContent.querySelector('.customer-chevron') : null;
-    const mobileProjectsContainer = document.getElementById(`customer-projects-${sanitizedCustomerName}`);
+    const headerContent = mobileContainer ? mobileContainer.querySelector(`[data-customer="${sanitizedCustomerName}"]`) : null;
+    const chevron = headerContent ? headerContent.querySelector('.customer-chevron') : null;
     
-    // Handle desktop version - toggle project row visibility
-    if (customerProjectRows.length > 0 && desktopChevron) {
-        const firstRow = customerProjectRows[0];
-        const isVisible = firstRow.style.display !== 'none';
-        
-        if (isVisible) {
-            // Collapse - hide all project rows for this customer
-            customerProjectRows.forEach(row => {
-                row.style.display = 'none';
-            });
-            desktopChevron.className = 'fas fa-chevron-right customer-toggle';
-        } else {
-            // Expand - show all project rows for this customer
-            customerProjectRows.forEach(row => {
-                row.style.display = 'table-row';
-            });
-            desktopChevron.className = 'fas fa-chevron-down customer-toggle';
-        }
-    }
-    
-    // Handle mobile version
-    if (mobileProjectsContainer && mobileChevron) {
-        const isVisible = mobileProjectsContainer.style.display !== 'none';
+    if (projectsContainer && chevron) {
+        const isVisible = projectsContainer.style.display !== 'none';
         
         if (isVisible) {
             // Collapse
-            mobileProjectsContainer.style.display = 'none';
-            mobileChevron.className = 'fas fa-chevron-right customer-chevron';
-            mobileChevron.style.transform = 'rotate(0deg)';
+            projectsContainer.style.display = 'none';
+            chevron.className = 'fas fa-chevron-right customer-chevron';
+            chevron.style.transform = 'rotate(0deg)';
         } else {
             // Expand
-            mobileProjectsContainer.style.display = 'block';
-            mobileChevron.className = 'fas fa-chevron-down customer-chevron';
-            mobileChevron.style.transform = 'rotate(0deg)';
+            projectsContainer.style.display = 'block';
+            chevron.className = 'fas fa-chevron-down customer-chevron';
+            chevron.style.transform = 'rotate(0deg)';
         }
     }
 }
 
-// Mobile card delete functions consolidated into main delete functions above
+// Delete functions for mobile cards
+// This function is now handled by the main deleteItem function
+
+// This function is now handled by the main deleteCustomer function below
+
+// This function is now handled by the main deleteItem function
+
+// This function is now handled by the main deletePhoto function below
+
+// This function is now handled by the main deleteIdea function below
 
 
 // Mobile modal enhancements
@@ -6426,7 +6282,7 @@ function setupMobileModalEnhancements() {
     // Only apply on mobile devices
     if (!isMobile()) return;
     
-    // Mobile modal enhancements for touch devices
+    // This function is now handled by MobileCardManager
     console.log('📱 Mobile modal enhancements setup complete');
 }
 
@@ -6792,7 +6648,14 @@ async function saveItemWithPhoto(item) {
             closeModal('addItemModal');
             
             // Force close on mobile if needed
-            // Modal closed successfully
+            if (isMobile()) {
+                const modal = document.getElementById('addItemModal');
+                if (modal && modal.style.display !== 'none') {
+                    console.log('🔄 Force closing modal on mobile');
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            }
             
             showNotification('Item added successfully!', 'success');
             console.log('✅ Item added and modal should be closed');
@@ -6878,7 +6741,7 @@ function loadInventoryItemsTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
     
     // Hide pagination for inventory - not needed
     const inventoryPagination = document.getElementById('inventoryPagination');
@@ -6949,7 +6812,7 @@ function loadCustomersTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddCustomerModal() {
@@ -7091,241 +6954,6 @@ function handleEditCustomer(e) {
     showNotification('Customer updated successfully!', 'success');
 }
 
-// Print Invoice Functions
-function openPrintInvoiceModal() {
-    if (!checkAuthentication()) {
-        sessionStorage.setItem('requestedTab', 'sales');
-        showAuthModal();
-        return;
-    }
-    
-    // Set today's date
-    document.getElementById('printInvoiceDate').value = new Date().toISOString().split('T')[0];
-    
-    // Clear the form
-    document.getElementById('printInvoiceForm').reset();
-    document.getElementById('printInvoiceDate').value = new Date().toISOString().split('T')[0];
-    
-    // Ensure at least one item row exists
-    const itemsContainer = document.getElementById('printInvoiceItems');
-    if (itemsContainer.children.length === 0) {
-        addInvoiceItem();
-    }
-    
-    document.getElementById('printInvoiceModal').style.display = 'block';
-}
-
-function addInvoiceItem() {
-    const container = document.getElementById('printInvoiceItems');
-    const itemRow = document.createElement('div');
-    itemRow.className = 'invoice-item-row';
-    
-    itemRow.innerHTML = `
-        <input type="text" name="itemDescription[]" placeholder="Item description" required>
-        <input type="number" name="itemQuantity[]" placeholder="Qty" min="1" value="1" required>
-        <input type="number" name="itemCost[]" placeholder="Cost" min="0" step="0.01" required>
-        <button type="button" class="btn btn-sm btn-outline" onclick="removeInvoiceItem(this)">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
-    
-    container.appendChild(itemRow);
-}
-
-function removeInvoiceItem(button) {
-    const container = document.getElementById('printInvoiceItems');
-    if (container.children.length > 1) {
-        button.parentElement.remove();
-    } else {
-        showNotification('At least one item is required', 'warning');
-    }
-}
-
-function previewPrintInvoice() {
-    const form = document.getElementById('printInvoiceForm');
-    if (!form) {
-        showNotification('Form not found', 'error');
-        return;
-    }
-    
-    const formData = new FormData(form);
-    
-    // Validate required fields
-    const vendorName = formData.get('vendorName');
-    const invoiceDate = formData.get('invoiceDate');
-    
-    if (!vendorName || !invoiceDate) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Collect items
-    const items = [];
-    const descriptions = formData.getAll('itemDescription[]');
-    const quantities = formData.getAll('itemQuantity[]');
-    const costs = formData.getAll('itemCost[]');
-    
-    for (let i = 0; i < descriptions.length; i++) {
-        if (descriptions[i] && quantities[i] && costs[i]) {
-            items.push({
-                description: descriptions[i],
-                quantity: parseInt(quantities[i]),
-                cost: parseFloat(costs[i])
-            });
-        }
-    }
-    
-    if (items.length === 0) {
-        showNotification('Please add at least one item', 'error');
-        return;
-    }
-    
-    // Close the modal first
-    closeModal('printInvoiceModal');
-    
-    // Generate preview
-    generatePrintInvoicePreview(vendorName, invoiceDate, items, formData.get('vendorLogo'), formData.get('notes'));
-}
-
-function generatePrintInvoicePreview(vendorName, invoiceDate, items, vendorLogo, notes) {
-    // Calculate totals
-    let subtotal = 0;
-    items.forEach(item => {
-        subtotal += item.quantity * item.cost;
-    });
-    
-    // Create preview HTML
-    const previewHTML = `
-        <div class="print-invoice-header">
-            <div>
-                <h1 class="print-invoice-title">CyndyP Stitchcraft</h1>
-                <p class="print-invoice-date">Invoice Date: ${new Date(invoiceDate).toLocaleDateString()}</p>
-            </div>
-            <div class="print-vendor-info">
-                ${vendorLogo ? `<img src="${vendorLogo}" alt="${vendorName} Logo" class="print-vendor-logo">` : ''}
-                <h2 class="print-vendor-name">${vendorName}</h2>
-            </div>
-        </div>
-        
-        <div class="print-invoice-items">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="item-description">Description</th>
-                        <th class="item-quantity">Qty</th>
-                        <th class="item-cost">Unit Cost</th>
-                        <th class="item-total">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => `
-                        <tr>
-                            <td class="item-description">${item.description}</td>
-                            <td class="item-quantity">${item.quantity}</td>
-                            <td class="item-cost">$${item.cost.toFixed(2)}</td>
-                            <td class="item-total">$${(item.quantity * item.cost).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="print-invoice-total">
-            <div class="total-amount">Total: $${subtotal.toFixed(2)}</div>
-        </div>
-        
-        ${notes ? `
-            <div class="print-invoice-notes">
-                <h4>Notes:</h4>
-                <p>${notes}</p>
-            </div>
-        ` : ''}
-        
-        <div class="print-invoice-signature">
-            <div>
-                <div class="print-signature-line"></div>
-                <div class="print-signature-label">CyndyP Stitchcraft Signature</div>
-            </div>
-            <div>
-                <div class="print-signature-line"></div>
-                <div class="print-signature-label">${vendorName} Signature</div>
-            </div>
-        </div>
-    `;
-    
-    // Show preview
-    const preview = document.getElementById('printInvoicePreview');
-    if (!preview) {
-        // Create preview element if it doesn't exist
-        const previewElement = document.createElement('div');
-        previewElement.id = 'printInvoicePreview';
-        previewElement.className = 'print-invoice-preview';
-        document.body.appendChild(previewElement);
-    }
-    
-    document.getElementById('printInvoicePreview').innerHTML = previewHTML;
-    document.getElementById('printInvoicePreview').style.display = 'block';
-    
-    // Scroll to preview
-    document.getElementById('printInvoicePreview').scrollIntoView({ behavior: 'smooth' });
-}
-
-function printInvoice() {
-    const form = document.getElementById('printInvoiceForm');
-    const formData = new FormData(form);
-    
-    // Validate required fields
-    const vendorName = formData.get('vendorName');
-    const invoiceDate = formData.get('invoiceDate');
-    
-    if (!vendorName || !invoiceDate) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Collect items
-    const items = [];
-    const descriptions = formData.getAll('itemDescription[]');
-    const quantities = formData.getAll('itemQuantity[]');
-    const costs = formData.getAll('itemCost[]');
-    
-    for (let i = 0; i < descriptions.length; i++) {
-        if (descriptions[i] && quantities[i] && costs[i]) {
-            items.push({
-                description: descriptions[i],
-                quantity: parseInt(quantities[i]),
-                cost: parseFloat(costs[i])
-            });
-        }
-    }
-    
-    if (items.length === 0) {
-        showNotification('Please add at least one item', 'error');
-        return;
-    }
-    
-    // Generate and print
-    generatePrintInvoicePreview(vendorName, invoiceDate, items, formData.get('vendorLogo'), formData.get('notes'));
-    
-    // Wait a moment for the preview to render, then print
-    setTimeout(() => {
-        window.print();
-    }, 500);
-}
-
-// Add form submission handler for print invoice
-document.addEventListener('DOMContentLoaded', function() {
-    const printInvoiceForm = document.getElementById('printInvoiceForm');
-    if (printInvoiceForm) {
-        printInvoiceForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            printInvoice();
-        });
-    }
-});
-
-// Function to add a project to the invoice
-
 // Sales Management
 function updateExistingSalesWithCommission() {
     let updated = false;
@@ -7451,7 +7079,7 @@ function loadSalesTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddSaleModal() {
@@ -7980,7 +7608,11 @@ function markAsSold(index) {
     }
 }
 
-// Test function removed - no longer needed
+function testDeleteClick(index) {
+    console.log('🧪 TEST: Delete button click detected!');
+    console.log('🧪 TEST: Index received:', index);
+    console.log('🧪 TEST: About to call deleteItem function...');
+}
 
 // Custom confirmation modal functions
 let pendingConfirmAction = null;
@@ -9440,7 +9072,7 @@ function loadWIPTab() {
     updateWIPStats(wipItems);
     loadWIPGrid(wipItems);
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function updateWIPStats(wipItems) {
@@ -9650,7 +9282,7 @@ function loadGallery() {
             </div>
         `;
         
-        // Desktop table loaded
+        // Mobile cards are loaded in switchTab function
         return;
     }
     
@@ -9679,7 +9311,7 @@ function loadGallery() {
         galleryGrid.appendChild(photoElement);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddPhotoModal() {
@@ -9739,18 +9371,6 @@ async function handleAddPhoto(e) {
     
     if (!file) {
         showNotification('Please select a photo', 'error');
-        return;
-    }
-    
-    // Mobile-specific validation
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        showNotification('File too large. Please select an image smaller than 10MB.', 'error');
-        return;
-    }
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        showNotification('Please select a valid image file', 'error');
         return;
     }
     
@@ -10433,7 +10053,7 @@ function loadIdeasGrid() {
             </div>
         `;
         
-        // Desktop table loaded
+        // Mobile cards are loaded in switchTab function
         return;
     }
     
@@ -10464,7 +10084,7 @@ function loadIdeasGrid() {
         `;
     }).join('');
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function filterIdeas() {
@@ -10749,28 +10369,6 @@ function openCameraForIdeas() {
 function openCameraForGallery() {
     currentCameraContext = 'gallery';
     openCamera();
-}
-
-// Mobile-friendly gallery upload helper
-function setupMobileGalleryUpload() {
-    const photoFileInput = document.getElementById('photoFile');
-    if (photoFileInput && 'ontouchstart' in window) {
-        // Add visual feedback for mobile users
-        photoFileInput.addEventListener('focus', function() {
-            this.style.borderColor = '#4A90A4';
-            this.style.backgroundColor = '#f0f8ff';
-        });
-        
-        photoFileInput.addEventListener('blur', function() {
-            this.style.borderColor = '#4A90A4';
-            this.style.backgroundColor = '#f8f9fa';
-        });
-        
-        // Add mobile-specific styling
-        photoFileInput.style.cursor = 'pointer';
-        photoFileInput.style.minHeight = '44px';
-        photoFileInput.style.minWidth = '44px';
-    }
 }
 
 function openCamera() {

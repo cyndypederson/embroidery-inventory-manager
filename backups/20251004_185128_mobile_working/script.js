@@ -1155,7 +1155,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.76'
+                appVersion: '1.0.32'
             }
         };
         
@@ -2695,7 +2695,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.76'; // Current app version
+                const currentVersion = '1.0.32'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -2935,14 +2935,14 @@ class FormManager {
         }
         
         // Length validation
-        if (field.minLength && field.minLength > 0) {
+        if (field.minLength) {
             rules.push({
                 validator: (value) => this.validationRules.get('minLength').validator(value, field.minLength),
                 message: this.validationRules.get('minLength').message(field.minLength)
             });
         }
         
-        if (field.maxLength && field.maxLength > 0) {
+        if (field.maxLength) {
             rules.push({
                 validator: (value) => this.validationRules.get('maxLength').validator(value, field.maxLength),
                 message: this.validationRules.get('maxLength').message(field.maxLength)
@@ -4276,14 +4276,13 @@ document.addEventListener('DOMContentLoaded', function() {
     registerServiceWorker();
     setupMobileFeatures();
     setupMobileModalEnhancements();
-    setupMobileGalleryUpload();
 });
 
 function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.76';
+        const currentVersion = '1.0.32';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -4319,30 +4318,6 @@ function initializeApp() {
     document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
     document.getElementById('editSaleForm').addEventListener('submit', handleEditSale);
     document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
-    
-    // Mobile-specific file input enhancements
-    const photoFileInput = document.getElementById('photoFile');
-    if (photoFileInput) {
-        // Add mobile-friendly event listeners
-        photoFileInput.addEventListener('change', function(e) {
-            console.log('Photo file input changed:', e.target.files.length, 'files');
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                console.log('File selected:', file.name, file.size, file.type);
-            }
-        });
-        
-        // Ensure proper touch handling on mobile
-        if ('ontouchstart' in window) {
-            photoFileInput.addEventListener('touchstart', function(e) {
-                console.log('Touch start on file input');
-            });
-            
-            photoFileInput.addEventListener('touchend', function(e) {
-                console.log('Touch end on file input');
-            });
-        }
-    }
     document.getElementById('addIdeaForm').addEventListener('submit', handleAddIdea);
     
     // Separate modal form listeners
@@ -4499,37 +4474,15 @@ function calculateEditProjectTotalValue() {
     }
 }
 
-function editItem(itemIdOrIndex) {
-    console.log('📦 editItem called with ID/Index:', itemIdOrIndex); // Debug log
+function editItem(index) {
+    console.log('📦 editItem called with index:', index); // Debug log
     
-    let item;
-    let actualIndex;
-    
-    // Handle both ID and index parameters
-    if (typeof itemIdOrIndex === 'string' || typeof itemIdOrIndex === 'number' && itemIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        actualIndex = inventory.findIndex(i => i.id === itemIdOrIndex);
-        if (actualIndex >= 0) {
-            item = inventory[actualIndex];
-        }
-    } else {
-        // It's an index (small number)
-        actualIndex = parseInt(itemIdOrIndex);
-        if (actualIndex >= 0 && actualIndex < inventory.length) {
-            item = inventory[actualIndex];
-        }
-    }
-    
-    if (!item) {
-        console.error('Item not found with parameter:', itemIdOrIndex);
-        return;
-    }
-    
+    const item = inventory[index];
     console.log('📝 Item to edit:', item); // Debug log
     console.log('📝 Item type:', item.type); // Debug log
     
     // Populate the edit form
-    document.getElementById('editItemIndex').value = actualIndex;
+    document.getElementById('editItemIndex').value = index;
     document.getElementById('editItemDescription').value = item.description || item.name || '';
     document.getElementById('editItemLocation').value = item.location || '';
     document.getElementById('editItemQuantity').value = item.quantity || 1;
@@ -4569,19 +4522,19 @@ function editItem(itemIdOrIndex) {
     imageDisplay.src = '';
     imageSection.style.display = 'none';
     
-    // Show image section for projects and inventory items with images
-    if (item.type === 'project' || !item.type || (item.imageData || item.photo?.dataUrl)) {
-        if (item.imageData || item.photo?.dataUrl) {
-            const imageData = item.imageData || item.photo?.dataUrl;
+    // Only show image section for projects, not for inventory items
+    if (item.type === 'project' || !item.type) {
+    if (item.imageData || item.photo?.dataUrl) {
+        const imageData = item.imageData || item.photo?.dataUrl;
             if (imageData && imageData.trim() !== '' && imageData !== 'undefined') {
-                imageDisplay.src = imageData;
-                imageSection.style.display = 'block';
-                console.log('📸 Displaying existing image in edit modal');
-            } else {
-                console.log('📸 Image data is empty or invalid, hiding section');
-            }
+            imageDisplay.src = imageData;
+            imageSection.style.display = 'block';
+            console.log('📸 Displaying existing image in edit modal');
         } else {
-            console.log('📸 No image to display in edit modal');
+                console.log('📸 Image data is empty or invalid, hiding section');
+        }
+    } else {
+        console.log('📸 No image to display in edit modal');
         }
     } else {
         console.log('📸 Inventory item - not showing image section');
@@ -4673,7 +4626,27 @@ function editProject(index) {
         }, 100);
     }
     
-    // Projects don't need images - they're tracked through inventory, ideas, and gallery
+    // Display existing image if available
+    const imageSection = document.getElementById('editProjectImageSection');
+    const imageDisplay = document.getElementById('editProjectImageDisplay');
+    
+    // Clear any previous image and hide section by default
+    imageDisplay.src = '';
+    imageSection.style.display = 'none';
+    
+    if (item.imageData || item.photo?.dataUrl) {
+        const imageData = item.imageData || item.photo?.dataUrl;
+        if (imageData && imageData.trim() !== '' && imageData !== 'undefined') {
+            imageDisplay.src = imageData;
+            imageSection.style.display = 'block';
+            console.log('📸 Displaying existing image in edit project modal');
+        } else {
+            console.log('📸 Image data is empty or invalid, hiding section');
+        }
+    } else {
+        imageSection.style.display = 'none';
+        console.log('📸 No image to display in edit project modal');
+    }
     
     // Show the project modal
     document.getElementById('editProjectModal').style.display = 'block';
@@ -5062,7 +5035,7 @@ function switchTab(tabName) {
     if (tabName === 'projects') {
         loadInventoryTable(); // Projects table
         // Load mobile cards for projects
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileInventoryCards();
         }
         // Hide pagination for projects - not needed
@@ -5074,7 +5047,7 @@ function switchTab(tabName) {
         // Load inventory items table (data should already be loaded)
         loadInventoryItemsTable(); // Inventory items table
         // Load mobile cards for inventory items
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileInventoryItemsCards();
         }
         // Hide pagination for inventory - not needed
@@ -5086,26 +5059,26 @@ function switchTab(tabName) {
         // Load customers table (data should already be loaded)
         loadCustomersTable();
         // Load mobile cards for customers
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileCustomerCards();
         }
     } else if (tabName === 'wip') {
         loadWIPTab();
         // Load mobile cards for WIP
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileWIPCards();
         }
     } else if (tabName === 'gallery') {
         loadGallery();
         // Load mobile cards for gallery
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileGalleryCards();
         }
     } else if (tabName === 'sales') {
         // Load sales table (data should already be loaded)
         loadSalesTable();
         // Load mobile cards for sales
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileSalesCards();
         }
         // Show bulk actions integrated with sales actions
@@ -5132,7 +5105,7 @@ function switchTab(tabName) {
     } else if (tabName === 'ideas') {
         loadIdeasGrid();
         // Load mobile cards for ideas
-        if (isMobile()) {
+        if (window.innerWidth <= 768) {
             loadMobileIdeasCards();
         }
     }
@@ -5164,7 +5137,7 @@ function loadData() {
     updateCustomerFilters();
     
     // Load mobile cards for the currently active tab on initial page load
-    if (isMobile()) {
+    if (window.innerWidth <= 768) {
         const activeTab = document.querySelector('.nav-btn.active')?.getAttribute('data-tab') || 'projects';
         console.log('📱 Loading mobile cards for active tab on initial load:', activeTab);
         
@@ -5655,61 +5628,10 @@ function updateEditStatusOptions() {
     }
 }
 
-// Update table headers based on view mode
-function updateTableHeaders(showDetailed = false) {
-    const headerRow = document.getElementById('projectsTableHeader');
-    if (!headerRow) return;
-    
-    if (showDetailed) {
-        // Full detailed view for editing
-        headerRow.innerHTML = `
-            <th>Project</th>
-            <th>Category</th>
-            <th>Qty</th>
-            <th>Status</th>
-            <th>Due Date</th>
-            <th>Notes</th>
-            <th>Link</th>
-            <th>Actions</th>
-        `;
-    } else {
-        // Simplified home view
-        headerRow.innerHTML = `
-            <th>Project</th>
-            <th>Status</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-        `;
-    }
-}
-
-// Toggle between simplified and detailed view
-let isDetailedView = false;
-function toggleDetailedView() {
-    isDetailedView = !isDetailedView;
-    const toggleBtn = document.getElementById('toggleViewBtn');
-    
-    if (isDetailedView) {
-        toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Simple View';
-        toggleBtn.classList.remove('btn-outline');
-        toggleBtn.classList.add('btn-primary');
-    } else {
-        toggleBtn.innerHTML = '<i class="fas fa-list"></i> Detailed View';
-        toggleBtn.classList.remove('btn-primary');
-        toggleBtn.classList.add('btn-outline');
-    }
-    
-    // Reload the table with the new view mode
-    loadInventoryTable(isDetailedView);
-}
-
 // Projects Management (Customer Work)
-function loadInventoryTable(showDetailed = false) {
+function loadInventoryTable() {
     const tbody = document.getElementById('inventoryTableBody');
     tbody.innerHTML = '';
-    
-    // Update table headers based on view mode
-    updateTableHeaders(showDetailed);
     
     // Filter for projects only (not inventory items)
     const projectItems = inventory.filter(item => item.type === 'project' || !item.type);
@@ -5730,6 +5652,7 @@ function loadInventoryTable(showDetailed = false) {
                 (invItem.name === item.name && invItem.dateAdded === item.dateAdded)
             );
         }
+        console.log(`Project: ${item.name}, Filtered index: ${filteredIndex}, Original index: ${originalIndex}`);
         groupedItems[customer].push({ item, index: originalIndex });
     });
     
@@ -5742,11 +5665,6 @@ function loadInventoryTable(showDetailed = false) {
     
     sortedCustomers.forEach(customer => {
         const customerItems = groupedItems[customer];
-        
-        // Skip customers with no projects (shouldn't happen but safety check)
-        if (!customerItems || customerItems.length === 0) {
-            return;
-        }
         
         // Create customer header row
         const headerRow = document.createElement('tr');
@@ -5762,9 +5680,8 @@ function loadInventoryTable(showDetailed = false) {
         const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
-        const colspan = showDetailed ? 8 : 4;
         headerRow.innerHTML = `
-            <td colspan="${colspan}">
+            <td colspan="8">
                 <div class="customer-header-content">
                     <i class="fas fa-chevron-right customer-toggle"></i>
                     <strong>${customer}</strong>
@@ -5777,15 +5694,25 @@ function loadInventoryTable(showDetailed = false) {
         `;
         tbody.appendChild(headerRow);
         
-        // Hide pagination completely - not needed for projects
-        const paginationContainer = document.getElementById('projectsPagination');
-        if (paginationContainer) {
-            paginationContainer.style.display = 'none';
-        }
+        // Create customer group container
+        const groupRow = document.createElement('tr');
+        groupRow.className = 'customer-group';
+        groupRow.id = `customer-group-${customer.replace(/\s+/g, '-').toLowerCase()}`;
+        groupRow.style.display = 'none';
+        groupRow.innerHTML = '<td colspan="9"><div class="customer-projects"></div></td>';
+        tbody.appendChild(groupRow);
+        
+    // Hide pagination completely - not needed for projects
+    const paginationContainer = document.getElementById('projectsPagination');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
     
-    // Add individual project rows for this customer directly to the tbody
+    // Add individual project rows
+    const projectsContainer = groupRow.querySelector('.customer-projects');
     customerItems.forEach(({ item, index }) => {
-            const projectRow = document.createElement('tr');
+            console.log(`Creating project row for: ${item.name}, using index: ${index}`);
+            const projectRow = document.createElement('div');
             projectRow.className = 'project-row';
             
             // Format due date with urgency styling
@@ -5848,70 +5775,39 @@ function loadInventoryTable(showDetailed = false) {
             const typeDisplay = item.type === 'inventory' ? 'Inventory' : 'Project';
             const typeClass = item.type === 'inventory' ? 'type-inventory' : 'type-project';
             
-            if (showDetailed) {
-                // Full detailed view for editing
-                projectRow.innerHTML = `
-                    <td class="project-name"><strong>${item.name}</strong></td>
-                    <td class="project-category">${categoryDisplay}</td>
-                    <td class="project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></td>
-                    <td class="project-status">
-                        <span class="status-badge status-${item.status}">${item.status}</span>
-                        <div class="quick-actions">${quickActions}</div>
-                    </td>
-                    <td class="project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></td>
-                    <td class="project-notes">${notesDisplay}</td>
-                    <td class="project-pattern">${patternLinkButton}</td>
-                    <td class="project-actions">
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-            } else {
-                // Simplified home view
-                projectRow.innerHTML = `
-                    <td class="project-name"><strong>${item.name}</strong></td>
-                    <td class="project-status">
-                        <span class="status-badge status-${item.status}">${item.status}</span>
-                        <div class="quick-actions">${quickActions}</div>
-                    </td>
-                    <td class="project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></td>
-                    <td class="project-actions">
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-            }
-            // Start collapsed by default
-            projectRow.style.display = 'none';
-            tbody.appendChild(projectRow);
+            projectRow.innerHTML = `
+                <div class="project-cell project-name"><strong>${item.name}</strong></div>
+                <div class="project-cell project-category">${categoryDisplay}</div>
+                <div class="project-cell project-quantity"><span class="quantity-badge">${item.quantity || 1}</span></div>
+                <div class="project-cell project-status">
+                    <span class="status-badge status-${item.status}">${item.status}</span>
+                    <div class="quick-actions">${quickActions}</div>
+                </div>
+                <div class="project-cell project-due-date"><span class="due-date ${dueDateClass}">${dueDate}</span></div>
+                <div class="project-cell project-notes">${notesDisplay}</div>
+                <div class="project-cell project-pattern">${patternLinkButton}</div>
+                <div class="project-cell project-actions">
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="editProject(${index})" title="Edit Project">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            projectsContainer.appendChild(projectRow);
         });
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 // CLEAN MOBILE CARD SYSTEM - REWRITTEN FROM SCRATCH
@@ -5951,21 +5847,17 @@ const MobileCardManager = {
     },
     
     // Create a simple data card
-    createDataCard(title, subtitle, details, editFunction, deleteFunction, imageData = null) {
+    createDataCard(title, subtitle, details, editFunction) {
             const card = document.createElement('div');
         card.className = 'mobile-card';
             card.innerHTML = `
                 <div class="mobile-card-content">
-                ${imageData ? `<div class="mobile-card-image"><img src="${imageData}" alt="${title}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 0.5rem;"></div>` : ''}
                 <h3>${title}</h3>
                 <p><strong>${subtitle}</strong></p>
                 ${details}
                 <div class="mobile-card-actions">
-                    <button class="btn btn-sm btn-edit" onclick="${editFunction}" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-delete" onclick="${deleteFunction}" title="Delete">
-                        <i class="fas fa-trash"></i>
+                    <button class="btn btn-secondary" onclick="${editFunction}">
+                        <i class="fas fa-edit"></i> Edit
                     </button>
                 </div>
                 </div>
@@ -5981,7 +5873,7 @@ const MobileCardManager = {
     container.innerHTML = '';
     
         // Add button
-        container.appendChild(this.createAddButton('Add New Project', 'openAddProjectModal()'));
+        container.appendChild(this.createAddButton('Add New Project', 'openAddItemModal()'));
         
         // Get projects
         const projects = (window.inventory || []).filter(item => item.type === 'project' || !item.type);
@@ -6000,74 +5892,18 @@ const MobileCardManager = {
         `;
             container.appendChild(emptyCard);
         } else {
-            // Group projects by customer
-            const projectsByCustomer = {};
-            projects.forEach(project => {
-                const customer = project.customer || 'No Customer';
-                if (!projectsByCustomer[customer]) {
-                    projectsByCustomer[customer] = [];
-                }
-                projectsByCustomer[customer].push(project);
-            });
-            
-            // Sort customers alphabetically
-            const sortedCustomers = Object.keys(projectsByCustomer).sort();
-            
-            // Create customer groups
-            sortedCustomers.forEach(customer => {
-                // Add customer header with collapsible functionality
-                const customerHeader = document.createElement('div');
-                customerHeader.className = 'mobile-customer-header';
-                const sanitizedCustomer = customer.replace(/[^a-zA-Z0-9]/g, '-');
-                
-                // Calculate project status breakdown
-                const customerProjects = projectsByCustomer[customer];
-                const statusCounts = {
-                    pending: customerProjects.filter(p => p.status === 'pending').length,
-                    inProgress: customerProjects.filter(p => p.status === 'in progress').length,
-                    completed: customerProjects.filter(p => p.status === 'completed').length,
-                    sold: customerProjects.filter(p => p.status === 'sold').length
-                };
-                
-                const statusText = `${customerProjects.length} project${customerProjects.length !== 1 ? 's' : ''} (${statusCounts.pending} pending, ${statusCounts.inProgress} in progress, ${statusCounts.completed} completed, ${statusCounts.sold} sold)`;
-                
-                customerHeader.innerHTML = `
-                    <div class="mobile-customer-header-content" onclick="toggleCustomerGroup('${sanitizedCustomer}')" data-customer="${sanitizedCustomer}">
-                        <div class="customer-info">
-                            <h3>
-                                <i class="fas fa-chevron-right customer-chevron"></i>
-                                <i class="fas fa-user"></i> ${customer}
-                            </h3>
-                            <div class="customer-stats">${statusText}</div>
-            </div>
-            </div>
-        `;
-                container.appendChild(customerHeader);
-                
-                // Add collapsible container for projects
-                const projectsContainer = document.createElement('div');
-                projectsContainer.className = 'mobile-customer-projects';
-                projectsContainer.id = `customer-projects-${customer.replace(/[^a-zA-Z0-9]/g, '-')}`;
-                projectsContainer.style.display = 'none'; // Start collapsed
-                
-                // Add projects for this customer
-                projectsByCustomer[customer].forEach((project, customerIndex) => {
-                    const originalIndex = projects.findIndex(p => p === project);
-                    const details = `
-                        <p><strong>Status:</strong> ${project.status || 'Unknown'}</p>
-                        <p><strong>Value:</strong> $${(project.totalValue || 0).toFixed(2)}</p>
-                        <p><strong>Priority:</strong> ${project.priority || 'Medium'}</p>
-                    `;
-                    projectsContainer.appendChild(this.createDataCard(
-                        project.description || 'Untitled Project',
-                        'Project',
-                        details,
-                        `editProject(${originalIndex})`,
-                        `deleteProject(${originalIndex})`
-                    ));
-                });
-                
-                container.appendChild(projectsContainer);
+            projects.forEach((project, index) => {
+                const details = `
+                    <p><strong>Customer:</strong> ${project.customer || 'No customer'}</p>
+                    <p><strong>Status:</strong> ${project.status || 'Unknown'}</p>
+                    <p><strong>Value:</strong> $${(project.totalValue || 0).toFixed(2)}</p>
+                `;
+                container.appendChild(this.createDataCard(
+                    project.description || 'Untitled Project',
+                    'Project',
+                    details,
+                    `editProject(${index})`
+                ));
             });
         }
     },
@@ -6075,10 +5911,10 @@ const MobileCardManager = {
     // Load customers
     loadCustomers() {
         const container = document.getElementById('mobileCustomerCards');
-    if (!container) return;
-
-    container.innerHTML = '';
-    
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
         // Add button
         container.appendChild(this.createAddButton('Add New Customer', 'openAddCustomerModal()'));
         
@@ -6090,7 +5926,7 @@ const MobileCardManager = {
             emptyCard.className = 'mobile-card';
             emptyCard.innerHTML = `
             <div class="mobile-card-content">
-            <div class="empty-state">
+                    <div class="empty-state">
                         <i class="fas fa-users"></i>
                         <h3>No Customers Yet</h3>
                         <p>Start adding your embroidery customers!</p>
@@ -6108,8 +5944,7 @@ const MobileCardManager = {
                     customer.name || 'Unnamed Customer',
                     'Customer',
                     details,
-                    `editCustomer(${index})`,
-                    `deleteCustomer(${index})`
+                    `editCustomer(${index})`
                 ));
             });
         }
@@ -6152,8 +5987,7 @@ const MobileCardManager = {
                     item.description || 'Untitled Item',
                     'Inventory Item',
                     details,
-                    `editInventoryItem(${index})`,
-                    `deleteInventoryItem(${index})`
+                    `editInventoryItem(${index})`
                 ));
             });
         }
@@ -6195,9 +6029,7 @@ const MobileCardManager = {
                     photo.title || 'Untitled Photo',
                     'Gallery Item',
                     details,
-                    `editPhoto(${index})`,
-                    `deletePhoto(${index})`,
-                    photo.imageData
+                    `editPhoto(${index})`
                 ));
             });
         }
@@ -6205,79 +6037,41 @@ const MobileCardManager = {
     
     // Load ideas
     loadIdeas() {
-        const container = document.getElementById('mobileIdeasCards');
-        if (!container) return;
+    const container = document.getElementById('mobileIdeasCards');
+    if (!container) return;
 
         container.innerHTML = '';
         
         // Add button
         container.appendChild(this.createAddButton('Add New Idea', 'openAddIdeaModal()'));
         
-        // Combine ideas and inventory items with images
-        const allItems = [];
-        
-        // Add ideas
+        // Get ideas
         const ideas = window.ideas || [];
-        ideas.forEach((idea, index) => {
-            allItems.push({
-                ...idea,
-                type: 'idea',
-                index: index,
-                displayTitle: idea.title || 'Untitled Idea',
-                displayDescription: idea.description || 'No description',
-                displayCategory: idea.category || 'No category',
-                imageData: idea.imageData || idea.imageUrl,
-                editFunction: `editIdea(${index})`,
-                deleteFunction: `deleteIdea(${index})`
-            });
-        });
         
-        // Add inventory items with images
-        const inventory = window.inventory || [];
-        inventory.forEach((item, index) => {
-            if (item.imageData || item.photo?.dataUrl) {
-                const imageData = item.imageData || item.photo?.dataUrl;
-                allItems.push({
-                    ...item,
-                    type: 'inventory',
-                    index: index,
-                    displayTitle: item.name || item.description || 'Untitled Item',
-                    displayDescription: item.description || 'No description',
-                    displayCategory: item.category || 'Inventory',
-                    imageData: imageData,
-                    editFunction: `editItem(${index})`,
-                    deleteFunction: `deleteItem(${index})`
-                });
-            }
-        });
-        
-        if (allItems.length === 0) {
+        if (ideas.length === 0) {
             const emptyCard = document.createElement('div');
             emptyCard.className = 'mobile-card';
             emptyCard.innerHTML = `
                 <div class="mobile-card-content">
-                    <div class="empty-state">
-                        <i class="fas fa-lightbulb"></i>
-                        <h3>No Ideas Yet</h3>
-                        <p>Start capturing your creative ideas and inspiration.</p>
-                    </div>
-                </div>
-            `;
+            <div class="empty-state">
+                <i class="fas fa-lightbulb"></i>
+                <h3>No Ideas Yet</h3>
+                <p>Start capturing your creative ideas and inspiration.</p>
+            </div>
+            </div>
+        `;
             container.appendChild(emptyCard);
         } else {
-            allItems.forEach((item) => {
+            ideas.forEach((idea, index) => {
                 const details = `
-                    <p><strong>Type:</strong> ${item.type === 'idea' ? 'Idea' : 'Inventory Item'}</p>
-                    <p><strong>Description:</strong> ${item.displayDescription}</p>
-                    <p><strong>Category:</strong> ${item.displayCategory}</p>
+                    <p><strong>Description:</strong> ${idea.description || 'No description'}</p>
+                    <p><strong>Category:</strong> ${idea.category || 'No category'}</p>
                 `;
                 container.appendChild(this.createDataCard(
-                    item.displayTitle,
-                    item.type === 'idea' ? 'Idea' : 'Inventory',
+                    idea.title || 'Untitled Idea',
+                    'Idea',
                     details,
-                    item.editFunction,
-                    item.deleteFunction,
-                    item.imageData
+                    `editIdea(${index})`
                 ));
             });
         }
@@ -6342,151 +6136,25 @@ function loadMobileIdeasCards() {
     MobileCardManager.loadIdeas();
 }
 
-// Toggle customer group visibility
-function toggleCustomerGroup(customerName) {
-    // Handle both desktop and mobile versions
-    const sanitizedCustomerName = customerName.replace(/\s+/g, '-').toLowerCase();
-    
-    // Desktop version - show/hide project rows for this customer
-    const desktopHeader = document.querySelector(`[data-customer="${customerName}"]`);
-    const desktopChevron = desktopHeader ? desktopHeader.querySelector('.customer-toggle') : null;
-    
-    // Find all project rows for this customer
-    const projectRows = document.querySelectorAll('.project-row');
-    let customerProjectRows = [];
-    
-    // Filter project rows that belong to this customer
-    projectRows.forEach(row => {
-        const projectName = row.querySelector('.project-name strong')?.textContent;
-        if (projectName) {
-            // Check if this project belongs to the customer
-            let matchingProject;
-            if (customerName === 'No Customer') {
-                // For "No Customer", find projects where customer is null, undefined, or empty
-                matchingProject = inventory.find(item => item.name === projectName && (!item.customer || item.customer === ''));
-            } else {
-                // For regular customers, match exactly
-                matchingProject = inventory.find(item => item.name === projectName && item.customer === customerName);
-            }
-            if (matchingProject) {
-                customerProjectRows.push(row);
-            }
-        }
-    });
-    
-    // Mobile version - look for mobile container
-    const mobileContainer = document.getElementById('mobileInventoryCards');
-    const mobileHeaderContent = mobileContainer ? mobileContainer.querySelector(`[data-customer="${customerName}"]`) : null;
-    const mobileChevron = mobileHeaderContent ? mobileHeaderContent.querySelector('.customer-chevron') : null;
-    const mobileProjectsContainer = document.getElementById(`customer-projects-${sanitizedCustomerName}`);
-    
-    // Handle desktop version - toggle project row visibility
-    if (customerProjectRows.length > 0 && desktopChevron) {
-        const firstRow = customerProjectRows[0];
-        const isVisible = firstRow.style.display !== 'none';
-        
-        if (isVisible) {
-            // Collapse - hide all project rows for this customer
-            customerProjectRows.forEach(row => {
-                row.style.display = 'none';
-            });
-            desktopChevron.className = 'fas fa-chevron-right customer-toggle';
-        } else {
-            // Expand - show all project rows for this customer
-            customerProjectRows.forEach(row => {
-                row.style.display = 'table-row';
-            });
-            desktopChevron.className = 'fas fa-chevron-down customer-toggle';
-        }
-    }
-    
-    // Handle mobile version
-    if (mobileProjectsContainer && mobileChevron) {
-        const isVisible = mobileProjectsContainer.style.display !== 'none';
-        
-        if (isVisible) {
-            // Collapse
-            mobileProjectsContainer.style.display = 'none';
-            mobileChevron.className = 'fas fa-chevron-right customer-chevron';
-            mobileChevron.style.transform = 'rotate(0deg)';
-        } else {
-            // Expand
-            mobileProjectsContainer.style.display = 'block';
-            mobileChevron.className = 'fas fa-chevron-down customer-chevron';
-            mobileChevron.style.transform = 'rotate(0deg)';
-        }
-    }
-}
-
-// Mobile card delete functions consolidated into main delete functions above
-
-
 // Mobile modal enhancements
 function setupMobileModalEnhancements() {
     // Only apply on mobile devices
-    if (!isMobile()) return;
+    if (window.innerWidth > 768) return;
     
-    // Mobile modal enhancements for touch devices
+    // This function is now handled by MobileCardManager
     console.log('📱 Mobile modal enhancements setup complete');
 }
 
 function openAddInventoryModal() {
-    const modal = document.getElementById('addInventoryModal');
-    const form = document.getElementById('addInventoryForm');
-    
-    if (form) {
-        form.reset();
-    }
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="number"], textarea, select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Inventory modal opened');
-    } else {
-        console.error('Add Inventory modal not found');
-    }
+    document.getElementById('addInventoryForm').reset();
+    document.getElementById('addInventoryModal').style.display = 'block';
 }
 
 // Dedicated Project Modal Functions  
 function openAddProjectModal() {
-    const modal = document.getElementById('addProjectModal');
-    const form = document.getElementById('addProjectForm');
-    
-    if (form) {
-        form.reset();
-    }
-    
+    document.getElementById('addProjectForm').reset();
     populateCustomerSelect('projectCustomer');
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="number"], textarea, select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Project modal opened');
-    } else {
-        console.error('Add Project modal not found');
-    }
+    document.getElementById('addProjectModal').style.display = 'block';
 }
 
 // Legacy function for backward compatibility
@@ -6625,7 +6293,19 @@ async function handleAddProject(e) {
         photo: null
     };
     
-    // Projects don't need images - they're tracked through inventory, ideas, and gallery
+    // Handle photo upload
+    const photoInput = document.getElementById('projectPhoto');
+    if (photoInput.files && photoInput.files[0]) {
+        try {
+            const photoData = await processPhoto(photoInput.files[0]);
+            projectData.photo = photoData;
+            projectData.imageData = photoData.dataUrl;
+        } catch (error) {
+            console.error('Error processing photo:', error);
+            alert('Error processing photo. Please try again.');
+            return;
+        }
+    }
     
     // Add to inventory array (projects are stored in the same array)
     inventory.push(projectData);
@@ -6792,7 +6472,14 @@ async function saveItemWithPhoto(item) {
             closeModal('addItemModal');
             
             // Force close on mobile if needed
-            // Modal closed successfully
+            if (window.innerWidth <= 768) {
+                const modal = document.getElementById('addItemModal');
+                if (modal && modal.style.display !== 'none') {
+                    console.log('🔄 Force closing modal on mobile');
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            }
             
             showNotification('Item added successfully!', 'success');
             console.log('✅ Item added and modal should be closed');
@@ -6878,7 +6565,7 @@ function loadInventoryItemsTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
     
     // Hide pagination for inventory - not needed
     const inventoryPagination = document.getElementById('inventoryPagination');
@@ -6949,35 +6636,12 @@ function loadCustomersTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddCustomerModal() {
-    const modal = document.getElementById('addCustomerModal');
-    const form = document.getElementById('addCustomerForm');
-    
-    if (form) {
-        form.reset();
-    }
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="email"], input[type="tel"], textarea');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Customer modal opened');
-    } else {
-        console.error('Add Customer modal not found');
-    }
+    document.getElementById('addCustomerForm').reset();
+    document.getElementById('addCustomerModal').style.display = 'block';
 }
 
 function handleAddCustomer(e) {
@@ -7090,241 +6754,6 @@ function handleEditCustomer(e) {
     
     showNotification('Customer updated successfully!', 'success');
 }
-
-// Print Invoice Functions
-function openPrintInvoiceModal() {
-    if (!checkAuthentication()) {
-        sessionStorage.setItem('requestedTab', 'sales');
-        showAuthModal();
-        return;
-    }
-    
-    // Set today's date
-    document.getElementById('printInvoiceDate').value = new Date().toISOString().split('T')[0];
-    
-    // Clear the form
-    document.getElementById('printInvoiceForm').reset();
-    document.getElementById('printInvoiceDate').value = new Date().toISOString().split('T')[0];
-    
-    // Ensure at least one item row exists
-    const itemsContainer = document.getElementById('printInvoiceItems');
-    if (itemsContainer.children.length === 0) {
-        addInvoiceItem();
-    }
-    
-    document.getElementById('printInvoiceModal').style.display = 'block';
-}
-
-function addInvoiceItem() {
-    const container = document.getElementById('printInvoiceItems');
-    const itemRow = document.createElement('div');
-    itemRow.className = 'invoice-item-row';
-    
-    itemRow.innerHTML = `
-        <input type="text" name="itemDescription[]" placeholder="Item description" required>
-        <input type="number" name="itemQuantity[]" placeholder="Qty" min="1" value="1" required>
-        <input type="number" name="itemCost[]" placeholder="Cost" min="0" step="0.01" required>
-        <button type="button" class="btn btn-sm btn-outline" onclick="removeInvoiceItem(this)">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
-    
-    container.appendChild(itemRow);
-}
-
-function removeInvoiceItem(button) {
-    const container = document.getElementById('printInvoiceItems');
-    if (container.children.length > 1) {
-        button.parentElement.remove();
-    } else {
-        showNotification('At least one item is required', 'warning');
-    }
-}
-
-function previewPrintInvoice() {
-    const form = document.getElementById('printInvoiceForm');
-    if (!form) {
-        showNotification('Form not found', 'error');
-        return;
-    }
-    
-    const formData = new FormData(form);
-    
-    // Validate required fields
-    const vendorName = formData.get('vendorName');
-    const invoiceDate = formData.get('invoiceDate');
-    
-    if (!vendorName || !invoiceDate) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Collect items
-    const items = [];
-    const descriptions = formData.getAll('itemDescription[]');
-    const quantities = formData.getAll('itemQuantity[]');
-    const costs = formData.getAll('itemCost[]');
-    
-    for (let i = 0; i < descriptions.length; i++) {
-        if (descriptions[i] && quantities[i] && costs[i]) {
-            items.push({
-                description: descriptions[i],
-                quantity: parseInt(quantities[i]),
-                cost: parseFloat(costs[i])
-            });
-        }
-    }
-    
-    if (items.length === 0) {
-        showNotification('Please add at least one item', 'error');
-        return;
-    }
-    
-    // Close the modal first
-    closeModal('printInvoiceModal');
-    
-    // Generate preview
-    generatePrintInvoicePreview(vendorName, invoiceDate, items, formData.get('vendorLogo'), formData.get('notes'));
-}
-
-function generatePrintInvoicePreview(vendorName, invoiceDate, items, vendorLogo, notes) {
-    // Calculate totals
-    let subtotal = 0;
-    items.forEach(item => {
-        subtotal += item.quantity * item.cost;
-    });
-    
-    // Create preview HTML
-    const previewHTML = `
-        <div class="print-invoice-header">
-            <div>
-                <h1 class="print-invoice-title">CyndyP Stitchcraft</h1>
-                <p class="print-invoice-date">Invoice Date: ${new Date(invoiceDate).toLocaleDateString()}</p>
-            </div>
-            <div class="print-vendor-info">
-                ${vendorLogo ? `<img src="${vendorLogo}" alt="${vendorName} Logo" class="print-vendor-logo">` : ''}
-                <h2 class="print-vendor-name">${vendorName}</h2>
-            </div>
-        </div>
-        
-        <div class="print-invoice-items">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="item-description">Description</th>
-                        <th class="item-quantity">Qty</th>
-                        <th class="item-cost">Unit Cost</th>
-                        <th class="item-total">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => `
-                        <tr>
-                            <td class="item-description">${item.description}</td>
-                            <td class="item-quantity">${item.quantity}</td>
-                            <td class="item-cost">$${item.cost.toFixed(2)}</td>
-                            <td class="item-total">$${(item.quantity * item.cost).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="print-invoice-total">
-            <div class="total-amount">Total: $${subtotal.toFixed(2)}</div>
-        </div>
-        
-        ${notes ? `
-            <div class="print-invoice-notes">
-                <h4>Notes:</h4>
-                <p>${notes}</p>
-            </div>
-        ` : ''}
-        
-        <div class="print-invoice-signature">
-            <div>
-                <div class="print-signature-line"></div>
-                <div class="print-signature-label">CyndyP Stitchcraft Signature</div>
-            </div>
-            <div>
-                <div class="print-signature-line"></div>
-                <div class="print-signature-label">${vendorName} Signature</div>
-            </div>
-        </div>
-    `;
-    
-    // Show preview
-    const preview = document.getElementById('printInvoicePreview');
-    if (!preview) {
-        // Create preview element if it doesn't exist
-        const previewElement = document.createElement('div');
-        previewElement.id = 'printInvoicePreview';
-        previewElement.className = 'print-invoice-preview';
-        document.body.appendChild(previewElement);
-    }
-    
-    document.getElementById('printInvoicePreview').innerHTML = previewHTML;
-    document.getElementById('printInvoicePreview').style.display = 'block';
-    
-    // Scroll to preview
-    document.getElementById('printInvoicePreview').scrollIntoView({ behavior: 'smooth' });
-}
-
-function printInvoice() {
-    const form = document.getElementById('printInvoiceForm');
-    const formData = new FormData(form);
-    
-    // Validate required fields
-    const vendorName = formData.get('vendorName');
-    const invoiceDate = formData.get('invoiceDate');
-    
-    if (!vendorName || !invoiceDate) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Collect items
-    const items = [];
-    const descriptions = formData.getAll('itemDescription[]');
-    const quantities = formData.getAll('itemQuantity[]');
-    const costs = formData.getAll('itemCost[]');
-    
-    for (let i = 0; i < descriptions.length; i++) {
-        if (descriptions[i] && quantities[i] && costs[i]) {
-            items.push({
-                description: descriptions[i],
-                quantity: parseInt(quantities[i]),
-                cost: parseFloat(costs[i])
-            });
-        }
-    }
-    
-    if (items.length === 0) {
-        showNotification('Please add at least one item', 'error');
-        return;
-    }
-    
-    // Generate and print
-    generatePrintInvoicePreview(vendorName, invoiceDate, items, formData.get('vendorLogo'), formData.get('notes'));
-    
-    // Wait a moment for the preview to render, then print
-    setTimeout(() => {
-        window.print();
-    }, 500);
-}
-
-// Add form submission handler for print invoice
-document.addEventListener('DOMContentLoaded', function() {
-    const printInvoiceForm = document.getElementById('printInvoiceForm');
-    if (printInvoiceForm) {
-        printInvoiceForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            printInvoice();
-        });
-    }
-});
-
-// Function to add a project to the invoice
 
 // Sales Management
 function updateExistingSalesWithCommission() {
@@ -7451,41 +6880,14 @@ function loadSalesTable() {
         tbody.appendChild(row);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddSaleModal() {
-    const modal = document.getElementById('addSaleModal');
-    const form = document.getElementById('addSaleForm');
-    
     populateItemSelect('saleItem');
-    
-    if (form) {
-        form.reset();
-        const saleDateInput = document.getElementById('saleDate');
-        if (saleDateInput) {
-            saleDateInput.value = new Date().toISOString().split('T')[0];
-        }
-    }
-    
-    if (modal) {
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="number"], select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Sale modal opened');
-    } else {
-        console.error('Add Sale modal not found');
-    }
+    document.getElementById('addSaleForm').reset();
+    document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('addSaleModal').style.display = 'block';
 }
 
 function toggleEditSaleItemType() {
@@ -7980,14 +7382,20 @@ function markAsSold(index) {
     }
 }
 
-// Test function removed - no longer needed
+function testDeleteClick(index) {
+    console.log('🧪 TEST: Delete button click detected!');
+    console.log('🧪 TEST: Index received:', index);
+    console.log('🧪 TEST: About to call deleteItem function...');
+}
 
 // Custom confirmation modal functions
 let pendingConfirmAction = null;
 
 function showConfirmModal(title, message, onConfirm) {
     // Check if we're on mobile
-    if (isMobile()) {
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
         // Use mobile-friendly confirmation
         showMobileConfirmation(title, message, onConfirm);
         return;
@@ -8038,17 +7446,17 @@ function closeConfirmModal() {
     document.body.classList.remove('modal-open');
 }
 
-async function deleteItem(itemIdOrIndex) {
-    console.log('🗑️ Delete item function called with ID/Index:', itemIdOrIndex);
+async function deleteItem(index) {
+    console.log('🗑️ Delete item function called with index:', index);
     
-    // Check if parameter is valid
-    if (itemIdOrIndex === undefined || itemIdOrIndex === null) {
-        console.error('❌ Invalid parameter provided to deleteItem:', itemIdOrIndex);
-        showNotification('Error: Invalid item parameter', 'error');
+    // Check if index is valid
+    if (index === undefined || index === null || isNaN(index)) {
+        console.error('❌ Invalid index provided to deleteItem:', index);
+        showNotification('Error: Invalid item index', 'error');
         return;
     }
     
-    console.log('✅ Parameter is valid, showing confirmation modal...');
+    console.log('✅ Index is valid, showing confirmation modal...');
     
     // Use custom confirmation modal instead of browser confirm
     showConfirmModal(
@@ -8056,32 +7464,17 @@ async function deleteItem(itemIdOrIndex) {
         'Are you sure you want to delete this item? This action cannot be undone.',
         async () => {
             console.log('👤 User confirmed deletion');
-            await proceedWithDeletion(itemIdOrIndex);
+            await proceedWithDeletion(index);
         }
     );
 }
 
-async function proceedWithDeletion(itemIdOrIndex) {
+async function proceedWithDeletion(index) {
     // Store expanded customer groups before deleting
     const expandedCustomers = getExpandedCustomerGroups();
     
-    // Handle both ID and index parameters
-    let itemRemoved = false;
-    if (typeof itemIdOrIndex === 'string' || typeof itemIdOrIndex === 'number' && itemIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        const beforeCount = inventory.length;
-        inventory = inventory.filter(item => item.id !== itemIdOrIndex);
-        itemRemoved = inventory.length < beforeCount;
-    } else {
-        // It's an index (small number)
-        const index = parseInt(itemIdOrIndex);
-        if (index >= 0 && index < inventory.length) {
-            inventory.splice(index, 1);
-            itemRemoved = true;
-        }
-    }
-    
-    if (itemRemoved) {
+    if (index >= 0 && index < inventory.length) {
+        inventory.splice(index, 1);
         
         // Try to save data, but don't let localStorage errors prevent deletion
         try {
@@ -8310,42 +7703,20 @@ function createProjectForCustomer(customerName) {
     showNotification(`Creating new project for ${customerName}`, 'info');
 }
 
-function deleteCustomer(customerIdOrIndex) {
+function deleteCustomer(index) {
     showConfirmModal(
         'Delete Customer',
         'Are you sure you want to delete this customer? This will also delete all associated items.',
         () => {
-        let customerName;
-        let customerRemoved = false;
-        
-        // Handle both ID and index parameters
-        if (typeof customerIdOrIndex === 'string' || typeof customerIdOrIndex === 'number' && customerIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            const customer = customers.find(c => c.id === customerIdOrIndex);
-            if (customer) {
-                customerName = customer.name;
-                customers = customers.filter(c => c.id !== customerIdOrIndex);
-                customerRemoved = true;
-            }
-        } else {
-            // It's an index (small number)
-            const index = parseInt(customerIdOrIndex);
-            if (index >= 0 && index < customers.length) {
-                customerName = customers[index].name;
-                customers.splice(index, 1);
-                customerRemoved = true;
-            }
-        }
-        
-        if (customerRemoved && customerName) {
-            inventory = inventory.filter(item => item.customer !== customerName);
-            sales = sales.filter(sale => sale.customer !== customerName);
-            saveData();
-            loadCustomersTable();
-            loadInventoryTable();
-            loadSalesTable();
-            showNotification('Customer and associated data deleted!', 'success');
-        }
+        const customerName = customers[index].name;
+        inventory = inventory.filter(item => item.customer !== customerName);
+        sales = sales.filter(sale => sale.customer !== customerName);
+        customers.splice(index, 1);
+        saveData();
+        loadCustomersTable();
+        loadInventoryTable();
+        loadSalesTable();
+        showNotification('Customer and associated data deleted!', 'success');
     }
     );
 }
@@ -8601,22 +7972,12 @@ function handleEditSale(e) {
     showNotification('Sale updated successfully!', 'success');
 }
 
-function deleteSale(saleIdOrIndex) {
+function deleteSale(index) {
     showConfirmModal(
         'Delete Sale',
         'Are you sure you want to delete this sale record?',
         () => {
-        // Handle both ID and index parameters
-        if (typeof saleIdOrIndex === 'string' || typeof saleIdOrIndex === 'number' && saleIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            sales = sales.filter(sale => sale.id !== saleIdOrIndex);
-        } else {
-            // It's an index (small number)
-            const index = parseInt(saleIdOrIndex);
-            if (index >= 0 && index < sales.length) {
-                sales.splice(index, 1);
-            }
-        }
+        sales.splice(index, 1);
         saveData();
         loadSalesTable();
         showNotification('Sale record deleted!', 'success');
@@ -9440,7 +8801,7 @@ function loadWIPTab() {
     updateWIPStats(wipItems);
     loadWIPGrid(wipItems);
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function updateWIPStats(wipItems) {
@@ -9650,7 +9011,7 @@ function loadGallery() {
             </div>
         `;
         
-        // Desktop table loaded
+        // Mobile cards are loaded in switchTab function
         return;
     }
     
@@ -9679,51 +9040,13 @@ function loadGallery() {
         galleryGrid.appendChild(photoElement);
     });
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function openAddPhotoModal() {
-    const modal = document.getElementById('addPhotoModal');
-    const form = document.getElementById('addPhotoForm');
-    
     populateItemSelect('photoItem');
-    
-    if (form) {
-        form.reset();
-    }
-    
-    if (modal) {
-        // Reset modal title and button text for adding new photo
-        const modalTitle = document.querySelector('#addPhotoModal h3');
-        if (modalTitle) {
-            modalTitle.textContent = 'Add New Photo';
-        }
-        
-        const submitButton = document.querySelector('#addPhotoForm button[type="submit"]');
-        if (submitButton) {
-            submitButton.textContent = 'Add Photo';
-        }
-        
-        // Clear any editing index
-        document.getElementById('addPhotoForm').dataset.editingIndex = '';
-        
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on first input after a short delay
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="text"], input[type="file"], textarea, select');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Photo modal opened');
-    } else {
-        console.error('Add Photo modal not found');
-    }
+    document.getElementById('addPhotoForm').reset();
+    document.getElementById('addPhotoModal').style.display = 'block';
 }
 
 function openAddGalleryModal() {
@@ -9739,18 +9062,6 @@ async function handleAddPhoto(e) {
     
     if (!file) {
         showNotification('Please select a photo', 'error');
-        return;
-    }
-    
-    // Mobile-specific validation
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        showNotification('File too large. Please select an image smaller than 10MB.', 'error');
-        return;
-    }
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        showNotification('Please select a valid image file', 'error');
         return;
     }
     
@@ -9872,22 +9183,12 @@ async function deleteGalleryItem(index) {
     await deletePhoto(index); // Use the existing deletePhoto function
 }
 
-async function deletePhoto(photoIdOrIndex) {
+async function deletePhoto(index) {
     showConfirmModal(
         'Delete Photo',
         'Are you sure you want to delete this photo from the gallery?',
         async () => {
-        // Handle both ID and index parameters
-        if (typeof photoIdOrIndex === 'string' || typeof photoIdOrIndex === 'number' && photoIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            gallery = gallery.filter(photo => photo.id !== photoIdOrIndex);
-        } else {
-            // It's an index (small number)
-            const index = parseInt(photoIdOrIndex);
-            if (index >= 0 && index < gallery.length) {
-                gallery.splice(index, 1);
-            }
-        }
+        gallery.splice(index, 1);
         await saveData();
         loadGallery();
         showNotification('Photo deleted from gallery!', 'success');
@@ -9895,153 +9196,21 @@ async function deletePhoto(photoIdOrIndex) {
     );
 }
 
-async function editPhoto(photoIdOrIndex) {
-    console.log('🔧 editPhoto called with parameter:', photoIdOrIndex);
-    
-    let photo;
-    let actualIndex;
-    
-    // Handle both ID and index parameters
-    if (typeof photoIdOrIndex === 'string' || typeof photoIdOrIndex === 'number' && photoIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        console.log('🔧 Treating as ID');
-        actualIndex = gallery.findIndex(p => p.id === photoIdOrIndex);
-        if (actualIndex >= 0) {
-            photo = gallery[actualIndex];
+async function editPhoto(index) {
+    // For now, just show a simple edit dialog
+    const photo = gallery[index];
+    const newTitle = prompt('Edit photo title:', photo.title || '');
+    if (newTitle !== null) {
+        photo.title = newTitle;
+        const newDescription = prompt('Edit photo description:', photo.description || '');
+        if (newDescription !== null) {
+            photo.description = newDescription;
         }
-    } else {
-        // It's an index (small number)
-        console.log('🔧 Treating as index');
-        actualIndex = parseInt(photoIdOrIndex);
-        if (actualIndex >= 0 && actualIndex < gallery.length) {
-            photo = gallery[actualIndex];
-        }
+        await saveData();
+        loadGallery();
+        showNotification('Photo updated!', 'success');
     }
-    
-    if (!photo) {
-        console.error('❌ Photo not found with parameter:', photoIdOrIndex);
-        return;
-    }
-    
-    console.log('✅ Found photo:', photo.title);
-    
-    // Populate the edit form
-    document.getElementById('editPhotoTitle').value = photo.title || '';
-    document.getElementById('editPhotoDescription').value = photo.description || '';
-    document.getElementById('editPhotoCategory').value = photo.category || '';
-    document.getElementById('editPhotoStatus').value = photo.status || 'completed';
-    document.getElementById('editPhotoNotes').value = photo.notes || '';
-    
-    // Display existing image if available
-    if (photo.imageData) {
-        const imagePreview = document.getElementById('editPhoto_preview');
-        if (imagePreview) {
-            imagePreview.remove(); // Remove existing preview
-        }
-        
-        // Create new image preview
-        const preview = document.createElement('div');
-        preview.id = 'editPhoto_preview';
-        preview.style.cssText = 'margin-top: 10px; text-align: center;';
-        preview.innerHTML = `
-            <img src="${photo.imageData}" alt="Current image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
-            <p style="margin-top: 5px; font-size: 0.9em; color: #666;">Current image</p>
-        `;
-        
-        // Insert after the image input container
-        const imageInput = document.getElementById('editPhotoImage');
-        const formGroup = imageInput ? imageInput.closest('.form-group') : null;
-        if (formGroup) {
-            formGroup.appendChild(preview);
-        }
-    }
-    
-    // Update modal title for editing
-    const modalTitle = document.querySelector('#editPhotoModal h3');
-    if (modalTitle) {
-        modalTitle.textContent = 'Update Photo';
-    }
-    
-    // Update submit button text
-    const submitButton = document.querySelector('#editPhotoForm button[type="submit"]');
-    if (submitButton) {
-        submitButton.textContent = 'Update Photo';
-    }
-    
-    // Store the photo index for updating
-    document.getElementById('editPhotoForm').dataset.editingIndex = actualIndex;
-    document.getElementById('editPhotoModal').style.display = 'block';
-    console.log('✅ Edit photo modal should be visible now');
 }
-
-// Handle edit photo form submission
-document.addEventListener('DOMContentLoaded', function() {
-    const editPhotoForm = document.getElementById('editPhotoForm');
-    if (editPhotoForm) {
-        editPhotoForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const editingIndex = this.dataset.editingIndex;
-            if (editingIndex === undefined) {
-                showNotification('Error: No photo selected for editing', 'error');
-                return;
-            }
-            
-            const photo = gallery[editingIndex];
-            if (!photo) {
-                showNotification('Error: Photo not found', 'error');
-                return;
-            }
-            
-            // Update photo data
-            photo.title = document.getElementById('editPhotoTitle').value;
-            photo.description = document.getElementById('editPhotoDescription').value;
-            photo.category = document.getElementById('editPhotoCategory').value;
-            photo.status = document.getElementById('editPhotoStatus').value;
-            photo.notes = document.getElementById('editPhotoNotes').value;
-            photo.lastModified = new Date().toISOString();
-            
-            // Handle new image if provided
-            const imageFile = document.getElementById('editPhotoImage').files[0];
-            if (imageFile) {
-                try {
-                    const reader = new FileReader();
-                    reader.onload = async function(e) {
-                        photo.imageData = e.target.result;
-                        await saveData();
-                        loadGallery();
-                        closeModal('editPhotoModal');
-                        showNotification('Photo updated successfully!', 'success');
-                    };
-                    reader.readAsDataURL(imageFile);
-                } catch (error) {
-                    console.error('Error processing new image:', error);
-                    showNotification('Error processing new image. Photo updated without image change.', 'warning');
-                    await saveData();
-                    loadGallery();
-                    closeModal('editPhotoModal');
-                    showNotification('Photo updated successfully!', 'success');
-                }
-            } else {
-                // No new image, just save the changes
-                await saveData();
-                loadGallery();
-                closeModal('editPhotoModal');
-                showNotification('Photo updated successfully!', 'success');
-            }
-            
-            // Reset form
-            this.reset();
-            delete this.dataset.editingIndex;
-            
-            // Clear image preview
-            const imagePreview = document.getElementById('editPhoto_preview');
-            if (imagePreview) {
-                imagePreview.remove();
-            }
-        });
-    }
-});
 
 // Mobile Confirmation Dialog
 function showMobileConfirmation(title, message, onConfirm, onCancel = null) {
@@ -10166,39 +9335,8 @@ document.head.appendChild(style);
 
 // Ideas Management Functions
 function openAddIdeaModal() {
-    const modal = document.getElementById('addIdeaModal');
-    if (modal) {
-        // Reset modal title and button text for adding new idea
-        const modalTitle = document.querySelector('#addIdeaModal h3');
-        if (modalTitle) {
-            modalTitle.textContent = 'Add New Idea';
-        }
-        
-        const submitButton = document.querySelector('#addIdeaForm button[type="submit"]');
-        if (submitButton) {
-            submitButton.textContent = 'Add Idea';
-        }
-        
-        // Clear any editing ID
-        document.getElementById('addIdeaForm').dataset.editingId = '';
-        
-        // Ensure modal is fully visible and positioned correctly
-        modal.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background-color: rgba(0,0,0,0.5) !important;');
-        modal.classList.add('show');
-        modal.classList.remove('hide');
-        
-        // Focus on the title input after a short delay
-        setTimeout(() => {
-            const titleInput = document.getElementById('ideaTitle');
-            if (titleInput) {
-                titleInput.focus();
-            }
-        }, 100);
-        
-        console.log('Add Idea modal opened');
-    } else {
-        console.error('Add Idea modal not found');
-    }
+    document.getElementById('addIdeaModal').style.display = 'block';
+    document.getElementById('ideaTitle').focus();
 }
 
 async function handleAddIdea(event) {
@@ -10242,16 +9380,10 @@ async function handleAddIdea(event) {
     };
     
     if (isEditing) {
-        // Update existing idea - preserve existing image data if no new image is provided
+        // Update existing idea
         const ideaIndex = ideas.findIndex(i => i.id === isEditing);
         if (ideaIndex !== -1) {
-            const existingImageData = ideas[ideaIndex].imageData || ideas[ideaIndex].imageUrl;
-            const updatedIdeaData = { ...ideaData };
-            // Only set imageData to null if we're actually processing a new image
-            if (!imageFile || imageFile.size === 0) {
-                updatedIdeaData.imageData = existingImageData;
-            }
-            ideas[ideaIndex] = { ...ideas[ideaIndex], ...updatedIdeaData };
+            ideas[ideaIndex] = { ...ideas[ideaIndex], ...ideaData };
         }
     } else {
         // Add new idea
@@ -10277,8 +9409,14 @@ async function handleAddIdea(event) {
             return;
         }
         
-        // Process image on all devices (mobile and desktop)
-        if (imageFile) {
+        // On mobile, skip FileReader for photo library images to prevent hanging
+        if (window.innerWidth <= 768) {
+            console.log('🎯 Mobile detected - skipping image processing, saving idea without image...');
+            await saveData();
+            loadIdeasGrid();
+            closeModal('addIdeaModal');
+            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
+        } else {
             // Desktop: use FileReader with improved error handling
             const reader = new FileReader();
             
@@ -10340,23 +9478,15 @@ async function handleAddIdea(event) {
             };
             
             reader.readAsDataURL(imageFile);
-        } else {
-            console.log('🎯 No image file, empty file, or file too large - saving data directly...');
-            console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null');
-            
-            if (imageFile && imageFile.size >= 10000000) {
-                showNotification('Image file too large. Maximum size is 10MB.', 'warning');
-            }
-            
-            await saveData();
-            console.log('🎯 Data saved, loading ideas grid...');
-            loadIdeasGrid();
-            closeModal('addIdeaModal');
-            showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
         }
     } else {
-        // No image file - save data directly
-        console.log('🎯 No image file - saving data directly...');
+        console.log('🎯 No image file, empty file, or file too large - saving data directly...');
+        console.log('🎯 Image file details:', imageFile ? `name: ${imageFile.name}, size: ${imageFile.size}` : 'null');
+        
+        if (imageFile && imageFile.size >= 10000000) {
+            showNotification('Image file too large. Maximum size is 10MB.', 'warning');
+        }
+        
         await saveData();
         console.log('🎯 Data saved, loading ideas grid...');
         loadIdeasGrid();
@@ -10383,45 +9513,7 @@ function loadIdeasGrid() {
     const grid = document.getElementById('ideasGrid');
     if (!grid) return;
     
-    // Combine ideas and inventory items with images
-    const allItems = [];
-    
-    // Add ideas
-    ideas.forEach(idea => {
-        allItems.push({
-            ...idea,
-            type: 'idea',
-            displayTitle: idea.title,
-            displayDescription: idea.description || 'No description',
-            displayCategory: idea.category,
-            displayStatus: idea.status,
-            displayPriority: idea.priority,
-            imageData: idea.imageData || idea.imageUrl,
-            editFunction: `editIdea('${idea.id}')`,
-            deleteFunction: `deleteIdea('${idea.id}')`
-        });
-    });
-    
-    // Add inventory items with images
-    inventory.forEach((item, index) => {
-        if (item.imageData || item.photo?.dataUrl) {
-            const imageData = item.imageData || item.photo?.dataUrl;
-            allItems.push({
-                ...item,
-                type: 'inventory',
-                displayTitle: item.name || item.description || 'Untitled Item',
-                displayDescription: item.description || 'No description',
-                displayCategory: item.category || 'Inventory',
-                displayStatus: item.status || 'inventory',
-                displayPriority: item.priority || 'medium',
-                imageData: imageData,
-                editFunction: `editItem(${index})`,
-                deleteFunction: `deleteItem(${index})`
-            });
-        }
-    });
-    
-    if (allItems.length === 0) {
+    if (ideas.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-lightbulb"></i>
@@ -10433,38 +9525,35 @@ function loadIdeasGrid() {
             </div>
         `;
         
-        // Desktop table loaded
+        // Mobile cards are loaded in switchTab function
         return;
     }
     
-    grid.innerHTML = allItems.map(item => {
-        return `
-        <div class="idea-card" data-category="${item.displayCategory}" data-status="${item.displayStatus}">
+    grid.innerHTML = ideas.map(idea => `
+        <div class="idea-card" data-category="${idea.category}" data-status="${idea.status}">
             <div class="idea-image">
-                ${item.imageData ? 
-                    `<img src="${item.imageData}" alt="${item.displayTitle}" onclick="viewIdeaImage('${item.id || item.displayTitle}')">` : 
+                ${idea.imageData || idea.imageUrl ? 
+                    `<img src="${idea.imageData || idea.imageUrl}" alt="${idea.title}" onclick="viewIdeaImage('${idea.id}')">` : 
                     `<div class="no-image"><i class="fas fa-image"></i></div>`
                 }
-                <div class="idea-status status-${item.displayStatus}">${item.displayStatus.replace('-', ' ')}</div>
-                <div class="item-type-badge">${item.type === 'idea' ? 'Idea' : 'Inventory'}</div>
+                <div class="idea-status status-${idea.status}">${idea.status.replace('-', ' ')}</div>
             </div>
             <div class="idea-content">
-                <h3 class="idea-title">${item.displayTitle}</h3>
-                <p class="idea-description">${item.displayDescription}</p>
+                <h3 class="idea-title">${idea.title}</h3>
+                <p class="idea-description">${idea.description || 'No description'}</p>
                 <div class="idea-meta">
-                    <span class="idea-category">${item.displayCategory}</span>
-                    <span class="idea-priority priority-${item.displayPriority}">${item.displayPriority}</span>
+                    <span class="idea-category">${idea.category}</span>
+                    <span class="idea-priority priority-${idea.priority}">${idea.priority}</span>
                 </div>
                 <div class="idea-actions">
-                    <button class="btn btn-small" onclick="${item.editFunction}"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn btn-small btn-danger" onclick="${item.deleteFunction}"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-small" onclick="editIdea('${idea.id}')"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteIdea('${idea.id}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
-        `;
-    }).join('');
+    `).join('');
     
-    // Desktop table loaded
+    // Mobile cards are loaded in switchTab function
 }
 
 function filterIdeas() {
@@ -10492,32 +9581,9 @@ function filterIdeas() {
     });
 }
 
-function editIdea(ideaIdOrIndex) {
-    console.log('🔧 editIdea called with parameter:', ideaIdOrIndex);
-    console.log('🔧 Current ideas array length:', ideas.length);
-    
-    let idea;
-    
-    // Handle both ID and index parameters
-    if (typeof ideaIdOrIndex === 'string' || typeof ideaIdOrIndex === 'number' && ideaIdOrIndex > 1000) {
-        // It's an ID (string or large number)
-        console.log('🔧 Treating as ID');
-        idea = ideas.find(i => i.id === ideaIdOrIndex);
-    } else {
-        // It's an index (small number)
-        console.log('🔧 Treating as index');
-        const index = parseInt(ideaIdOrIndex);
-        if (index >= 0 && index < ideas.length) {
-            idea = ideas[index];
-        }
-    }
-    
-    if (!idea) {
-        console.error('❌ Idea not found with parameter:', ideaIdOrIndex);
-        return;
-    }
-    
-    console.log('✅ Found idea:', idea.title);
+function editIdea(ideaId) {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
     
     // Populate form with existing data
     document.getElementById('ideaTitle').value = idea.title;
@@ -10528,47 +9594,9 @@ function editIdea(ideaIdOrIndex) {
     document.getElementById('ideaPriority').value = idea.priority;
     document.getElementById('ideaNotes').value = idea.notes || '';
     
-    // Display existing image if available
-    if (idea.imageData || idea.imageUrl) {
-        const imageData = idea.imageData || idea.imageUrl;
-        const imagePreview = document.getElementById('ideaImage_preview');
-        if (imagePreview) {
-            imagePreview.remove(); // Remove existing preview
-        }
-        
-        // Create new image preview
-        const preview = document.createElement('div');
-        preview.id = 'ideaImage_preview';
-        preview.style.cssText = 'margin-top: 10px; text-align: center;';
-        preview.innerHTML = `
-            <img src="${imageData}" alt="Current image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
-            <p style="margin-top: 5px; font-size: 0.9em; color: #666;">Current image</p>
-        `;
-        
-        // Insert after the image input container
-        const imageInput = document.getElementById('ideaImage');
-        const formGroup = imageInput.closest('.form-group');
-        if (formGroup) {
-            formGroup.appendChild(preview);
-        }
-    }
-    
-    // Update modal title for editing
-    const modalTitle = document.querySelector('#addIdeaModal h3');
-    if (modalTitle) {
-        modalTitle.textContent = 'Update Idea';
-    }
-    
-    // Update submit button text
-    const submitButton = document.querySelector('#addIdeaForm button[type="submit"]');
-    if (submitButton) {
-        submitButton.textContent = 'Update Idea';
-    }
-    
     // Store the idea ID for updating
-    document.getElementById('addIdeaForm').dataset.editingId = idea.id;
+    document.getElementById('addIdeaForm').dataset.editingId = ideaId;
     document.getElementById('addIdeaModal').style.display = 'block';
-    console.log('✅ Edit modal should be visible now');
 }
 
 function viewIdea(index) {
@@ -10628,8 +9656,8 @@ function convertIdeaToProject(index) {
     }
 }
 
-function deleteIdea(ideaIdOrIndex) {
-    console.log('🗑️ deleteIdea called with ID/Index:', ideaIdOrIndex);
+function deleteIdea(ideaId) {
+    console.log('🗑️ deleteIdea called with ID:', ideaId);
     console.log('🗑️ Current ideas count before delete:', ideas.length);
     console.log('🗑️ Ideas before delete:', ideas.map(i => ({ id: i.id, title: i.title })));
     
@@ -10642,24 +9670,7 @@ function deleteIdea(ideaIdOrIndex) {
         console.log('🗑️ Set isModifying = true');
         
         const beforeCount = ideas.length;
-        
-        // Handle both ID and index parameters
-        if (typeof ideaIdOrIndex === 'string' || typeof ideaIdOrIndex === 'number' && ideaIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            ideas = ideas.filter(i => i.id !== ideaIdOrIndex);
-        } else {
-            // It's an index (small number)
-            const index = parseInt(ideaIdOrIndex);
-            if (index >= 0 && index < ideas.length) {
-                ideas.splice(index, 1);
-            } else {
-                console.error('🚨 ERROR: Invalid index:', index);
-                showNotification('Error: Invalid item index. Please refresh the page.', 'error');
-                window.isModifying = false;
-                return;
-            }
-        }
-        
+        ideas = ideas.filter(i => i.id !== ideaId);
         const afterCount = ideas.length;
         
         console.log('🗑️ Ideas count after delete:', afterCount);
@@ -10749,28 +9760,6 @@ function openCameraForIdeas() {
 function openCameraForGallery() {
     currentCameraContext = 'gallery';
     openCamera();
-}
-
-// Mobile-friendly gallery upload helper
-function setupMobileGalleryUpload() {
-    const photoFileInput = document.getElementById('photoFile');
-    if (photoFileInput && 'ontouchstart' in window) {
-        // Add visual feedback for mobile users
-        photoFileInput.addEventListener('focus', function() {
-            this.style.borderColor = '#4A90A4';
-            this.style.backgroundColor = '#f0f8ff';
-        });
-        
-        photoFileInput.addEventListener('blur', function() {
-            this.style.borderColor = '#4A90A4';
-            this.style.backgroundColor = '#f8f9fa';
-        });
-        
-        // Add mobile-specific styling
-        photoFileInput.style.cursor = 'pointer';
-        photoFileInput.style.minHeight = '44px';
-        photoFileInput.style.minWidth = '44px';
-    }
 }
 
 function openCamera() {
@@ -10950,7 +9939,12 @@ function viewPhoto(photoUrl, photoTitle = 'Photo') {
     document.getElementById('photoViewModal').style.display = 'block';
 }
 
-// This function is now handled by the main deletePhoto function above
+function deletePhoto() {
+    // This would need to be implemented based on how photos are stored
+    // For now, just close the modal
+    closeModal('photoViewModal');
+    showNotification('Photo deleted successfully!', 'success');
+}
 
 // Enhanced file input handling with preview
 function setupPhotoPreviews() {
@@ -11124,7 +10118,7 @@ function setupMobileFeatures() {
 
 function showInstallPrompt() {
     // Only show install banner on mobile devices (screen width <= 768px)
-    if (!isMobile()) {
+    if (window.innerWidth > 768) {
         // Remove any existing install banner if we're on desktop
         const existingBanner = document.querySelector('.install-banner');
         if (existingBanner) {
@@ -11167,20 +10161,6 @@ function dismissInstallBanner() {
     }
 }
 
-// Mobile detection utility - centralized for consistency
-function isMobile() {
-    return window.innerWidth <= 768;
-}
-
-// Enhanced mobile detection with device type
-function getDeviceType() {
-    const width = window.innerWidth;
-    if (width <= 480) return 'mobile-small';
-    if (width <= 768) return 'mobile';
-    if (width <= 1024) return 'tablet';
-    return 'desktop';
-}
-
 // Enhanced photo capture with mobile gestures
 function setupMobilePhotoGestures() {
     const cameraModal = document.getElementById('cameraModal');
@@ -11214,28 +10194,6 @@ function setupMobilePhotoGestures() {
 
 // ===== ENHANCED DATA STRUCTURES =====
 
-// ===== PHOTO PROCESSING =====
-
-async function processPhoto(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const photoData = {
-                dataUrl: e.target.result,
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                timestamp: new Date().toISOString()
-            };
-            resolve(photoData);
-        };
-        reader.onerror = function(error) {
-            reject(error);
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
 // ===== OCR PHOTO ANALYSIS SYSTEM =====
 
 // OCR Analysis Functions
@@ -11267,7 +10225,19 @@ function analyzePhotoForProject() {
     analyzePhotoWithOCR(file, 'project');
 }
 
-// Projects don't need photo analysis - they're tracked through inventory, ideas, and gallery
+function analyzePhotoForNewProject() {
+    // OCR for add new project modal
+    
+    const fileInput = document.getElementById('projectPhoto');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showNotification('Please select a photo first', 'error');
+        return;
+    }
+    
+    analyzePhotoWithOCR(file, 'project');
+}
 
 function analyzePhotoForGallery() {
     // OCR now works on mobile with improved error handling
@@ -11678,6 +10648,7 @@ function setupOCRFunctionality() {
     const photoInputs = [
         { input: 'itemPhoto', button: 'analyzeInventoryBtn' },
         { input: 'itemPhoto', button: 'analyzeProjectBtn' },
+        { input: 'projectPhoto', button: 'analyzeNewProjectBtn' },
         { input: 'photoFile', button: 'analyzeGalleryBtn' },
         { input: 'ideaImage', button: 'analyzeIdeasBtn' }
     ];
