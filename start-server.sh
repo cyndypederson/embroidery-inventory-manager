@@ -30,7 +30,7 @@ npx pm2 status
 
 echo ""
 echo "🌐 Your server is now running at:"
-echo "   http://localhost:3000"
+echo "   http://localhost:3002"
 echo ""
 echo "📝 Useful commands:"
 echo "   View logs:     npx pm2 logs embroidery-inventory"
