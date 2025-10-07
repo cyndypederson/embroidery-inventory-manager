@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { MongoClient, ObjectId } = require('mongodb');
 
 // Load environment variables
@@ -122,8 +123,6 @@ app.get('/script.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'script.js'));
 });
 
-app.use(express.static(path.join(__dirname)));
-
 // Version check endpoint for debugging
 app.get('/version.json', (req, res) => {
     const packageJson = require('./package.json');
@@ -135,17 +134,41 @@ app.get('/version.json', (req, res) => {
     });
 });
 
-// Serve the main HTML file with NUCLEAR cache busting
-app.get('/', (req, res) => {
-    // Add timestamp to response headers
-    res.setHeader('X-Timestamp', res.locals.timestamp);
-    res.setHeader('X-Random', res.locals.random);
-    res.setHeader('X-Cache-Bust', `${res.locals.timestamp}-${res.locals.random}`);
-    
-    // Always redirect with fresh cache bust parameters to force reload
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(7);
-    return res.redirect(`/?cb=${timestamp}&r=${random}&v=1.0.12&force=${timestamp}`);
+// Serve the main HTML file with dynamic version injection
+app.get('/', async (req, res) => {
+    try {
+        // Read package.json to get current version
+        const packageJson = require('./package.json');
+        const version = packageJson.version;
+        
+        // Read the HTML file
+        const htmlPath = path.join(__dirname, 'index.html');
+        let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+        
+        // Replace all hardcoded version numbers with dynamic version
+        htmlContent = htmlContent.replace(/v1\.0\.\d+/g, `v${version}`);
+        htmlContent = htmlContent.replace(/1\.0\.\d+/g, version);
+        // Also handle the placeholder version 1.0.0
+        htmlContent = htmlContent.replace(/v1\.0\.0/g, `v${version}`);
+        htmlContent = htmlContent.replace(/1\.0\.0/g, version);
+        
+        // Add timestamp to response headers for cache busting
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(7);
+        
+        res.setHeader('X-Timestamp', timestamp);
+        res.setHeader('X-Random', random);
+        res.setHeader('X-Cache-Bust', `${timestamp}-${random}`);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
+        // Send the modified HTML with dynamic version
+        res.send(htmlContent);
+    } catch (error) {
+        console.error('Error serving index.html:', error);
+        res.status(500).send('Error loading application');
+    }
 });
 
 // Health check endpoint
@@ -371,6 +394,9 @@ app.post('/api/ideas', async (req, res) => {
         res.status(500).json({ error: 'Failed to save ideas data' });
     }
 });
+
+// Serve static files (CSS, JS, images, etc.) - must be after dynamic routes
+app.use(express.static(path.join(__dirname)));
 
 // Connect to database and start server
 connectToDatabase().then(() => {
