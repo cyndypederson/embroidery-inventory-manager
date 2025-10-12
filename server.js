@@ -87,9 +87,25 @@ async function initializeCollections() {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
+
+// Session middleware
+const session = require('express-session');
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'embroidery-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
 
 // NUCLEAR CACHE CONTROL - Force no caching whatsoever
 app.use((req, res, next) => {
@@ -155,6 +171,57 @@ app.get('/health', async (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         database: database ? 'Connected' : 'Disconnected'
+    });
+});
+
+// Authentication endpoints
+// Default admin credentials (should be changed in production)
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'embroidery2024';
+
+// Check auth status
+app.get('/api/auth/status', (req, res) => {
+    res.json({
+        authenticated: req.session && req.session.authenticated === true,
+        username: req.session && req.session.username,
+        authEnabled: true
+    });
+});
+
+// Login endpoint
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        req.session.authenticated = true;
+        req.session.username = username;
+        res.json({
+            success: true,
+            message: 'Login successful',
+            username: username
+        });
+    } else {
+        res.status(401).json({
+            success: false,
+            message: 'Invalid username or password'
+        });
+    }
+});
+
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            res.status(500).json({
+                success: false,
+                message: 'Logout failed'
+            });
+        } else {
+            res.json({
+                success: true,
+                message: 'Logged out successfully'
+            });
+        }
     });
 });
 
