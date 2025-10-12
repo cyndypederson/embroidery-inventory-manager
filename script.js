@@ -6112,11 +6112,13 @@ async function switchTab(tabName) {
             projectsPagination.style.display = 'none';
         }
     } else if (tabName === 'inventory') {
-        // Load inventory items as cards
-        loadInventoryCards();
-        // Load mobile cards for inventory items
+        // Load inventory - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
+            console.log('📱 Mobile detected - loading mobile inventory cards only');
             loadMobileInventoryItemsCards();
+        } else {
+            console.log('🖥️ Desktop detected - loading desktop inventory cards only');
+            loadInventoryCards();
         }
         // Hide pagination for inventory - not needed
         const inventoryPagination = document.getElementById('inventoryPagination');
@@ -6124,11 +6126,13 @@ async function switchTab(tabName) {
             inventoryPagination.style.display = 'none';
         }
     } else if (tabName === 'customers') {
-        // Load customers as cards
-        loadCustomersCards();
-        // Load mobile cards for customers
+        // Load customers - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
+            console.log('📱 Mobile detected - loading mobile customer cards only');
             loadMobileCustomerCards();
+        } else {
+            console.log('🖥️ Desktop detected - loading desktop customer cards only');
+            loadCustomersCards();
         }
     } else if (tabName === 'wip') {
         loadWIPTab();
@@ -6137,17 +6141,22 @@ async function switchTab(tabName) {
             loadMobileWIPCards();
         }
     } else if (tabName === 'gallery') {
-        loadGallery();
-        // Load mobile cards for gallery
+        // Load gallery - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
+            console.log('📱 Mobile detected - loading mobile gallery cards only');
             loadMobileGalleryCards();
+        } else {
+            console.log('🖥️ Desktop detected - loading desktop gallery only');
+            loadGallery();
         }
     } else if (tabName === 'sales') {
-        // Load sales as cards
-        loadSalesCards();
-        // Load mobile cards for sales
+        // Load sales - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
+            console.log('📱 Mobile detected - loading mobile sales cards only');
             loadMobileSalesCards();
+        } else {
+            console.log('🖥️ Desktop detected - loading desktop sales cards only');
+            loadSalesCards();
         }
         // Show bulk actions integrated with sales actions
         if (bulkContainer) {
@@ -6184,10 +6193,13 @@ async function switchTab(tabName) {
             }
         }
     } else if (tabName === 'ideas') {
-        loadIdeasGrid();
-        // Load mobile cards for ideas
+        // Load ideas - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
+            console.log('📱 Mobile detected - loading mobile ideas cards only');
             loadMobileIdeasCards();
+        } else {
+            console.log('🖥️ Desktop detected - loading desktop ideas grid only');
+            loadIdeasGrid();
         }
     }
 }
