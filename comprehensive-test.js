@@ -68,7 +68,7 @@ class ComprehensiveTestSuite {
         console.log('📋 Testing EVERY button, field, upload, edit, delete, and edge case\n');
         
         this.browser = await puppeteer.launch({
-            headless: false, // Show browser for visual verification
+            headless: true, // Run headless for faster testing
             devtools: false,
             args: [
                 '--no-sandbox',
@@ -153,6 +153,122 @@ class ComprehensiveTestSuite {
         // Check for critical elements
         await this.page.waitForSelector('.branding h1', { timeout: 5000 });
         await this.page.waitForSelector('.nav-btn', { timeout: 5000 });
+        
+        // Login for authenticated tests
+        await this.login();
+    }
+    
+    async login() {
+        // Check if we need to login
+        await sleep(1000);
+        
+        // Check if login button exists
+        const loginBtn = await this.page.$('#logoutBtn');
+        if (loginBtn) {
+            // Already logged in
+            console.log('✅ Already logged in');
+            return;
+        }
+        
+        // Try to login using the API endpoint
+        await this.page.evaluate(async () => {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ 
+                        username: 'admin', 
+                        password: 'Kobe#1' 
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Logged in successfully');
+                    // Reload to update auth state
+                    await checkAuthStatus();
+                } else {
+                    console.error('❌ Login failed');
+                }
+            } catch (error) {
+                console.error('❌ Login error:', error);
+            }
+        });
+        
+        await sleep(1000);
+        console.log('✅ Login completed');
+    }
+    
+    async testDataLoadingAndDOMIntegrity() {
+        console.log('\n🔍 Testing Data Loading and DOM Integrity...');
+        
+        try {
+            // Wait for data to load
+            await sleep(2000);
+            
+            // Check for console errors related to data loading
+            const consoleErrors = [];
+            this.page.on('console', msg => {
+                if (msg.type() === 'error' && msg.text().includes('innerHTML')) {
+                    consoleErrors.push(msg.text());
+                }
+            });
+            
+            // Test data loading by checking if inventory data exists
+            const inventoryData = await this.page.evaluate(() => {
+                return window.inventory ? window.inventory.length : 0;
+            });
+            
+            if (inventoryData === 0) {
+                throw new Error('No inventory data loaded');
+            }
+            
+            // Test that card containers exist and are properly initialized
+            const projectsCards = await this.page.$('#projectsCards');
+            if (!projectsCards) {
+                throw new Error('Projects cards container not found');
+            }
+            
+            // Test that we can switch to projects tab without errors
+            await this.page.click('[data-tab="projects"]');
+            await sleep(1000);
+            
+            // Check if cards are rendered
+            const cardCount = await this.page.$$eval('.project-card', cards => cards.length);
+            if (cardCount === 0 && inventoryData > 0) {
+                throw new Error('Project cards not rendered despite having inventory data');
+            }
+            
+            // Test other critical tab switches
+            const tabs = ['inventory', 'customers', 'wip', 'completed'];
+            for (const tab of tabs) {
+                try {
+                    await this.page.click(`[data-tab="${tab}"]`);
+                    await sleep(500);
+                    
+                    // Check for any JavaScript errors during tab switch
+                    const hasErrors = consoleErrors.length > 0;
+                    if (hasErrors) {
+                        throw new Error(`Console errors during ${tab} tab switch: ${consoleErrors.join(', ')}`);
+                    }
+                } catch (error) {
+                    throw new Error(`Failed to switch to ${tab} tab: ${error.message}`);
+                }
+            }
+            
+            console.log(`✅ Data loading test passed - ${inventoryData} items loaded`);
+            console.log(`✅ DOM integrity test passed - all tab switches successful`);
+            this.results.passed++;
+            this.results.testedFeatures.push('Data Loading & DOM Integrity');
+            
+        } catch (error) {
+            console.error(`❌ Data loading test failed: ${error.message}`);
+            this.results.failed++;
+            this.results.errors.push({
+                test: 'Data Loading & DOM Integrity',
+                error: error.message
+            });
+        }
     }
 
     async testAllNavigationTabs() {
@@ -204,10 +320,10 @@ class ComprehensiveTestSuite {
         }
         
         await addButton.click();
-        await this.page.waitForSelector('#addItemModal', { visible: true });
+        await this.page.waitForSelector('#addProjectModal', { visible: true });
         
         // Verify modal opened
-        const modal = await this.page.$('#addItemModal');
+        const modal = await this.page.$('#addProjectModal');
         if (!modal) {
             throw new Error('Add project modal did not open');
         }
@@ -216,17 +332,17 @@ class ComprehensiveTestSuite {
     async testProjectsFormFields() {
         // Test all form fields in add project modal
         const fields = [
-            { id: 'itemDescription', value: this.testData.project.description, required: true },
-            { id: 'itemCustomer', value: this.testData.project.customer, required: false },
-            { id: 'itemStatus', value: this.testData.project.status, required: true },
-            { id: 'itemPriority', value: this.testData.project.priority, required: false },
-            { id: 'itemLocation', value: this.testData.project.location, required: false },
-            { id: 'itemQuantity', value: this.testData.project.quantity.toString(), required: false },
-            { id: 'itemPrice', value: this.testData.project.price.toString(), required: false },
-            { id: 'itemNotes', value: this.testData.project.notes, required: false },
-            { id: 'itemCategory', value: this.testData.project.category, required: false },
-            { id: 'itemTags', value: this.testData.project.tags, required: false },
-            { id: 'itemDueDate', value: this.testData.project.dueDate, required: false }
+            { id: 'projectDescription', value: this.testData.project.description, required: true },
+            { id: 'projectCustomer', value: this.testData.project.customer, required: false },
+            { id: 'projectStatus', value: this.testData.project.status, required: true },
+            { id: 'projectPriority', value: this.testData.project.priority, required: false },
+            { id: 'projectLocation', value: this.testData.project.location, required: false },
+            { id: 'projectQuantity', value: this.testData.project.quantity.toString(), required: false },
+            { id: 'projectPrice', value: this.testData.project.price.toString(), required: false },
+            { id: 'projectNotes', value: this.testData.project.notes, required: false },
+            { id: 'projectCategory', value: this.testData.project.category, required: false },
+            { id: 'projectTags', value: this.testData.project.tags, required: false },
+            { id: 'projectDueDate', value: this.testData.project.dueDate, required: false }
         ];
 
         for (const field of fields) {
@@ -251,10 +367,10 @@ class ComprehensiveTestSuite {
 
     async testProjectsFormValidation() {
         // Test required field validation
-        const nameField = await this.page.$('#itemDescription');
+        const nameField = await this.page.$('#projectDescription');
         await nameField.evaluate(el => el.value = ''); // Clear required field
         
-        const submitButton = await this.page.$('#addItemModal .btn-primary[type="submit"]');
+        const submitButton = await this.page.$('#addProjectModal .btn-primary[type="submit"]');
         await submitButton.click();
         
         // Check for validation error
@@ -267,16 +383,16 @@ class ComprehensiveTestSuite {
 
     async testProjectsFormSubmission() {
         // Fill form with valid data
-        await this.page.type('#itemDescription', this.testData.project.name);
-        await this.page.type('#itemDescription', this.testData.project.description);
-        await this.page.select('#itemStatus', 'pending');
+        await this.page.type('#projectDescription', this.testData.project.name);
+        await this.page.type('#projectDescription', this.testData.project.description);
+        await this.page.select('#projectStatus', 'pending');
         
         // Submit form
-        const submitButton = await this.page.$('#addItemModal .btn-primary[type="submit"]');
+        const submitButton = await this.page.$('#addProjectModal .btn-primary[type="submit"]');
         await submitButton.click();
         
         // Wait for modal to close
-        await this.page.waitForSelector('#addItemModal', { hidden: true });
+        await this.page.waitForSelector('#addProjectModal', { hidden: true });
         
         // Verify item was added to table
         await sleep(1000);
@@ -551,10 +667,10 @@ class ComprehensiveTestSuite {
         // Check for mobile cards or fallback to desktop view
         const mobileCards = await this.page.$$('.mobile-card');
         if (mobileCards.length === 0) {
-            // If no mobile cards, check if desktop view is working
-            const desktopTable = await this.page.$('#inventoryTableBody');
-            if (!desktopTable) {
-                throw new Error('Neither mobile cards nor desktop table found');
+            // If no mobile cards, check if desktop cards view is working
+            const desktopCards = await this.page.$('#projectsCards');
+            if (!desktopCards) {
+                throw new Error('Neither mobile cards nor desktop cards found');
             }
         }
     }
@@ -577,9 +693,9 @@ class ComprehensiveTestSuite {
         const addButton = await this.page.$('button[onclick="openAddProjectModal()"]');
         if (addButton) {
             await addButton.click();
-            await this.page.waitForSelector('#addItemModal', { visible: true });
+            await this.page.waitForSelector('#addProjectModal', { visible: true });
             
-            const notesField = await this.page.$('#itemNotes');
+            const notesField = await this.page.$('#projectNotes');
             if (notesField) {
                 const largeText = 'A'.repeat(10000); // 10KB of text
                 await notesField.type(largeText);
@@ -592,9 +708,9 @@ class ComprehensiveTestSuite {
         const addButton = await this.page.$('button[onclick="openAddProjectModal()"]');
         if (addButton) {
             await addButton.click();
-            await this.page.waitForSelector('#addItemModal', { visible: true });
+            await this.page.waitForSelector('#addProjectModal', { visible: true });
             
-            const nameField = await this.page.$('#itemDescription');
+            const nameField = await this.page.$('#projectDescription');
             if (nameField) {
                 const specialText = 'Test <script>alert("xss")</script> & "quotes" \'apostrophes\'';
                 await nameField.type(specialText);
@@ -637,15 +753,15 @@ class ComprehensiveTestSuite {
             const addButton = await this.page.$('button[onclick="openAddProjectModal()"]');
             if (addButton) {
                 await addButton.click();
-                await this.page.waitForSelector('#addItemModal', { visible: true });
+                await this.page.waitForSelector('#addProjectModal', { visible: true });
                 
-                await this.page.type('#itemDescription', `Performance Test ${i}`);
-                await this.page.type('#itemDescription', `Description ${i}`);
+                await this.page.type('#projectDescription', `Performance Test ${i}`);
+                await this.page.type('#projectDescription', `Description ${i}`);
                 
-                const submitButton = await this.page.$('#addItemModal .btn-primary[type="submit"]');
+                const submitButton = await this.page.$('#addProjectModal .btn-primary[type="submit"]');
                 if (submitButton) {
                     await submitButton.click();
-                    await this.page.waitForSelector('#addItemModal', { hidden: true });
+                    await this.page.waitForSelector('#addProjectModal', { hidden: true });
                 }
             }
         }
@@ -669,6 +785,7 @@ class ComprehensiveTestSuite {
         
         // Core functionality
         await this.runTest('Server Connection', () => this.testServerConnection(), 'Core');
+        await this.runTest('Data Loading & DOM Integrity', () => this.testDataLoadingAndDOMIntegrity(), 'Core');
         await this.runTest('All Navigation Tabs', () => this.testAllNavigationTabs(), 'Core');
         
         // Projects tab comprehensive testing

@@ -264,6 +264,305 @@ function updatePaginationControls(tab) {
     }
 }
 
+// Load Projects as Cards
+function loadProjectsCards() {
+    const container = document.getElementById('projectsCards');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Filter projects only and apply current filters
+    const projects = inventory.filter(item => {
+        if (item.type !== 'project') return false;
+        
+        // Apply current filters
+        const searchTerm = document.getElementById('searchItems')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('statusFilter')?.value || '';
+        const customerFilter = document.getElementById('customerFilter')?.value || '';
+        const locationFilter = document.getElementById('locationFilter')?.value || '';
+        
+        return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
+               (!statusFilter || item.status === statusFilter) &&
+               (!customerFilter || item.customer === customerFilter) &&
+               (!locationFilter || item.location === locationFilter);
+    });
+    
+    if (projects.length === 0) {
+        container.innerHTML = '<div class="no-data">No projects found. <a href="#" onclick="openAddProjectModal()">Add your first project</a></div>';
+        return;
+    }
+    
+    projects.forEach((project, index) => {
+        // Find the actual inventory index for this project
+        const actualIndex = inventory.findIndex(item => item === project);
+        
+        const card = document.createElement('div');
+        card.className = 'project-card';
+        
+        const statusClass = project.status ? project.status.toLowerCase().replace(/\s+/g, '-') : 'pending';
+        const dueDate = project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'Not set';
+        const customer = project.customer || 'No customer';
+        
+        card.innerHTML = `
+            <div class="project-card-header">
+                <h3 class="project-card-title">${project.description || project.name || 'Untitled Project'}</h3>
+                <span class="project-card-status ${statusClass}">${project.status || 'pending'}</span>
+            </div>
+            <div class="project-card-details">
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Customer:</span>
+                    <span class="project-card-detail-value">${customer}</span>
+                </div>
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Due Date:</span>
+                    <span class="project-card-detail-value">${dueDate}</span>
+                </div>
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Quantity:</span>
+                    <span class="project-card-detail-value">${project.quantity || 1}</span>
+                </div>
+                ${project.price ? `
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Price:</span>
+                    <span class="project-card-detail-value">$${(project.price || 0).toFixed(2)}</span>
+                </div>
+                ` : ''}
+            </div>
+            <div class="project-card-actions">
+                <button class="btn btn-outline btn-sm" onclick="editItem(${actualIndex})" title="Edit Project">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="copyItem(${actualIndex})" title="Copy Project">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteItem(${actualIndex})" title="Delete Project">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+// Load Inventory Items as Cards
+function loadInventoryCards() {
+    const container = document.getElementById('inventoryCards');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Filter inventory items only and apply current filters
+    const items = inventory.filter(item => {
+        if (item.type !== 'inventory') return false;
+        
+        // Apply current filters
+        const searchTerm = document.getElementById('searchItems')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('statusFilter')?.value || '';
+        const customerFilter = document.getElementById('customerFilter')?.value || '';
+        const locationFilter = document.getElementById('locationFilter')?.value || '';
+        
+        return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
+               (!statusFilter || item.status === statusFilter) &&
+               (!customerFilter || item.customer === customerFilter) &&
+               (!locationFilter || item.location === locationFilter);
+    });
+    
+    if (items.length === 0) {
+        container.innerHTML = '<div class="no-data">No inventory items found. <a href="#" onclick="openAddInventoryModal()">Add your first item</a></div>';
+        return;
+    }
+    
+    items.forEach((item, index) => {
+        // Find the actual inventory index for this item
+        const actualIndex = inventory.findIndex(invItem => invItem === item);
+        
+        const card = document.createElement('div');
+        card.className = 'inventory-card project-card';
+        
+        const statusClass = item.status ? item.status.toLowerCase().replace(/\s+/g, '-') : 'in-stock';
+        
+        card.innerHTML = `
+            <div class="project-card-header">
+                <h3 class="project-card-title">${item.description || item.name || 'Untitled Item'}</h3>
+                <span class="project-card-status ${statusClass}">${item.status || 'In Stock'}</span>
+            </div>
+            <div class="project-card-details">
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Quantity:</span>
+                    <span class="project-card-detail-value">${item.quantity || 0}</span>
+                </div>
+                ${item.price ? `
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Price:</span>
+                    <span class="project-card-detail-value">$${(item.price || 0).toFixed(2)}</span>
+                </div>
+                ` : ''}
+                ${item.notes ? `
+                <div class="project-card-detail">
+                    <span class="project-card-detail-label">Notes:</span>
+                    <span class="project-card-detail-value">${item.notes}</span>
+                </div>
+                ` : ''}
+            </div>
+            <div class="project-card-actions">
+                <button class="btn btn-outline btn-sm" onclick="editItem(${actualIndex})" title="Edit Item">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteItem(${actualIndex})" title="Delete Item">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+// Load Customers as Cards
+function loadCustomersCards() {
+    const container = document.getElementById('customersCards');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (customers.length === 0) {
+        container.innerHTML = '<div class="no-data">No customers found. <a href="#" onclick="openAddCustomerModal()">Add your first customer</a></div>';
+        return;
+    }
+    
+    customers.forEach((customer, index) => {
+        const card = document.createElement('div');
+        card.className = 'customer-card';
+        
+        // Calculate customer statistics
+        const customerProjects = inventory.filter(item => item.customer === customer.name);
+        const totalOrders = customerProjects.length;
+        const totalSpent = customerProjects.reduce((sum, item) => {
+            const price = parseFloat(item.price) || 0;
+            const qty = parseInt(item.quantity) || 1;
+            return sum + (price * qty);
+        }, 0);
+        
+        card.innerHTML = `
+            <div class="customer-card-header">
+                <h3 class="customer-card-name">${customer.name}</h3>
+            </div>
+            <div class="customer-card-stats">
+                <div class="customer-stat">
+                    <span class="customer-stat-value">${totalOrders}</span>
+                    <span class="customer-stat-label">Orders</span>
+                </div>
+                <div class="customer-stat">
+                    <span class="customer-stat-value">$${totalSpent.toFixed(2)}</span>
+                    <span class="customer-stat-label">Total Spent</span>
+                </div>
+            </div>
+            <div class="customer-card-details">
+                ${customer.contact ? `
+                <div class="customer-card-detail">
+                    <i class="fas fa-envelope"></i>
+                    <span>${customer.contact}</span>
+                </div>
+                ` : ''}
+                ${customer.location ? `
+                <div class="customer-card-detail">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${customer.location}</span>
+                </div>
+                ` : ''}
+            </div>
+            <div class="customer-card-actions">
+                <button class="btn btn-outline btn-sm" onclick="editCustomer(${index})" title="Edit Customer">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${index})" title="Delete Customer">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+// Load Sales as Cards
+function loadSalesCards() {
+    const container = document.getElementById('salesCards');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Filter sales items and apply current filters
+    const salesItems = inventory.filter(item => {
+        if (item.type !== 'sale') return false;
+        
+        // Apply current filters
+        const searchTerm = document.getElementById('searchItems')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('statusFilter')?.value || '';
+        const customerFilter = document.getElementById('customerFilter')?.value || '';
+        const locationFilter = document.getElementById('locationFilter')?.value || '';
+        
+        return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
+               (!statusFilter || item.status === statusFilter) &&
+               (!customerFilter || item.customer === customerFilter) &&
+               (!locationFilter || item.location === locationFilter);
+    });
+    
+    if (salesItems.length === 0) {
+        container.innerHTML = '<div class="no-data">No sales recorded. <a href="#" onclick="openAddSaleModal()">Record your first sale</a></div>';
+        return;
+    }
+    
+    salesItems.forEach((sale, index) => {
+        // Find the actual inventory index for this sale
+        const actualIndex = inventory.findIndex(invItem => invItem === sale);
+        
+        const card = document.createElement('div');
+        card.className = 'sale-card';
+        
+        const listPrice = parseFloat(sale.price) || 0;
+        const commissionPercent = parseFloat(sale.commissionPercent) || 0;
+        const commissionAmount = listPrice * (commissionPercent / 100);
+        const netPrice = listPrice - commissionAmount;
+        
+        card.innerHTML = `
+            <div class="sale-card-header">
+                <h3 class="sale-card-item">${sale.description || sale.name || 'Untitled Sale'}</h3>
+                <p class="sale-card-customer">${sale.customer || 'No customer'}</p>
+            </div>
+            <div class="sale-card-pricing">
+                <div class="sale-price-item">
+                    <span class="sale-price-label">List Price</span>
+                    <span class="sale-price-value">$${listPrice.toFixed(2)}</span>
+                </div>
+                <div class="sale-price-item">
+                    <span class="sale-price-label">Net Price</span>
+                    <span class="sale-price-value">$${netPrice.toFixed(2)}</span>
+                </div>
+                <div class="sale-price-item">
+                    <span class="sale-price-label">Commission %</span>
+                    <span class="sale-price-value">${commissionPercent.toFixed(1)}%</span>
+                </div>
+                <div class="sale-price-item">
+                    <span class="sale-price-label">Commission</span>
+                    <span class="sale-price-value commission">$${commissionAmount.toFixed(2)}</span>
+                </div>
+            </div>
+            <div class="sale-card-actions">
+                <button class="btn btn-outline btn-sm" onclick="editItem(${actualIndex})" title="Edit Sale">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteItem(${actualIndex})" title="Delete Sale">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
 // Enhanced table loading with pagination
 function loadInventoryTableWithPagination() {
     const cacheKey = 'inventory_table';
@@ -301,7 +600,77 @@ function loadInventoryTableWithPagination() {
     }
     
     pagination.data.forEach((item, index) => {
-        const row = createInventoryRow(item, (currentPage - 1) * currentPageSize + index);
+        const row = document.createElement('tr');
+        row.className = 'inventory-row status-' + (item.status || 'pending');
+        
+        // Format due date with urgency styling
+        const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '';
+        const today = new Date();
+        const dueDateObj = item.dueDate ? new Date(item.dueDate) : null;
+        const isOverdue = dueDateObj && dueDateObj < today && item.status !== 'completed' && item.status !== 'sold';
+        const isDueSoon = dueDateObj && dueDateObj <= new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000) && item.status !== 'completed' && item.status !== 'sold';
+        const dueDateClass = isOverdue ? 'due-date-overdue' : isDueSoon ? 'due-date-soon' : '';
+        
+        // Create quick action buttons based on current status
+        let quickActions = '';
+        if (item.status === 'inventory') {
+            quickActions = `
+                <button class="btn btn-sm btn-primary" onclick="quickStatusChange(${(currentPage - 1) * currentPageSize + index}, 'pending')" title="Start Project">
+                    <i class="fas fa-play"></i>
+                </button>
+            `;
+        } else if (item.status === 'pending') {
+            quickActions = `
+                <button class="btn btn-sm btn-warning" onclick="quickStatusChange(${(currentPage - 1) * currentPageSize + index}, 'in-progress')" title="Start Work">
+                    <i class="fas fa-hammer"></i>
+                </button>
+            `;
+        } else if (item.status === 'in-progress') {
+            quickActions = `
+                <button class="btn btn-sm btn-success" onclick="quickStatusChange(${(currentPage - 1) * currentPageSize + index}, 'completed')" title="Mark Complete">
+                    <i class="fas fa-check"></i>
+                </button>
+            `;
+        } else if (item.status === 'completed') {
+            quickActions = `
+                <button class="btn btn-sm btn-info" onclick="quickStatusChange(${(currentPage - 1) * currentPageSize + index}, 'sold')" title="Mark Sold">
+                    <i class="fas fa-dollar-sign"></i>
+                </button>
+            `;
+        }
+        
+        row.innerHTML = `
+            <td class="project-cell">
+                <div class="project-info">
+                    <div class="project-name">${item.description || item.name || 'Untitled'}</div>
+                    <div class="project-meta">
+                        <span class="customer">${item.customer || 'No Customer'}</span>
+                        ${item.priority ? `<span class="priority priority-${item.priority}">${item.priority}</span>` : ''}
+                    </div>
+                </div>
+            </td>
+            <td class="status-cell">
+                <span class="status-badge status-${item.status || 'pending'}">${(item.status || 'pending').replace('-', ' ')}</span>
+            </td>
+            <td class="due-date-cell ${dueDateClass}">
+                ${dueDate || '<span class="text-muted">No due date</span>'}
+            </td>
+            <td class="actions-cell">
+                <div class="action-buttons">
+                    ${quickActions}
+                    <button class="btn btn-sm btn-outline" onclick="editItem(${(currentPage - 1) * currentPageSize + index})" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="copyItem(${(currentPage - 1) * currentPageSize + index})" title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteItem(${(currentPage - 1) * currentPageSize + index})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
         tbody.appendChild(row);
     });
     
@@ -344,7 +713,35 @@ function loadInventoryItemsTableWithPagination() {
     }
     
     pagination.data.forEach((item, index) => {
-        const row = createInventoryItemRow(item, (currentPage - 1) * currentPageSize + index);
+        const row = document.createElement('tr');
+        row.className = 'inventory-row status-' + (item.status || 'inventory');
+        
+        // Format category display
+        const categoryDisplay = item.category ? `<span class="category-badge category-${item.category}">${item.category}</span>` : '<span class="text-muted">-</span>';
+        
+        // Format status display
+        const statusDisplay = item.status ? `<span class="status-badge status-${item.status}">${item.status}</span>` : '<span class="status-badge status-inventory">inventory</span>';
+        
+        row.innerHTML = `
+            <td>${item.description || item.name || 'Untitled'}</td>
+            <td>${categoryDisplay}</td>
+            <td>${item.location || '<span class="text-muted">-</span>'}</td>
+            <td>${statusDisplay}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline" onclick="editItem(${(currentPage - 1) * currentPageSize + index})" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="copyItem(${(currentPage - 1) * currentPageSize + index})" title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteItem(${(currentPage - 1) * currentPageSize + index})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
         tbody.appendChild(row);
     });
     
@@ -374,8 +771,12 @@ class SearchManager {
         // Clear cache when searching
         PerformanceManager.clearCache();
         
-        // Reload table with new search
-        loadInventoryTableWithPagination();
+        // Reload current view with new search
+        const activeTab = document.querySelector('.nav-btn.active');
+        if (activeTab) {
+            const tabName = activeTab.getAttribute('data-tab');
+            switchTab(tabName);
+        }
     }
     
     getSearchSuggestions(term) {
@@ -1155,7 +1556,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.76'
+                appVersion: '1.0.94'
             }
         };
         
@@ -2258,9 +2659,11 @@ class DesktopManager {
         if ('Notification' in window) {
             this.notificationPermission = Notification.permission;
             
-            if (this.notificationPermission === 'default') {
-                this.requestNotificationPermission();
-            }
+            // Don't auto-request notification permission
+            // Users can enable it manually if needed
+            // if (this.notificationPermission === 'default') {
+            //     this.requestNotificationPermission();
+            // }
         }
     }
     
@@ -2695,7 +3098,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.76'; // Current app version
+                const currentVersion = '1.0.95'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -3548,9 +3951,8 @@ function handleApiError(operation, error) {
     // For internal use, just log - no user notifications needed
 }
 
-// Authentication
-let ADMIN_PASSWORD = 'Kobedavis#1'; // Default password - change this to your desired password
-let isAuthenticated = false;
+// Authentication - now implemented with server-side auth (see line 4143)
+// Old client-side auth variables removed (ADMIN_PASSWORD, isAuthenticated)
 
 // Check if running on localhost or local network
 function isLocalhost() {
@@ -3856,13 +4258,43 @@ function generateInvoiceId() {
 
 function showInvoicePreview(invoice) {
     const content = document.getElementById('invoiceContent');
+    
+    // Clear any existing content completely
+    content.innerHTML = '';
+    
+    // Generate new invoice HTML
     content.innerHTML = generateInvoiceHTML(invoice);
+    
+    // Store the invoice data for printing
+    currentInvoiceData = {
+        businessName: "CyndyP Stitchcraft",
+        businessEmail: "cyndypstitchcraft@gmail.com",
+        invoiceTitle: "INVOICE",
+        id: invoice.id,
+        date: invoice.date,
+        customer: invoice.customer,
+        sales: invoice.sales,
+        total: invoice.total
+    };
+    
     document.getElementById('invoicePreviewModal').style.display = 'block';
 }
 
 function generateInvoiceHTML(invoice) {
     const businessName = "CyndyP Stitchcraft";
     const businessEmail = "cyndypstitchcraft@gmail.com";
+    
+    // Debug: Check for duplicate sales items
+    console.log('Invoice sales items:', invoice.sales);
+    if (invoice.sales) {
+        const uniqueSales = invoice.sales.filter((sale, index, self) => 
+            index === self.findIndex(s => s.itemName === sale.itemName && s.dateSold === sale.dateSold && s.salePrice === sale.salePrice)
+        );
+        if (uniqueSales.length !== invoice.sales.length) {
+            console.warn('Duplicate sales items detected, removing duplicates');
+            invoice.sales = uniqueSales;
+        }
+    }
     
     // Get customer details
     const customer = customers.find(c => c.name === invoice.customer);
@@ -3886,13 +4318,7 @@ function generateInvoiceHTML(invoice) {
                     <h2>INVOICE</h2>
                     <p><strong>Invoice #:</strong> ${invoice.id}</p>
                     <p><strong>Date:</strong> ${invoice.date}</p>
-                    <p><strong>Status:</strong> ${invoice.status.toUpperCase()}</p>
                 </div>
-            </div>
-            
-            <div class="customer-info">
-                <h3>Bill To:</h3>
-                ${customerInfo}
             </div>
             
             <div class="invoice-items">
@@ -3900,7 +4326,7 @@ function generateInvoiceHTML(invoice) {
                     <thead>
                         <tr>
                             <th>Item</th>
-                            <th>Date Sold</th>
+                            <th>Date Invoiced</th>
                             <th>Price</th>
                         </tr>
                     </thead>
@@ -3922,12 +4348,22 @@ function generateInvoiceHTML(invoice) {
                 </table>
             </div>
             
-            ${invoice.notes ? `
-                <div class="invoice-notes">
-                    <h3>Notes:</h3>
-                    <p>${invoice.notes}</p>
+            <div class="invoice-signatures">
+                <div class="signature-section">
+                    <div class="signature-line">
+                        <div class="signature-label">Artist Signature:</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-date">Date: _______________</div>
+                    </div>
                 </div>
-            ` : ''}
+                <div class="signature-section">
+                    <div class="signature-line">
+                        <div class="signature-label">Shop Signature:</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-date">Date: _______________</div>
+                    </div>
+                </div>
+            </div>
             
             <div class="invoice-footer">
                 <p>Thank you for your business!</p>
@@ -3937,36 +4373,276 @@ function generateInvoiceHTML(invoice) {
 }
 
 function printInvoice() {
-    const invoiceContent = document.getElementById('invoiceContent').innerHTML;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Invoice</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .invoice-document { max-width: 800px; margin: 0 auto; }
-                    .invoice-header-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
-                    .business-info h1 { color: #2C3E2D; margin-bottom: 10px; }
-                    .business-logo { text-align: center; margin-bottom: 15px; }
-                    .invoice-logo { max-width: 120px; max-height: 60px; object-fit: contain; }
-                    .invoice-info h2 { color: #6B8E5A; margin-bottom: 10px; }
-                    .invoice-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                    .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    .invoice-table th { background-color: #f5f5f5; }
-                    .total-row { background-color: #f9f9f9; font-weight: bold; }
-                    .invoice-notes { margin: 20px 0; }
-                    .invoice-footer { margin-top: 30px; text-align: center; }
-                    @media print { body { margin: 0; } }
-                </style>
-            </head>
-            <body>
-                ${invoiceContent}
-            </body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    try {
+        // Use the stored invoice data instead of extracting from modal
+        if (!currentInvoiceData) {
+            showNotification('No invoice data available for printing', 'error');
+            return;
+        }
+        
+        const invoiceData = currentInvoiceData;
+        
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            showNotification('Please allow popups to print invoices', 'error');
+            return;
+        }
+        
+        // Generate clean invoice HTML for printing
+        const cleanInvoiceHTML = generateCleanInvoiceHTML(invoiceData);
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Invoice</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            margin: 0; 
+                            padding: 20px; 
+                            background: white;
+                            color: black;
+                        }
+                        .invoice-document { 
+                            max-width: 800px; 
+                            margin: 0 auto; 
+                        }
+                        .invoice-header-section { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            margin-bottom: 30px; 
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 15px;
+                        }
+                        .business-info h1 { 
+                            color: #000; 
+                            margin-bottom: 10px; 
+                            font-size: 24px;
+                        }
+                        .business-logo { 
+                            text-align: center; 
+                            margin-bottom: 15px; 
+                        }
+                        .invoice-logo { 
+                            max-width: 120px; 
+                            max-height: 60px; 
+                            object-fit: contain; 
+                        }
+                        .invoice-info h2 { 
+                            color: #000; 
+                            margin-bottom: 10px; 
+                            font-size: 20px;
+                        }
+                        .invoice-table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin: 20px 0; 
+                        }
+                        .invoice-table th, .invoice-table td { 
+                            border: 1px solid #000; 
+                            padding: 8px; 
+                            text-align: left; 
+                        }
+                        .invoice-table th { 
+                            background-color: #f5f5f5; 
+                            font-weight: bold;
+                        }
+                        .total-row { 
+                            background-color: #f9f9f9; 
+                            font-weight: bold; 
+                            font-size: 16px;
+                        }
+                        .invoice-signatures { 
+                            margin-top: 40px; 
+                            display: block; 
+                        }
+                        .signature-section { 
+                            margin-bottom: 25px; 
+                            display: block; 
+                        }
+                        .signature-line { 
+                            display: flex; 
+                            align-items: flex-end; 
+                            width: 100%; 
+                            margin-bottom: 15px; 
+                            gap: 15px; 
+                            flex-direction: row; 
+                        }
+                        .signature-label { 
+                            font-weight: bold; 
+                            white-space: nowrap; 
+                            min-width: 120px; 
+                        }
+                        .signature-space { 
+                            flex: 1; 
+                            height: 30px; 
+                            border-bottom: 1px solid #000; 
+                            margin: 0 10px; 
+                        }
+                        .signature-date { 
+                            font-size: 0.9em; 
+                            white-space: nowrap; 
+                            min-width: 80px; 
+                            text-align: right; 
+                        }
+                        .invoice-footer {
+                            margin-top: 30px;
+                            text-align: center;
+                            font-style: italic;
+                        }
+                        @media print { 
+                            body { margin: 0; padding: 15px; }
+                            .invoice-document { max-width: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${cleanInvoiceHTML}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        
+        // Wait for content to load before printing
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+        
+    } catch (error) {
+        console.error('Print error:', error);
+        showNotification('Print failed: ' + error.message, 'error');
+    }
+}
+
+// Extract invoice data from the modal content
+function extractInvoiceDataFromModal() {
+    try {
+        const invoiceContent = document.getElementById('invoiceContent');
+        if (!invoiceContent) return null;
+        
+        // Extract business info
+        const businessName = invoiceContent.querySelector('.business-info h1')?.textContent || 'CyndyP Stitchcraft';
+        const businessEmail = invoiceContent.querySelector('.business-info p')?.textContent?.replace('Email: ', '') || 'cyndypstitchcraft@gmail.com';
+        
+        // Extract invoice info
+        const invoiceTitle = invoiceContent.querySelector('.invoice-info h2')?.textContent || 'INVOICE';
+        const invoiceId = invoiceContent.querySelector('.invoice-info p')?.textContent?.replace('Invoice #: ', '') || `INV-${Date.now()}`;
+        const invoiceDate = invoiceContent.querySelectorAll('.invoice-info p')[1]?.textContent?.replace('Date: ', '') || new Date().toLocaleDateString();
+        
+        // Extract customer info
+        const customerInfo = invoiceContent.querySelector('.customer-info h3')?.textContent || 
+                           invoiceContent.querySelector('.customer-info p')?.textContent?.replace('<strong>', '').replace('</strong>', '') || 
+                           'No Customer';
+        
+        // Extract table data
+        const sales = [];
+        const tableRows = invoiceContent.querySelectorAll('.invoice-table tbody tr');
+        let total = 0;
+        
+        tableRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 3) {
+                const itemName = cells[0].textContent.trim();
+                const dateInvoiced = cells[1].textContent.trim();
+                const price = parseFloat(cells[2].textContent.replace('$', ''));
+                
+                if (itemName && !isNaN(price)) {
+                    sales.push({
+                        itemName,
+                        dateSold: dateInvoiced,
+                        salePrice: price
+                    });
+                    total += price;
+                }
+            }
+        });
+        
+        return {
+            businessName,
+            businessEmail,
+            invoiceTitle,
+            id: invoiceId,
+            date: invoiceDate,
+            customer: customerInfo,
+            sales,
+            total
+        };
+    } catch (error) {
+        console.error('Error extracting invoice data:', error);
+        return null;
+    }
+}
+
+// Generate clean invoice HTML for printing
+function generateCleanInvoiceHTML(invoiceData) {
+    return `
+        <div class="invoice-document">
+            <div class="invoice-header-section">
+                <div class="business-info">
+                    <div class="business-logo">
+                        <img src="logo.png" alt="${invoiceData.businessName} Logo" class="invoice-logo">
+                    </div>
+                    <h1>${invoiceData.businessName}</h1>
+                    <p>Email: ${invoiceData.businessEmail}</p>
+                </div>
+                <div class="invoice-info">
+                    <h2>${invoiceData.invoiceTitle}</h2>
+                    <p><strong>Invoice #:</strong> ${invoiceData.id}</p>
+                    <p><strong>Date:</strong> ${invoiceData.date}</p>
+                </div>
+            </div>
+            
+            <div class="invoice-items">
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Date Invoiced</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${invoiceData.sales.map(sale => `
+                            <tr>
+                                <td>${sale.itemName}</td>
+                                <td>${sale.dateSold}</td>
+                                <td>$${sale.salePrice}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Total:</strong></td>
+                            <td><strong>$${invoiceData.total.toFixed(2)}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="invoice-signatures">
+                <div class="signature-section">
+                    <div class="signature-line">
+                        <div class="signature-label">Artist Signature:</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-date">Date: _______________</div>
+                    </div>
+                </div>
+                <div class="signature-section">
+                    <div class="signature-line">
+                        <div class="signature-label">Shop Signature:</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-date">Date: _______________</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="invoice-footer">
+                <p>Thank you for your business!</p>
+            </div>
+        </div>
+    `;
 }
 
 function viewInvoices() {
@@ -4091,7 +4767,7 @@ function togglePassword(inputId) {
 }
 
 // Helper functions to preserve expanded customer groups during edits
-function getExpandedCustomerGroups() {
+function getCurrentlyExpandedCustomerGroups() {
     const expandedCustomers = [];
     const customerHeaders = document.querySelectorAll('.customer-header');
     
@@ -4138,50 +4814,142 @@ function restoreExpandedCustomerGroups(expandedCustomers) {
 const API_BASE = '';
 
 // Authentication functions
-function checkAuthentication() {
-    // Always authenticated on localhost
-    if (isLocalhost()) {
+// Authentication state
+let isAuthenticated = false;
+let authEnabled = false;
+let currentUsername = null;
+
+// Check auth status with server
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/status', {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        isAuthenticated = data.authenticated;
+        authEnabled = data.authEnabled;
+        currentUsername = data.username;
+        updateAuthUI();
+        return { authenticated: isAuthenticated, authEnabled: authEnabled };
+    } catch (error) {
+        console.error('Failed to check auth status:', error);
+        return { authenticated: false, authEnabled: false };
+    }
+}
+
+// Update auth UI elements
+function updateAuthUI() {
+    const authContainer = document.getElementById('authStatusContainer');
+    const authUsernameSpan = document.getElementById('authUsername');
+    
+    if (authEnabled && isAuthenticated && currentUsername) {
+        authContainer.style.display = 'flex';
+        authUsernameSpan.textContent = currentUsername;
+    } else {
+        authContainer.style.display = 'none';
+    }
+}
+
+// Check if user is authenticated (for operations)
+async function checkAuthentication() {
+    const status = await checkAuthStatus();
+    
+    // If auth is not enabled, always allow
+    if (!status.authEnabled) {
         return true;
     }
     
-    const authStatus = sessionStorage.getItem('embroideryAuth');
-    isAuthenticated = authStatus === 'true';
-    return isAuthenticated;
+    // If auth is enabled, check if authenticated
+    return status.authenticated;
 }
 
-function setAuthenticated(status) {
-    isAuthenticated = status;
-    sessionStorage.setItem('embroideryAuth', status.toString());
-}
-
+// Show login modal
 function showAuthModal() {
     document.getElementById('authModal').style.display = 'block';
-    document.getElementById('adminPassword').focus();
+    const usernameInput = document.getElementById('adminUsername');
+    const passwordInput = document.getElementById('adminPassword');
+    if (usernameInput.value) {
+        passwordInput.focus();
+    } else {
+        usernameInput.focus();
+    }
 }
 
+// Hide login modal
 function hideAuthModal() {
     document.getElementById('authModal').style.display = 'none';
     document.getElementById('authForm').reset();
     document.getElementById('authError').style.display = 'none';
 }
 
-function handleAuthSubmit(event) {
+// Handle login form submission
+async function handleAuthSubmit(event) {
     event.preventDefault();
+    const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
     
-    if (password === ADMIN_PASSWORD) {
-        setAuthenticated(true);
-        hideAuthModal();
-        // Switch to the requested tab
-        const requestedTab = sessionStorage.getItem('requestedTab');
-        if (requestedTab) {
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            isAuthenticated = true;
+            currentUsername = data.username;
+            hideAuthModal();
+            updateAuthUI();
+            showNotification('Login successful!', 'success');
+            
+            // Switch to the requested tab if any
+            const requestedTab = sessionStorage.getItem('requestedTab');
+            if (requestedTab) {
             switchTab(requestedTab);
             sessionStorage.removeItem('requestedTab');
         }
-    } else {
+        } else {
+            document.getElementById('authError').style.display = 'block';
+            document.getElementById('authErrorText').textContent = data.message || 'Invalid credentials. Please try again.';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('adminPassword').focus();
+        }
+    } catch (error) {
+        console.error('Login error:', error);
         document.getElementById('authError').style.display = 'block';
+        document.getElementById('authErrorText').textContent = 'Login failed. Please try again.';
         document.getElementById('adminPassword').value = '';
         document.getElementById('adminPassword').focus();
+    }
+}
+
+// Handle logout
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            isAuthenticated = false;
+            currentUsername = null;
+            updateAuthUI();
+            showNotification('Logged out successfully', 'success');
+            
+            // Optionally reload to clear any cached data
+            // window.location.reload();
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showNotification('Logout failed', 'error');
     }
 }
 
@@ -4283,7 +5051,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.76';
+        const currentVersion = '1.0.95';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -4310,15 +5078,30 @@ function initializeApp() {
     // Ensure sticky positioning works
     setupStickyElements();
 
-    // Form submissions
-    document.getElementById('addItemForm').addEventListener('submit', handleAddItem);
-    document.getElementById('addInventoryForm').addEventListener('submit', handleAddInventory);
-    document.getElementById('addProjectForm').addEventListener('submit', handleAddProject);
-    document.getElementById('addCustomerForm').addEventListener('submit', handleAddCustomer);
-    document.getElementById('editCustomerForm').addEventListener('submit', handleEditCustomer);
-    document.getElementById('addSaleForm').addEventListener('submit', handleAddSale);
-    document.getElementById('editSaleForm').addEventListener('submit', handleEditSale);
-    document.getElementById('addPhotoForm').addEventListener('submit', handleAddPhoto);
+    // Form submissions with null checks
+    const addItemForm = document.getElementById('addItemForm');
+    if (addItemForm) addItemForm.addEventListener('submit', handleAddItem);
+    
+    const addInventoryForm = document.getElementById('addInventoryForm');
+    if (addInventoryForm) addInventoryForm.addEventListener('submit', handleAddInventory);
+    
+    const addProjectForm = document.getElementById('addProjectForm');
+    if (addProjectForm) addProjectForm.addEventListener('submit', handleAddProject);
+    
+    const addCustomerForm = document.getElementById('addCustomerForm');
+    if (addCustomerForm) addCustomerForm.addEventListener('submit', handleAddCustomer);
+    
+    const editCustomerForm = document.getElementById('editCustomerForm');
+    if (editCustomerForm) editCustomerForm.addEventListener('submit', handleEditCustomer);
+    
+    const addSaleForm = document.getElementById('addSaleForm');
+    if (addSaleForm) addSaleForm.addEventListener('submit', handleAddSale);
+    
+    const editSaleForm = document.getElementById('editSaleForm');
+    if (editSaleForm) editSaleForm.addEventListener('submit', handleEditSale);
+    
+    const addPhotoForm = document.getElementById('addPhotoForm');
+    if (addPhotoForm) addPhotoForm.addEventListener('submit', handleAddPhoto);
     
     // Mobile-specific file input enhancements
     const photoFileInput = document.getElementById('photoFile');
@@ -4343,7 +5126,8 @@ function initializeApp() {
             });
         }
     }
-    document.getElementById('addIdeaForm').addEventListener('submit', handleAddIdea);
+    const addIdeaForm = document.getElementById('addIdeaForm');
+    if (addIdeaForm) addIdeaForm.addEventListener('submit', handleAddIdea);
     
     // Separate modal form listeners
     const editProjectForm = document.getElementById('editProjectForm');
@@ -4358,10 +5142,23 @@ function initializeApp() {
         console.log('Edit inventory form event listener added');
     }
     
+    const editCompletedItemForm = document.getElementById('editCompletedItemForm');
+    if (editCompletedItemForm) {
+        editCompletedItemForm.addEventListener('submit', handleEditCompletedItem);
+        console.log('Edit completed item form event listener added');
+    }
+    
+    const addCompletedItemForm = document.getElementById('addCompletedItemForm');
+    if (addCompletedItemForm) {
+        addCompletedItemForm.addEventListener('submit', handleAddCompletedItem);
+        console.log('Add completed item form event listener added');
+    }
+    
     // Close button event listeners are handled by onclick attributes in HTML
 
     // Set today's date for sale date
-    document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
+    const saleDate = document.getElementById('saleDate');
+    if (saleDate) saleDate.value = new Date().toISOString().split('T')[0];
     
     // Add event listeners for quantity and price calculation
     const itemQuantity = document.getElementById('itemQuantity');
@@ -4384,33 +5181,52 @@ function initializeApp() {
     // Initialize connection status display (show on localhost, hide on live site)
     initializeConnectionStatus();
     
-    // Authentication event listeners
-    document.getElementById('authForm').addEventListener('submit', handleAuthSubmit);
-    document.getElementById('closeAuthModal').addEventListener('click', hideAuthModal);
-    document.getElementById('cancelAuth').addEventListener('click', hideAuthModal);
+    // Authentication event listeners with null checks
+    const authForm = document.getElementById('authForm');
+    if (authForm) authForm.addEventListener('submit', handleAuthSubmit);
+    
+    const closeAuthModal = document.getElementById('closeAuthModal');
+    if (closeAuthModal) closeAuthModal.addEventListener('click', hideAuthModal);
+    
+    const cancelAuth = document.getElementById('cancelAuth');
+    if (cancelAuth) cancelAuth.addEventListener('click', hideAuthModal);
     
     // Close auth modal when clicking outside
-    document.getElementById('authModal').addEventListener('click', function(event) {
-        if (event.target === this) {
-            hideAuthModal();
-        }
-    });
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                hideAuthModal();
+            }
+        });
+    }
     
-    // Password change event listeners
-    document.getElementById('changePasswordBtn').addEventListener('click', showChangePasswordModal);
-    document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-    document.getElementById('closeChangePasswordModal').addEventListener('click', hideChangePasswordModal);
-    document.getElementById('cancelChangePassword').addEventListener('click', hideChangePasswordModal);
+    // Password change event listeners with null checks
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn) changePasswordBtn.addEventListener('click', showChangePasswordModal);
+    
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) changePasswordForm.addEventListener('submit', handleChangePassword);
+    
+    const closeChangePasswordModal = document.getElementById('closeChangePasswordModal');
+    if (closeChangePasswordModal) closeChangePasswordModal.addEventListener('click', hideChangePasswordModal);
+    
+    const cancelChangePassword = document.getElementById('cancelChangePassword');
+    if (cancelChangePassword) cancelChangePassword.addEventListener('click', hideChangePasswordModal);
     
     // Close change password modal when clicking outside
-    document.getElementById('changePasswordModal').addEventListener('click', function(event) {
-        if (event.target === this) {
-            hideChangePasswordModal();
-        }
-    });
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    if (changePasswordModal) {
+        changePasswordModal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                hideChangePasswordModal();
+            }
+        });
+    }
     
-    // Invoice form event listener
-    document.getElementById('invoiceForm').addEventListener('submit', handleInvoiceGeneration);
+    // Invoice form event listener with null check
+    const invoiceForm = document.getElementById('invoiceForm');
+    if (invoiceForm) invoiceForm.addEventListener('submit', handleInvoiceGeneration);
     
     // Load invoices from localStorage
     loadInvoicesFromLocalStorage();
@@ -4473,11 +5289,29 @@ function calculateTotalValue() {
 }
 
 function calculateEditTotalValue() {
-    const quantity = parseInt(document.getElementById('editItemQuantity').value) || 0;
-    const price = parseFloat(document.getElementById('editItemPrice').value) || 0;
-    const totalValue = quantity * price;
+    // Try both project and inventory field IDs since we don't know which modal is open
+    const projectQuantity = document.getElementById('editProjectQuantity');
+    const projectPrice = document.getElementById('editProjectPrice');
+    const projectTotal = document.getElementById('editProjectTotalPrice');
     
-    document.getElementById('editItemTotalPrice').value = totalValue.toFixed(2);
+    const inventoryQuantity = document.getElementById('editInventoryQuantity');
+    const inventoryPrice = document.getElementById('editInventoryPrice');
+    const inventoryTotal = document.getElementById('editInventoryTotalPrice');
+    
+    // Determine which modal is active and calculate accordingly
+    if (projectQuantity && projectPrice && projectTotal) {
+        const quantity = parseInt(projectQuantity.value) || 0;
+        const price = parseFloat(projectPrice.value) || 0;
+        const totalValue = quantity * price;
+        projectTotal.value = totalValue.toFixed(2);
+    } else if (inventoryQuantity && inventoryPrice && inventoryTotal) {
+        const quantity = parseInt(inventoryQuantity.value) || 0;
+        const price = parseFloat(inventoryPrice.value) || 0;
+        const totalValue = quantity * price;
+        inventoryTotal.value = totalValue.toFixed(2);
+    } else {
+        console.warn('calculateEditTotalValue: Required elements not found');
+    }
 }
 
 function calculateEditInventoryTotalValue() {
@@ -4528,55 +5362,116 @@ function editItem(itemIdOrIndex) {
     console.log('📝 Item to edit:', item); // Debug log
     console.log('📝 Item type:', item.type); // Debug log
     
-    // Populate the edit form
-    document.getElementById('editItemIndex').value = actualIndex;
-    document.getElementById('editItemDescription').value = item.description || item.name || '';
-    document.getElementById('editItemLocation').value = item.location || '';
-    document.getElementById('editItemQuantity').value = item.quantity || 1;
-    document.getElementById('editItemPrice').value = item.price || 0;
-    document.getElementById('editItemType').value = item.type || 'inventory';
-    document.getElementById('editItemStatus').value = item.status || 'available';
-    document.getElementById('editItemCategory').value = item.category || '';
-    document.getElementById('editItemNotes').value = item.notes || '';
-    document.getElementById('editItemSupplier').value = item.supplier || '';
-    document.getElementById('editItemReorderPoint').value = item.reorderPoint || 0;
+    // Populate the edit form with null checks
+    const setElementValue = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = value;
+        } else {
+            console.warn(`Element with id '${id}' not found`);
+        }
+    };
+    
+    // Determine the correct field prefix based on item type
+    const itemType = item.type || 'project';
+    const fieldPrefix = itemType === 'inventory' ? 'editInventory' : 'editProject';
+    
+    setElementValue(`${fieldPrefix}Index`, actualIndex);
+    setElementValue(`${fieldPrefix}Description`, item.description || item.name || '');
+    setElementValue(`${fieldPrefix}Location`, item.location || '');
+    setElementValue(`${fieldPrefix}Quantity`, item.quantity || 1);
+    setElementValue(`${fieldPrefix}Price`, item.price || 0);
+    setElementValue(`${fieldPrefix}Type`, item.type || 'project');
+    setElementValue(`${fieldPrefix}Status`, item.status || 'completed');
+    // setElementValue(`${fieldPrefix}Category`, item.category || ''); // Field removed
+    setElementValue(`${fieldPrefix}Notes`, item.notes || '');
+    setElementValue(`${fieldPrefix}Supplier`, item.supplier || '');
+    setElementValue(`${fieldPrefix}ReorderPoint`, item.reorderPoint || 0);
+    
+    // Populate customer dropdown for projects
+    if (itemType === 'project' && customers.length > 0) {
+        populateCustomerSelect(`${fieldPrefix}Customer`);
+        setElementValue(`${fieldPrefix}Customer`, item.customer || '');
+    }
     
     // Update status options and modal title based on type FIRST
     console.log('Item type for edit:', item.type); // Debug log
     updateEditStatusOptions();
     
-    // NOW set all the field values after the options are created
-    document.getElementById('editItemStatus').value = item.status || 'available';
+    // Hide/show fields based on item status for completed items
+    const hideCompletedItemFields = (itemStatus) => {
+        console.log('🔍 hideCompletedItemFields called with status:', itemStatus);
+        const fieldsToHide = [
+            `${fieldPrefix}DueDate`,
+            `${fieldPrefix}Priority`, 
+            `${fieldPrefix}Tags`,
+            `${fieldPrefix}PatternLink`
+        ];
+        
+        console.log('🔍 Fields to hide:', fieldsToHide);
+        
+        fieldsToHide.forEach(fieldId => {
+            const fieldElement = document.getElementById(fieldId);
+            console.log(`🔍 Field ${fieldId}:`, fieldElement ? 'found' : 'not found');
+            if (fieldElement) {
+                const formGroup = fieldElement.closest('.form-group');
+                if (formGroup) {
+                    const shouldHide = itemStatus === 'completed';
+                    formGroup.style.display = shouldHide ? 'none' : 'block';
+                    console.log(`🔍 Field ${fieldId} ${shouldHide ? 'HIDDEN' : 'SHOWN'}`);
+                }
+            }
+        });
+    };
     
-    // Set project-specific fields
-    document.getElementById('editItemCustomer').value = item.customer || '';
-    document.getElementById('editItemDueDate').value = item.dueDate || '';
-    document.getElementById('editItemPriority').value = item.priority || 'medium';
-    document.getElementById('editItemTags').value = item.tags || '';
-    document.getElementById('editItemPatternLink').value = item.patternLink || '';
+    // NOW set all the field values after the options are created
+    setElementValue(`${fieldPrefix}Status`, item.status || 'completed');
+    
+    // Apply field visibility based on status AFTER the status is set
+    hideCompletedItemFields(item.status || 'completed');
+    
+    // Set project-specific fields (customer will be set after dropdown population)
+    setElementValue(`${fieldPrefix}DueDate`, item.dueDate || '');
+    setElementValue(`${fieldPrefix}Priority`, item.priority || 'medium');
+    setElementValue(`${fieldPrefix}Tags`, item.tags || '');
+    setElementValue(`${fieldPrefix}PatternLink`, item.patternLink || '');
+    
+    // Populate customer dropdown BEFORE setting the value
+    populateCustomerSelect(`${fieldPrefix}Customer`);
+    
+    // NOW set the customer value (this will override the dropdown population)
+    setElementValue(`${fieldPrefix}Customer`, item.customer || '');
     
     // Calculate and set total value
     calculateEditTotalValue();
     
-    // Populate customer dropdown (this will preserve the value we just set)
-    populateCustomerSelect('editItemCustomer');
+    // IMPORTANT: Hide fields AFTER all values are set to prevent reset
+    setTimeout(() => {
+        hideCompletedItemFields(item.status || 'completed');
+    }, 100);
     
     // Display existing image if available (only for projects, not inventory items)
-    const imageSection = document.getElementById('editItemImageSection');
-    const imageDisplay = document.getElementById('editItemImageDisplay');
+    const imageSection = document.getElementById(`${fieldPrefix}ImageSection`);
+    const imageDisplay = document.getElementById(`${fieldPrefix}ImageDisplay`);
     
-    // Clear any previous image and hide section by default
-    imageDisplay.src = '';
-    imageSection.style.display = 'none';
+    // Clear any previous image and hide section by default (with null checks)
+    if (imageDisplay) {
+        imageDisplay.src = '';
+    }
+    if (imageSection) {
+        imageSection.style.display = 'none';
+    }
     
     // Show image section for projects and inventory items with images
     if (item.type === 'project' || !item.type || (item.imageData || item.photo?.dataUrl)) {
         if (item.imageData || item.photo?.dataUrl) {
             const imageData = item.imageData || item.photo?.dataUrl;
             if (imageData && imageData.trim() !== '' && imageData !== 'undefined') {
-                imageDisplay.src = imageData;
-                imageSection.style.display = 'block';
-                console.log('📸 Displaying existing image in edit modal');
+                if (imageDisplay && imageSection) {
+                    imageDisplay.src = imageData;
+                    imageSection.style.display = 'block';
+                    console.log('📸 Displaying existing image in edit modal');
+                }
             } else {
                 console.log('📸 Image data is empty or invalid, hiding section');
             }
@@ -4587,9 +5482,16 @@ function editItem(itemIdOrIndex) {
         console.log('📸 Inventory item - not showing image section');
     }
     
-    // Show the edit modal
-    document.getElementById('editItemModal').style.display = 'block';
-    console.log('Edit modal should be visible now'); // Debug log
+    // Show the appropriate edit modal based on item type
+    const modalId = itemType === 'inventory' ? 'editInventoryModal' : 'editProjectModal';
+    const editModal = document.getElementById(modalId);
+    
+    if (editModal) {
+        editModal.style.display = 'block';
+        console.log(`Edit modal (${modalId}) should be visible now`); // Debug log
+    } else {
+        console.error(`Edit modal (${modalId}) not found!`);
+    }
 }
 
 // Dedicated function for editing Work in Progress items
@@ -4621,9 +5523,8 @@ function editInventoryItem(index) {
     document.getElementById('editInventoryIndex').value = index;
     document.getElementById('editInventoryDescription').value = item.description || item.name || '';
     document.getElementById('editInventoryQuantity').value = item.quantity || 1;
-    document.getElementById('editInventoryCategory').value = item.category || '';
+    // Category and location fields removed - skip them
     document.getElementById('editInventoryPrice').value = item.price || 0;
-    document.getElementById('editInventoryLocation').value = item.location || '';
     document.getElementById('editInventorySupplier').value = item.supplier || '';
     document.getElementById('editInventoryReorderPoint').value = item.reorderPoint || 0;
     document.getElementById('editInventoryStatus').value = item.status || 'available';
@@ -4648,7 +5549,7 @@ function editProject(index) {
     document.getElementById('editProjectIndex').value = index;
     document.getElementById('editProjectDescription').value = item.description || item.name || '';
     document.getElementById('editProjectQuantity').value = item.quantity || 1;
-    document.getElementById('editProjectCategory').value = item.category || '';
+    // document.getElementById('editProjectCategory').value = item.category || ''; // Field removed
     document.getElementById('editProjectStatus').value = item.status || 'pending';
     document.getElementById('editProjectDueDate').value = item.dueDate || '';
     document.getElementById('editProjectPriority').value = item.priority || 'medium';
@@ -4709,7 +5610,7 @@ async function handleEditProject(e) {
         ...inventory[index],
         description: description,
         quantity: parseInt(getElementValue('editProjectQuantity')) || 1,
-        category: getElementValue('editProjectCategory'),
+        category: '', // Field removed
         status: getElementValue('editProjectStatus'),
         customer: getElementValue('editProjectCustomer'),
         dueDate: getElementValue('editProjectDueDate'),
@@ -4761,9 +5662,9 @@ async function handleEditInventory(e) {
         ...inventory[index],
         description: description,
         quantity: parseInt(getElementValue('editInventoryQuantity')) || 1,
-        category: getElementValue('editInventoryCategory'),
+        category: '',
         price: parseFloat(getElementValue('editInventoryPrice')) || 0,
-        location: getElementValue('editInventoryLocation'),
+        location: '',
         supplier: getElementValue('editInventorySupplier'),
         reorderPoint: parseInt(getElementValue('editInventoryReorderPoint')) || 0,
         status: getElementValue('editInventoryStatus'),
@@ -4781,6 +5682,122 @@ async function handleEditInventory(e) {
     closeModal('editInventoryModal');
     
     console.log('Inventory item updated successfully');
+}
+
+async function handleEditCompletedItem(e) {
+    e.preventDefault();
+    
+    console.log('🎯 handleEditCompletedItem called!');
+    
+    const getElementValue = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+    
+    const indexField = document.getElementById('editCompletedItemIndex');
+    if (!indexField || indexField.value === '') {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
+    const index = parseInt(indexField.value);
+    if (index < 0 || index >= inventory.length) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
+    // Basic validation
+    const description = getElementValue('editCompletedItemDescription');
+    if (!description.trim()) {
+        showNotification('Description is required', 'error');
+        return;
+    }
+    
+    // Store expanded customer groups before reload
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+    
+    // Update the item
+    inventory[index] = {
+        ...inventory[index],
+        description: description.trim(),
+        quantity: parseInt(getElementValue('editCompletedItemQuantity')) || 1,
+        price: parseFloat(getElementValue('editCompletedItemPrice')) || 0,
+        customer: getElementValue('editCompletedItemCustomer'),
+        invoicedDate: getElementValue('editCompletedItemInvoicedDate'),
+        status: 'completed', // Always set to completed
+        // Preserve existing image data
+        photo: inventory[index].photo,
+        imageData: inventory[index].imageData
+    };
+    
+    console.log('Completed item updated:', inventory[index]);
+    
+    await saveData();
+    loadCompletedItemsTable(); // Refresh completed items
+    loadInventoryTable(); // Refresh projects table
+    updateCustomerFilters();
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
+    
+    // Close modal
+    closeModal('editCompletedItemModal');
+    
+    showNotification('Completed item updated successfully', 'success');
+    console.log('Completed item updated successfully');
+}
+
+async function handleAddCompletedItem(e) {
+    e.preventDefault();
+    
+    console.log('🎯 handleAddCompletedItem called!');
+    
+    const getElementValue = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+    
+    // Basic validation
+    const description = getElementValue('addCompletedItemDescription');
+    if (!description.trim()) {
+        showNotification('Description is required', 'error');
+        return;
+    }
+    
+    // Store expanded customer groups before reload
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+    
+    // Create new completed item
+    const newItem = {
+        _id: Date.now().toString(), // Simple ID generation
+        description: description.trim(),
+        quantity: parseInt(getElementValue('addCompletedItemQuantity')) || 1,
+        price: parseFloat(getElementValue('addCompletedItemPrice')) || 0,
+        customer: getElementValue('addCompletedItemCustomer'),
+        invoicedDate: getElementValue('addCompletedItemInvoicedDate'),
+        status: 'completed',
+        type: 'project',
+        createdAt: new Date().toISOString()
+    };
+    
+    console.log('New completed item:', newItem);
+    
+    // Add to inventory
+    inventory.push(newItem);
+    
+    await saveData();
+    loadCompletedItemsTable(); // Refresh completed items
+    loadInventoryTable(); // Refresh projects table
+    updateCustomerFilters();
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
+    
+    // Close modal
+    closeModal('addCompletedItemModal');
+    
+    showNotification('Completed item added successfully', 'success');
+    console.log('Completed item added successfully');
 }
 
 async function handleEditItem(e) {
@@ -4817,7 +5834,7 @@ async function handleEditItem(e) {
     console.log(`🔄 Status change: ${oldStatus} → ${newStatus}`);
     
     // Store expanded customer groups before updating
-    const expandedCustomers = getExpandedCustomerGroups();
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
     // Update the item (preserve existing image data)
     inventory[index] = {
@@ -5060,7 +6077,7 @@ function switchTab(tabName) {
     
     // Load data for the tab
     if (tabName === 'projects') {
-        loadInventoryTable(); // Projects table
+        loadProjectsCards(); // Load projects as cards
         // Load mobile cards for projects
         if (isMobile()) {
             loadMobileInventoryCards();
@@ -5071,8 +6088,8 @@ function switchTab(tabName) {
             projectsPagination.style.display = 'none';
         }
     } else if (tabName === 'inventory') {
-        // Load inventory items table (data should already be loaded)
-        loadInventoryItemsTable(); // Inventory items table
+        // Load inventory items as cards
+        loadInventoryCards();
         // Load mobile cards for inventory items
         if (isMobile()) {
             loadMobileInventoryItemsCards();
@@ -5083,8 +6100,8 @@ function switchTab(tabName) {
             inventoryPagination.style.display = 'none';
         }
     } else if (tabName === 'customers') {
-        // Load customers table (data should already be loaded)
-        loadCustomersTable();
+        // Load customers as cards
+        loadCustomersCards();
         // Load mobile cards for customers
         if (isMobile()) {
             loadMobileCustomerCards();
@@ -5102,8 +6119,8 @@ function switchTab(tabName) {
             loadMobileGalleryCards();
         }
     } else if (tabName === 'sales') {
-        // Load sales table (data should already be loaded)
-        loadSalesTable();
+        // Load sales as cards
+        loadSalesCards();
         // Load mobile cards for sales
         if (isMobile()) {
             loadMobileSalesCards();
@@ -5117,7 +6134,15 @@ function switchTab(tabName) {
                 salesActions.appendChild(bulkContainer);
             }
         }
-    } else if (tabName === 'reports') {
+        } else if (tabName === 'completed') {
+            // Load completed items
+            populateCompletedCustomerFilter(); // Populate customer filter first
+            loadCompletedItemsTable();
+            // Load mobile cards for completed items if needed
+            if (isMobile()) {
+                // TODO: Add mobile cards for completed items
+            }
+        } else if (tabName === 'reports') {
         loadReportsDashboard();
         // Show bulk actions as a separate section below report actions
         if (bulkContainer) {
@@ -5126,7 +6151,12 @@ function switchTab(tabName) {
             const reportsTab = document.getElementById('reports');
             const reportActions = document.querySelector('#reports .report-actions');
             if (reportsTab && reportActions && !reportsTab.contains(bulkContainer)) {
-                reportsTab.insertBefore(bulkContainer, reportActions.nextSibling);
+                const nextSibling = reportActions.nextSibling;
+                if (nextSibling && nextSibling.parentNode === reportsTab) {
+                    reportsTab.insertBefore(bulkContainer, nextSibling);
+                } else {
+                    reportsTab.appendChild(bulkContainer);
+                }
             }
         }
     } else if (tabName === 'ideas') {
@@ -5152,14 +6182,18 @@ function loadData() {
     
     console.log('📊 Loading all data...');
     cleanCopyText();
-    loadInventoryTable(); // Projects table
-    loadInventoryItemsTable(); // Inventory items table
-    loadCustomersTable();
-    loadWIPTab();
-    loadGallery();
-    loadSalesTable();
-    loadIdeasGrid();
-    loadReportsDashboard();
+    
+    // Load the appropriate view based on current active tab
+    const activeTab = document.querySelector('.nav-btn.active');
+    if (activeTab) {
+        const tabName = activeTab.getAttribute('data-tab');
+        switchTab(tabName);
+    } else {
+        // Default to projects tab if no active tab
+        switchTab('projects');
+    }
+    
+    // Load other data that doesn't depend on current tab
     updateLocationFilters();
     updateCustomerFilters();
     
@@ -5248,6 +6282,7 @@ async function saveDataToAPI() {
             const response = await fetch(`/api/${name}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // Include session cookies for authentication
                 body: JSON.stringify(data)
             });
             
@@ -5311,7 +6346,9 @@ async function saveDataToLocalStorage() {
                 }
             }
         } else {
-            showNotification('Failed to save data locally', 'error');
+            console.error('LocalStorage save failed:', error);
+            // Don't show error notification for localStorage failures when API is working
+            console.log('LocalStorage save failed, but API save should have succeeded');
         }
     }
 }
@@ -5365,6 +6402,12 @@ function cleanupLocalStorage() {
 }
 
 async function saveData() {
+    // Prevent multiple simultaneous saves
+    if (window.isSaving) {
+        console.log('💾 Save already in progress, skipping');
+        return;
+    }
+    
     console.log('💾 saveData() called');
     console.log('💾 Ideas count before save:', ideas.length);
     console.log('💾 Ideas before save:', ideas.map(i => ({ id: i.id, title: i.title })));
@@ -5379,11 +6422,12 @@ async function saveData() {
         console.error('Data validation failed, skipping save');
         showNotification('Data validation failed. Please refresh and try again.', 'error');
         window.isSaving = false;
+        window.isModifying = false;
         return;
     }
     
-    // Try API first, fallback to localStorage
     try {
+        // Try API first, fallback to localStorage
         await saveDataToAPI();
         console.log('✅ Data saved to API successfully');
     } catch (error) {
@@ -5398,7 +6442,7 @@ async function saveData() {
         window.isModifying = false;
         // Trigger synchronization for both desktop and mobile views
         synchronizeViews();
-    }, 2000); // Increased delay to 2 seconds to allow server processing
+    }, 1000); // Reduced delay to 1 second
 }
 
 function validateDataIntegrity() {
@@ -5587,12 +6631,29 @@ function updateStatusOptions() {
 
 // Update edit status options based on item type
 function updateEditStatusOptions() {
-    const typeSelect = document.getElementById('editItemType');
-    const statusSelect = document.getElementById('editItemStatus');
-    const categorySelect = document.getElementById('editItemCategory');
-    const projectFields = document.getElementById('editProjectFields');
-    const modalTitle = document.getElementById('editItemModalTitle');
-    const submitButton = document.getElementById('editItemSubmitButton');
+    // Try both project and inventory elements
+    const projectTypeSelect = document.getElementById('editProjectType');
+    const projectStatusSelect = document.getElementById('editProjectStatus');
+    // const projectCategorySelect = document.getElementById('editProjectCategory'); // Field removed
+    
+    const inventoryTypeSelect = document.getElementById('editInventoryType');
+    const inventoryStatusSelect = document.getElementById('editInventoryStatus');
+    // const inventoryCategorySelect = document.getElementById('editInventoryCategory'); // Field removed
+    
+    // Determine which modal is active
+    let typeSelect, statusSelect, categorySelect;
+    if (projectTypeSelect && projectStatusSelect) {
+        typeSelect = projectTypeSelect;
+        statusSelect = projectStatusSelect;
+        categorySelect = null; // Category field removed
+    } else if (inventoryTypeSelect && inventoryStatusSelect) {
+        typeSelect = inventoryTypeSelect;
+        statusSelect = inventoryStatusSelect;
+        categorySelect = null; // Category field removed
+    } else {
+        console.warn('updateEditStatusOptions: Required elements not found');
+        return;
+    }
     
     console.log('updateEditStatusOptions called, typeSelect.value:', typeSelect.value); // Debug log
     
@@ -5653,6 +6714,27 @@ function updateEditStatusOptions() {
         modalTitle.textContent = 'Edit Project';
         submitButton.textContent = 'Update Project';
     }
+    
+    // Hide/show fields based on status for completed items
+    const currentStatus = statusSelect.value;
+    const fieldPrefix = typeSelect.value === 'inventory' ? 'editInventory' : 'editProject';
+    
+    const fieldsToHide = [
+        `${fieldPrefix}DueDate`,
+        `${fieldPrefix}Priority`, 
+        `${fieldPrefix}Tags`,
+        `${fieldPrefix}PatternLink`
+    ];
+    
+    fieldsToHide.forEach(fieldId => {
+        const fieldElement = document.getElementById(fieldId);
+        if (fieldElement) {
+            const formGroup = fieldElement.closest('.form-group');
+            if (formGroup) {
+                formGroup.style.display = currentStatus === 'completed' ? 'none' : 'block';
+            }
+        }
+    });
 }
 
 // Update table headers based on view mode
@@ -5705,8 +6787,17 @@ function toggleDetailedView() {
 
 // Projects Management (Customer Work)
 function loadInventoryTable(showDetailed = false) {
-    const tbody = document.getElementById('inventoryTableBody');
-    tbody.innerHTML = '';
+    // This function is deprecated - projects now use cards
+    // Check if we're on the projects tab and load cards instead
+    const activeTab = document.querySelector('.nav-btn.active');
+    if (activeTab && activeTab.getAttribute('data-tab') === 'projects') {
+        loadProjectsCards();
+        return;
+    }
+    
+    // For other tabs, this is a no-op since we use cards now
+    console.log('loadInventoryTable called - using card layout instead');
+    return;
     
     // Update table headers based on view mode
     updateTableHeaders(showDetailed);
@@ -5911,7 +7002,73 @@ function loadInventoryTable(showDetailed = false) {
         });
     });
     
+    // Restore expanded customer groups from localStorage
+    restoreExpandedCustomerGroups();
+    
     // Desktop table loaded
+}
+
+// Restore expanded customer groups after table is rebuilt
+function restoreExpandedCustomerGroups() {
+    const expandedCustomers = getExpandedCustomerGroups();
+    console.log('🔄 Restoring expanded customer groups:', expandedCustomers);
+    expandedCustomers.forEach(customerName => {
+        expandCustomerGroup(customerName);
+    });
+}
+
+// Clear all expanded customer groups (for debugging)
+function clearAllExpandedCustomerGroups() {
+    localStorage.removeItem('expandedCustomerGroups');
+    console.log('🧹 Cleared all expanded customer groups from localStorage');
+    showNotification('All customer groups collapsed', 'info');
+}
+
+// Expand a customer group (without toggling)
+function expandCustomerGroup(customerName) {
+    // Desktop version
+    const desktopHeader = document.querySelector(`[data-customer="${customerName}"]`);
+    const desktopChevron = desktopHeader ? desktopHeader.querySelector('.customer-toggle') : null;
+    
+    // Find all project rows for this customer
+    const projectRows = document.querySelectorAll('.project-row');
+    let customerProjectRows = [];
+    
+    projectRows.forEach(row => {
+        const projectName = row.querySelector('.project-name strong')?.textContent;
+        if (projectName) {
+            let matchingProject;
+            if (customerName === 'No Customer') {
+                matchingProject = inventory.find(item => item.name === projectName && (!item.customer || item.customer === ''));
+            } else {
+                matchingProject = inventory.find(item => item.name === projectName && item.customer === customerName);
+            }
+            if (matchingProject) {
+                customerProjectRows.push(row);
+            }
+        }
+    });
+    
+    // Expand desktop version
+    if (customerProjectRows.length > 0 && desktopChevron) {
+        customerProjectRows.forEach(row => {
+            row.style.display = 'table-row';
+        });
+        desktopChevron.className = 'fas fa-chevron-down customer-toggle';
+    }
+    
+    // Mobile version
+    const sanitizedCustomerName = customerName.replace(/\s+/g, '-').toLowerCase();
+    const mobileContainer = document.getElementById('mobileInventoryCards');
+    const mobileHeaderContent = mobileContainer ? mobileContainer.querySelector(`[data-customer="${customerName}"]`) : null;
+    const mobileChevron = mobileHeaderContent ? mobileHeaderContent.querySelector('.customer-chevron') : null;
+    const mobileProjectsContainer = document.getElementById(`customer-projects-${sanitizedCustomerName}`);
+    
+    if (mobileProjectsContainer && mobileChevron) {
+        mobileProjectsContainer.style.display = 'block';
+        mobileChevron.className = 'fas fa-chevron-down customer-chevron';
+        mobileChevron.style.transform = 'rotate(0deg)';
+    }
 }
 
 // CLEAN MOBILE CARD SYSTEM - REWRITTEN FROM SCRATCH
@@ -6342,6 +7499,44 @@ function loadMobileIdeasCards() {
     MobileCardManager.loadIdeas();
 }
 
+// Customer expansion state management
+function getExpandedCustomerGroups() {
+    try {
+        const stored = localStorage.getItem('expandedCustomerGroups');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.warn('Failed to load expanded customer groups:', e);
+        return [];
+    }
+}
+
+function saveExpandedCustomerGroups(expandedCustomers) {
+    try {
+        localStorage.setItem('expandedCustomerGroups', JSON.stringify(expandedCustomers));
+    } catch (e) {
+        console.warn('Failed to save expanded customer groups:', e);
+    }
+}
+
+function isCustomerExpanded(customerName) {
+    const expanded = getExpandedCustomerGroups();
+    return expanded.includes(customerName);
+}
+
+function addExpandedCustomer(customerName) {
+    const expanded = getExpandedCustomerGroups();
+    if (!expanded.includes(customerName)) {
+        expanded.push(customerName);
+        saveExpandedCustomerGroups(expanded);
+    }
+}
+
+function removeExpandedCustomer(customerName) {
+    const expanded = getExpandedCustomerGroups();
+    const filtered = expanded.filter(name => name !== customerName);
+    saveExpandedCustomerGroups(filtered);
+}
+
 // Toggle customer group visibility
 function toggleCustomerGroup(customerName) {
     // Handle both desktop and mobile versions
@@ -6391,12 +7586,14 @@ function toggleCustomerGroup(customerName) {
                 row.style.display = 'none';
             });
             desktopChevron.className = 'fas fa-chevron-right customer-toggle';
+            removeExpandedCustomer(customerName);
         } else {
             // Expand - show all project rows for this customer
             customerProjectRows.forEach(row => {
                 row.style.display = 'table-row';
             });
             desktopChevron.className = 'fas fa-chevron-down customer-toggle';
+            addExpandedCustomer(customerName);
         }
     }
     
@@ -6409,11 +7606,13 @@ function toggleCustomerGroup(customerName) {
             mobileProjectsContainer.style.display = 'none';
             mobileChevron.className = 'fas fa-chevron-right customer-chevron';
             mobileChevron.style.transform = 'rotate(0deg)';
+            removeExpandedCustomer(customerName);
         } else {
             // Expand
             mobileProjectsContainer.style.display = 'block';
             mobileChevron.className = 'fas fa-chevron-down customer-chevron';
             mobileChevron.style.transform = 'rotate(0deg)';
+            addExpandedCustomer(customerName);
         }
     }
 }
@@ -6430,12 +7629,45 @@ function setupMobileModalEnhancements() {
     console.log('📱 Mobile modal enhancements setup complete');
 }
 
-function openAddInventoryModal() {
+function openAddInventoryModal(prefilledData = null) {
     const modal = document.getElementById('addInventoryModal');
     const form = document.getElementById('addInventoryForm');
     
     if (form) {
         form.reset();
+        
+        // If prefilled data is provided (from copy), populate the form
+        if (prefilledData) {
+            // Update modal title to indicate copying
+            const modalTitle = modal.querySelector('h2');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<i class="fas fa-copy"></i> Copy Item';
+            }
+            
+            // Populate form fields with copied data (using correct field IDs)
+            const fields = {
+                'inventoryDescription': prefilledData.description || '',
+                'inventoryQuantity': prefilledData.quantity || 1,
+                'inventoryCategory': prefilledData.category || '',
+                'inventoryStatus': prefilledData.status || 'available',
+                'inventoryCost': prefilledData.price || 0,
+                'inventoryNotes': prefilledData.notes || ''
+            };
+            
+            // Set form values
+            Object.keys(fields).forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.value = fields[fieldId];
+                }
+            });
+        } else {
+            // Reset modal title for new items
+            const modalTitle = modal.querySelector('h2');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<i class="fas fa-plus"></i> Add New Project';
+            }
+        }
     }
     
     if (modal) {
@@ -6459,12 +7691,51 @@ function openAddInventoryModal() {
 }
 
 // Dedicated Project Modal Functions  
-function openAddProjectModal() {
+function openAddProjectModal(prefilledData = null) {
     const modal = document.getElementById('addProjectModal');
     const form = document.getElementById('addProjectForm');
     
     if (form) {
         form.reset();
+        
+        // If prefilled data is provided (from copy), populate the form
+        if (prefilledData) {
+            // Update modal title to indicate copying
+            const modalTitle = modal.querySelector('h3');
+            if (modalTitle) {
+                modalTitle.innerHTML = 'Copy Item';
+            }
+            
+            // Populate form fields with copied data (using correct field IDs)
+            const fields = {
+                'projectDescription': prefilledData.description || '',
+                'projectQuantity': prefilledData.quantity || 1,
+                // 'projectCategory': prefilledData.category || '', // Field removed
+                'projectStatus': prefilledData.status || 'pending',
+                'projectCustomer': prefilledData.customer || '',
+                'projectDueDate': prefilledData.dueDate || '',
+                'projectPrice': prefilledData.price || 0,
+                'projectPriority': prefilledData.priority || 'low',
+                'projectNotes': prefilledData.notes || '',
+                'projectLocation': prefilledData.location || 'Not specified',
+                'projectTags': prefilledData.tags || '',
+                'projectPatternLink': prefilledData.patternLink || ''
+            };
+            
+            // Set form values
+            Object.keys(fields).forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.value = fields[fieldId];
+                }
+            });
+        } else {
+            // Reset modal title for new items
+            const modalTitle = modal.querySelector('h3');
+            if (modalTitle) {
+                modalTitle.innerHTML = 'Add New Project';
+            }
+        }
     }
     
     populateCustomerSelect('projectCustomer');
@@ -6521,9 +7792,9 @@ async function handleAddInventory(e) {
         priority: 'medium',
         dueDate: null,
         notes: document.getElementById('inventoryNotes').value,
-        category: document.getElementById('inventoryCategory').value,
+        category: '',
         supplier: document.getElementById('inventorySupplier').value,
-        location: document.getElementById('inventoryLocation').value,
+        location: '',
         reorderPoint: parseInt(document.getElementById('inventoryReorderPoint').value) || 0,
         tags: '',
         patternLink: '',
@@ -6615,7 +7886,6 @@ async function handleAddProject(e) {
         priority: document.getElementById('projectPriority').value,
         dueDate: document.getElementById('projectDueDate').value || null,
         notes: document.getElementById('projectNotes').value,
-        category: document.getElementById('projectCategory').value,
         customer: document.getElementById('projectCustomer').value,
         location: document.getElementById('projectLocation').value,
         patternLink: document.getElementById('projectPatternLink').value,
@@ -6630,8 +7900,44 @@ async function handleAddProject(e) {
     // Add to inventory array (projects are stored in the same array)
     inventory.push(projectData);
     
+    // If adding to a customer, ensure that customer stays expanded
+    const customerName = projectData.customer || 'No Customer';
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+    if (!expandedCustomers.includes(customerName)) {
+        expandedCustomers.push(customerName);
+        saveExpandedCustomerGroups(expandedCustomers);
+    }
+    
     // Save data
     await saveData();
+    
+    // Handle customer switching if we're in copy mode
+    if (window.copyMode && window.copyMode.isActive) {
+        const originalCustomer = window.copyMode.originalCustomer;
+        const newCustomer = projectData.customer || 'No Customer';
+        
+        // Close original customer group and focus on new customer
+        if (originalCustomer !== newCustomer) {
+            const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+            
+            // Remove original customer from expanded list (close it)
+            const originalIndex = expandedCustomers.indexOf(originalCustomer);
+            if (originalIndex > -1) {
+                expandedCustomers.splice(originalIndex, 1);
+            }
+            
+            // Ensure new customer is expanded (focus on it)
+            if (!expandedCustomers.includes(newCustomer)) {
+                expandedCustomers.push(newCustomer);
+            }
+            
+            saveExpandedCustomerGroups(expandedCustomers);
+            console.log(`🔄 Copy mode: Closed "${originalCustomer}" and focused on "${newCustomer}"`);
+        }
+        
+        // Clear copy mode
+        window.copyMode = null;
+    }
     
     // Update UI
     loadInventoryTable();
@@ -6657,7 +7963,6 @@ function copyFromLastProject() {
     // Populate form fields
     document.getElementById('projectDescription').value = lastProject.description || lastProject.name || '';
     document.getElementById('projectQuantity').value = lastProject.quantity || 1;
-    document.getElementById('projectCategory').value = lastProject.category || '';
     document.getElementById('projectStatus').value = lastProject.status || 'pending';
     document.getElementById('projectCustomer').value = lastProject.customer || '';
     document.getElementById('projectDueDate').value = lastProject.dueDate || '';
@@ -7270,8 +8575,13 @@ function generatePrintInvoicePreview(vendorName, invoiceDate, items, vendorLogo,
     document.getElementById('printInvoicePreview').scrollIntoView({ behavior: 'smooth' });
 }
 
-function printInvoice() {
+function printCustomInvoice() {
     const form = document.getElementById('printInvoiceForm');
+    if (!form) {
+        showNotification('Invoice form not found', 'error');
+        return;
+    }
+    
     const formData = new FormData(form);
     
     // Validate required fields
@@ -7319,7 +8629,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (printInvoiceForm) {
         printInvoiceForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            printInvoice();
+            printCustomInvoice();
         });
     }
 });
@@ -7782,6 +9092,12 @@ function handleAddSale(e) {
 // Utility Functions
 function populateCustomerSelect(selectId) {
     const select = document.getElementById(selectId);
+    
+    if (!select) {
+        console.warn(`populateCustomerSelect: Element with id '${selectId}' not found`);
+        return;
+    }
+    
     const currentValue = select.value; // Save current value
     console.log(`populateCustomerSelect(${selectId}): currentValue = "${currentValue}"`);
     console.log(`Available customers:`, customers.map(c => c.name));
@@ -7884,6 +9200,7 @@ function filterItems() {
     
     customerHeaders.forEach((header, index) => {
         const group = customerGroups[index];
+        if (!group) return; // Skip if group doesn't exist
         const customerName = header.querySelector('strong').textContent;
         const projectRows = group.querySelectorAll('.project-row');
         
@@ -7934,7 +9251,7 @@ function quickStatusChange(index, newStatus) {
     };
     
     // Store expanded customer groups before updating
-    const expandedCustomers = getExpandedCustomerGroups();
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
     inventory[index].status = newStatus;
     saveData();
@@ -7949,7 +9266,7 @@ function quickStatusChange(index, newStatus) {
 function markAsCompleted(index) {
     if (confirm('Mark this item as completed?')) {
         // Store expanded customer groups before updating
-        const expandedCustomers = getExpandedCustomerGroups();
+        const expandedCustomers = getCurrentlyExpandedCustomerGroups();
         
         inventory[index].status = 'completed';
         inventory[index].dateCompleted = new Date().toISOString();
@@ -7967,7 +9284,7 @@ function markAsCompleted(index) {
 function markAsSold(index) {
     if (confirm('Mark this item as sold?')) {
         // Store expanded customer groups before updating
-        const expandedCustomers = getExpandedCustomerGroups();
+        const expandedCustomers = getCurrentlyExpandedCustomerGroups();
         
         inventory[index].status = 'sold';
         saveData();
@@ -8063,7 +9380,7 @@ async function deleteItem(itemIdOrIndex) {
 
 async function proceedWithDeletion(itemIdOrIndex) {
     // Store expanded customer groups before deleting
-    const expandedCustomers = getExpandedCustomerGroups();
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
     // Handle both ID and index parameters
     let itemRemoved = false;
@@ -8098,8 +9415,7 @@ async function proceedWithDeletion(itemIdOrIndex) {
         loadInventoryTable();
         loadInventoryItemsTable(); // Also reload inventory items table
         
-        // Restore expanded customer groups after reload
-        restoreExpandedCustomerGroups(expandedCustomers);
+        // Expanded customer groups will be restored automatically by loadInventoryTable()
         
         showNotification('Item deleted successfully!', 'success');
         console.log('✅ Item deleted successfully');
@@ -8128,37 +9444,30 @@ async function copyItem(index) {
             return;
         }
         
-        // Store expanded customer groups before copying
-        const expandedCustomers = getExpandedCustomerGroups();
-        
-        // Create a copy with reset status
+        // Create a copy with reset status and without MongoDB _id
+        const { _id, ...itemWithoutId } = originalItem;
         const copiedItem = {
-            ...originalItem,
+            ...itemWithoutId,
             name: originalItem.name, // Keep original name
             type: originalItem.type || 'inventory', // Ensure type is preserved
             status: originalItem.type === 'inventory' ? 'available' : 'pending', // Use appropriate status based on type
             dateAdded: new Date().toISOString(),
             dueDate: null, // Clear due date for copy
-            notes: originalItem.notes || '' // Keep original notes without copy notation
+            notes: originalItem.notes || '', // Keep original notes without copy notation
+            customer: '' // Clear customer so user can assign to correct one
         };
         
-        // Add to inventory
-        inventory.push(copiedItem);
+        // Store the original customer for later reference
+        const originalCustomer = originalItem.customer || 'No Customer';
         
-        // Save data
-        await saveData();
+        // Open the add project modal with the copied item data for editing
+        openAddProjectModal(copiedItem);
         
-        // Refresh both tables
-        loadInventoryTable(); // Projects table
-        loadInventoryItemsTable(); // Inventory items table
-        
-        // Restore expanded customer groups after reload
-        restoreExpandedCustomerGroups(expandedCustomers);
-        
-        // Show success message
-        showNotification('Item copied successfully!', 'success');
-        
-        console.log('Item copied successfully:', copiedItem);
+        // Set up a flag to track that we're in copy mode
+        window.copyMode = {
+            originalCustomer: originalCustomer,
+            isActive: true
+        };
         
     } catch (error) {
         console.error('Error in copyItem function:', error);
@@ -8220,7 +9529,7 @@ async function copyCurrentItem() {
     const currentItem = inventory[index];
     
     // Store expanded customer groups before copying
-    const expandedCustomers = getExpandedCustomerGroups();
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
     // Create a copy with reset status
     const copiedItem = {
@@ -8233,6 +9542,13 @@ async function copyCurrentItem() {
         notes: currentItem.notes || '' // Keep original notes without copy notation
     };
     
+    // If copying to the same customer, ensure that customer stays expanded
+    const customerName = copiedItem.customer || 'No Customer';
+    if (!expandedCustomers.includes(customerName)) {
+        expandedCustomers.push(customerName);
+        saveExpandedCustomerGroups(expandedCustomers);
+    }
+    
     // Add to inventory
     inventory.push(copiedItem);
     
@@ -8242,9 +9558,6 @@ async function copyCurrentItem() {
     // Refresh both tables
     loadInventoryTable(); // Projects table
     loadInventoryItemsTable(); // Inventory items table
-    
-    // Restore expanded customer groups after reload
-    restoreExpandedCustomerGroups(expandedCustomers);
     
     // Close the edit modal
     closeModal('editItemModal');
@@ -9615,7 +10928,7 @@ function updateWIPStatus(index) {
     
     if (confirm(`Mark "${item.name || item.description}" as ${newStatus.replace('-', ' ')}?`)) {
         // Store expanded customer groups before updating
-        const expandedCustomers = getExpandedCustomerGroups();
+        const expandedCustomers = getCurrentlyExpandedCustomerGroups();
         
         item.status = newStatus;
         console.log('✅ Item status updated to:', item.status);
@@ -9686,7 +10999,7 @@ function openAddPhotoModal() {
     const modal = document.getElementById('addPhotoModal');
     const form = document.getElementById('addPhotoForm');
     
-    populateItemSelect('photoItem');
+    // populateItemSelect('photoItem'); // Field removed
     
     if (form) {
         form.reset();
@@ -9760,8 +11073,8 @@ async function handleAddPhoto(e) {
             const newPhoto = {
                 title: document.getElementById('photoTitle').value,
                 description: document.getElementById('photoDescription').value,
-                status: document.getElementById('photoStatus').value,
-                relatedItem: document.getElementById('photoItem').value,
+                status: 'completed', // Default status since field removed
+                relatedItem: '', // Field removed
                 imageData: e.target.result,
                 dateAdded: new Date().toISOString()
             };
@@ -9928,8 +11241,8 @@ async function editPhoto(photoIdOrIndex) {
     // Populate the edit form
     document.getElementById('editPhotoTitle').value = photo.title || '';
     document.getElementById('editPhotoDescription').value = photo.description || '';
-    document.getElementById('editPhotoCategory').value = photo.category || '';
-    document.getElementById('editPhotoStatus').value = photo.status || 'completed';
+    // document.getElementById('editPhotoCategory').value = photo.category || ''; // Field removed
+    // document.getElementById('editPhotoStatus').value = photo.status || 'completed'; // Field removed
     document.getElementById('editPhotoNotes').value = photo.notes || '';
     
     // Display existing image if available
@@ -9996,8 +11309,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update photo data
             photo.title = document.getElementById('editPhotoTitle').value;
             photo.description = document.getElementById('editPhotoDescription').value;
-            photo.category = document.getElementById('editPhotoCategory').value;
-            photo.status = document.getElementById('editPhotoStatus').value;
+            photo.category = ''; // Field removed
+            photo.status = 'completed'; // Default status since field removed
             photo.notes = document.getElementById('editPhotoNotes').value;
             photo.lastModified = new Date().toISOString();
             
@@ -10207,7 +11520,7 @@ async function handleAddIdea(event) {
     
     const title = document.getElementById('ideaTitle').value.trim();
     const description = document.getElementById('ideaDescription').value.trim();
-    const category = document.getElementById('ideaCategory').value;
+    const category = ''; // Field removed
     const status = document.getElementById('ideaStatus').value;
     const source = document.getElementById('ideaSource').value.trim();
     const priority = document.getElementById('ideaPriority').value;
@@ -10445,7 +11758,7 @@ function loadIdeasGrid() {
                     `<img src="${item.imageData}" alt="${item.displayTitle}" onclick="viewIdeaImage('${item.id || item.displayTitle}')">` : 
                     `<div class="no-image"><i class="fas fa-image"></i></div>`
                 }
-                <div class="idea-status status-${item.displayStatus}">${item.displayStatus.replace('-', ' ')}</div>
+                <div class="idea-status status-${item.displayStatus}">${item.displayStatus ? item.displayStatus.replace('-', ' ') : 'idea'}</div>
                 <div class="item-type-badge">${item.type === 'idea' ? 'Idea' : 'Inventory'}</div>
             </div>
             <div class="idea-content">
@@ -10522,7 +11835,7 @@ function editIdea(ideaIdOrIndex) {
     // Populate form with existing data
     document.getElementById('ideaTitle').value = idea.title;
     document.getElementById('ideaDescription').value = idea.description || '';
-    document.getElementById('ideaCategory').value = idea.category;
+    // document.getElementById('ideaCategory').value = idea.category; // Field removed
     document.getElementById('ideaStatus').value = idea.status;
     document.getElementById('ideaSource').value = idea.source || '';
     document.getElementById('ideaPriority').value = idea.priority;
@@ -11017,9 +12330,14 @@ function showPhotoPreview(inputId, imageUrl) {
     preview.innerHTML = `<img src="${imageUrl}" alt="Preview">`;
     
     // Insert after the input container
-    const inputContainer = document.querySelector(`#${inputId}`).closest('.photo-input-container');
-    if (inputContainer) {
-        inputContainer.parentNode.insertBefore(preview, inputContainer.nextSibling);
+    const inputContainer = document.querySelector(`#${inputId}`)?.closest('.photo-input-container');
+    if (inputContainer && inputContainer.parentNode) {
+        const nextSibling = inputContainer.nextSibling;
+        if (nextSibling && nextSibling.parentNode === inputContainer.parentNode) {
+            inputContainer.parentNode.insertBefore(preview, nextSibling);
+        } else {
+            inputContainer.parentNode.appendChild(preview);
+        }
     }
 }
 
@@ -11623,13 +12941,13 @@ function populateFormFields(data, context, confidence) {
             name: 'photoTitle',
             description: 'photoDescription',
             category: 'photoCategory',
-            status: 'photoStatus',
+            status: 'completed', // Field removed, use default
             notes: 'photoDescription'
         },
         ideas: {
             name: 'ideaTitle',
             description: 'ideaDescription',
-            category: 'ideaCategory',
+            category: '', // Field removed
             status: 'ideaStatus',
             notes: 'ideaDescription'
         }
@@ -11696,8 +13014,652 @@ function setupOCRFunctionality() {
     console.log('OCR functionality initialized');
 }
 
-// Initialize OCR when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+// Load data from server
+async function loadDataFromServer() {
+    try {
+        console.log('🔄 Loading data from server...');
+        
+        // Load all data in parallel
+        const [inventoryResponse, customersResponse, salesResponse, galleryResponse, ideasResponse] = await Promise.all([
+            fetch('/api/inventory', { credentials: 'include' }),
+            fetch('/api/customers', { credentials: 'include' }),
+            fetch('/api/sales', { credentials: 'include' }),
+            fetch('/api/gallery', { credentials: 'include' }),
+            fetch('/api/ideas', { credentials: 'include' })
+        ]);
+        
+        // Check if responses are ok
+        if (!inventoryResponse.ok) throw new Error('Failed to load inventory');
+        if (!customersResponse.ok) throw new Error('Failed to load customers');
+        if (!salesResponse.ok) throw new Error('Failed to load sales');
+        if (!galleryResponse.ok) throw new Error('Failed to load gallery');
+        if (!ideasResponse.ok) throw new Error('Failed to load ideas');
+        
+        // Parse JSON responses
+        inventory = await inventoryResponse.json();
+        customers = await customersResponse.json();
+        sales = await salesResponse.json();
+        gallery = await galleryResponse.json();
+        ideas = await ideasResponse.json();
+        
+        console.log(`✅ Data loaded: ${inventory.length} inventory, ${customers.length} customers, ${sales.length} sales, ${gallery.length} gallery, ${ideas.length} ideas`);
+        
+        // Load the appropriate view based on current tab
+        const activeTab = document.querySelector('.nav-btn.active');
+        if (activeTab) {
+            const tabName = activeTab.getAttribute('data-tab');
+            switchTab(tabName);
+        } else {
+            // Default to projects tab
+            switchTab('projects');
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to load data from server:', error);
+        showNotification('Failed to load data from server', 'error');
+    }
+}
+
+// Initialize authentication and OCR when DOM is loaded
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check authentication status on page load
+    await checkAuthStatus();
+    
+    // Load data from server
+    await loadDataFromServer();
+    
+    // Setup auth form handler
+    const authForm = document.getElementById('authForm');
+    if (authForm) {
+        authForm.addEventListener('submit', handleAuthSubmit);
+    }
+    
+    // Setup auth modal close handlers
+    const closeAuthModal = document.getElementById('closeAuthModal');
+    if (closeAuthModal) {
+        closeAuthModal.addEventListener('click', hideAuthModal);
+    }
+    
+    const cancelAuth = document.getElementById('cancelAuth');
+    if (cancelAuth) {
+        cancelAuth.addEventListener('click', hideAuthModal);
+    }
+    
     // Add OCR setup to existing DOMContentLoaded handler
     setTimeout(setupOCRFunctionality, 100);
 });
+
+// ===== INVOICING TAB FUNCTIONS =====
+
+// Track selected items for invoicing
+let selectedCompletedItems = new Set();
+
+// Filter completed items (debounced)
+function filterCompletedItems() {
+    return PerformanceManager.debounce(() => {
+        loadCompletedItemsTable();
+    }, 300)();
+}
+
+// Clear completed items filters
+function clearCompletedFilters() {
+    const searchElement = document.getElementById('completedSearchItems');
+    const customerElement = document.getElementById('completedCustomerFilter');
+    const dateElement = document.getElementById('completedDateFilter');
+    
+    if (searchElement) searchElement.value = '';
+    if (customerElement) customerElement.value = '';
+    if (dateElement) dateElement.value = '';
+    
+    loadCompletedItemsTable();
+}
+
+// Populate completed items customer filter
+function populateCompletedCustomerFilter() {
+    const customerSelect = document.getElementById('completedCustomerFilter');
+    if (!customerSelect) return;
+    
+    // Get unique customers from completed items
+    const completedCustomers = [...new Set(
+        inventory
+            .filter(item => item.status === 'completed' && item.customer)
+            .map(item => item.customer)
+    )].sort();
+    
+    // Clear existing options (except "All Customers")
+    customerSelect.innerHTML = '<option value="">All Customers</option>';
+    
+    // Add customer options
+    completedCustomers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer;
+        option.textContent = customer;
+        customerSelect.appendChild(option);
+    });
+}
+
+// Load completed projects into the invoicing tab
+function loadCompletedItemsTable() {
+    // Apply filters to completed projects
+    const completedProjects = inventory.filter(item => {
+        if (item.status !== 'completed') return false;
+        
+        // Apply search filter
+        const searchElement = document.getElementById('completedSearchItems');
+        const searchTerm = searchElement?.value?.toLowerCase() || '';
+        if (searchTerm && !item.description?.toLowerCase().includes(searchTerm)) {
+            return false;
+        }
+        
+        // Apply customer filter
+        const customerFilter = document.getElementById('completedCustomerFilter')?.value || '';
+        if (customerFilter && item.customer !== customerFilter) {
+            return false;
+        }
+        
+        // Apply date filter
+        const dateFilter = document.getElementById('completedDateFilter')?.value || '';
+        if (dateFilter && item.invoicedDate) {
+            const itemDate = new Date(item.invoicedDate);
+            const now = new Date();
+            
+            switch (dateFilter) {
+                case 'today':
+                    if (itemDate.toDateString() !== now.toDateString()) return false;
+                    break;
+                case 'week':
+                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    if (itemDate < weekAgo) return false;
+                    break;
+                case 'month':
+                    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    if (itemDate < monthAgo) return false;
+                    break;
+                case 'quarter':
+                    const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                    if (itemDate < quarterAgo) return false;
+                    break;
+                case 'year':
+                    const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    if (itemDate < yearAgo) return false;
+                    break;
+            }
+        }
+        
+        return true;
+    });
+    
+    const container = document.getElementById('completedItemsCards');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (completedProjects.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666;">
+                <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                <h3>No Completed Items</h3>
+                <p>Mark some projects as completed to see them here.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    completedProjects.forEach((item, filteredIndex) => {
+        // Find the actual index in the inventory array
+        const actualIndex = inventory.findIndex(invItem => 
+            invItem._id ? invItem._id === item._id : invItem === item
+        );
+        
+        const card = document.createElement('div');
+        card.className = 'completed-item-card';
+        const itemId = item._id || `item-${filteredIndex}`;
+        card.dataset.itemId = itemId;
+        
+        const invoicedDate = item.invoicedDate ? new Date(item.invoicedDate).toLocaleDateString() : 'Not invoiced';
+        const totalPrice = ((item.quantity || 1) * (item.price || 0)).toFixed(2);
+        
+        card.innerHTML = `
+            <div class="completed-item-card-header">
+                <h3 class="completed-item-card-title">${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}</h3>
+                <input type="checkbox" class="completed-item-card-checkbox" data-item-id="${itemId}" onchange="updateInvoiceSelection()">
+            </div>
+            <div class="completed-item-card-body">
+                <div class="completed-item-card-meta">
+                    <span class="completed-item-card-customer">${SecurityManager.escapeHtml(item.customer || 'No Customer')}</span>
+                    <span class="completed-item-card-date">${invoicedDate}</span>
+                </div>
+                <div class="completed-item-card-details">
+                    <div class="completed-item-card-detail">
+                        <span class="completed-item-card-detail-label">Qty</span>
+                        <span class="completed-item-card-detail-value">${item.quantity || 1}</span>
+                    </div>
+                    <div class="completed-item-card-detail">
+                        <span class="completed-item-card-detail-label">Price</span>
+                        <span class="completed-item-card-detail-value">$${(item.price || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="completed-item-card-detail">
+                        <span class="completed-item-card-detail-label">Total</span>
+                        <span class="completed-item-card-detail-value">$${totalPrice}</span>
+                    </div>
+                </div>
+                <div class="completed-item-card-actions">
+                    <button class="btn btn-sm btn-outline" onclick="editCompletedItem(${actualIndex})" title="Edit">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="copyItem(${actualIndex})" title="Copy">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+    
+    // Update invoice summary
+    updateInvoiceSelection();
+}
+
+// Edit a completed item
+function editCompletedItem(index) {
+    if (index < 0 || index >= inventory.length) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
+    const item = inventory[index];
+    console.log('📝 Editing completed item:', item);
+    
+    // Set the index
+    const indexField = document.getElementById('editCompletedItemIndex');
+    if (indexField) {
+        indexField.value = index;
+    }
+    
+    // Populate the form with item data
+    const setElementValue = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = value;
+        }
+    };
+    
+    // Set all the field values
+    setElementValue('editCompletedItemDescription', item.description || item.name || '');
+    setElementValue('editCompletedItemQuantity', item.quantity || 1);
+    setElementValue('editCompletedItemPrice', item.price || 0);
+    setElementValue('editCompletedItemInvoicedDate', item.invoicedDate || '');
+    
+    // Populate customer dropdown
+    populateCustomerSelect('editCompletedItemCustomer');
+    setElementValue('editCompletedItemCustomer', item.customer || '');
+    
+    // Calculate total
+    calculateCompletedItemTotal();
+    
+    // Show the modal
+    const modal = document.getElementById('editCompletedItemModal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+}
+
+// Calculate total for completed item modal
+function calculateCompletedItemTotal() {
+    const quantityElement = document.getElementById('editCompletedItemQuantity');
+    const priceElement = document.getElementById('editCompletedItemPrice');
+    const totalElement = document.getElementById('editCompletedItemTotal');
+    
+    if (quantityElement && priceElement && totalElement) {
+        const quantity = parseFloat(quantityElement.value) || 0;
+        const price = parseFloat(priceElement.value) || 0;
+        const total = quantity * price;
+        totalElement.value = total.toFixed(2);
+    }
+}
+
+// Copy current completed item
+function copyCurrentCompletedItem() {
+    const indexField = document.getElementById('editCompletedItemIndex');
+    if (indexField && indexField.value !== '') {
+        const index = parseInt(indexField.value);
+        copyItem(index);
+        closeModal('editCompletedItemModal');
+    }
+}
+
+// Manually add a completed item (for items made without a specific customer)
+function addCompletedItem() {
+    // Clear the form
+    const form = document.getElementById('addCompletedItemForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Set default values
+    const quantityField = document.getElementById('addCompletedItemQuantity');
+    if (quantityField) {
+        quantityField.value = 1;
+    }
+    
+    // Set today's date as invoiced date
+    const invoicedDateField = document.getElementById('addCompletedItemInvoicedDate');
+    if (invoicedDateField) {
+        const today = new Date();
+        invoicedDateField.value = today.toISOString().split('T')[0];
+    }
+    
+    // Populate customer dropdown
+    populateCustomerSelect('addCompletedItemCustomer');
+    
+    // Show the modal
+    const modal = document.getElementById('addCompletedItemModal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+    
+    console.log('✅ Add completed item modal opened');
+}
+
+// Calculate total for add completed item modal
+function calculateAddCompletedItemTotal() {
+    const quantityElement = document.getElementById('addCompletedItemQuantity');
+    const priceElement = document.getElementById('addCompletedItemPrice');
+    const totalElement = document.getElementById('addCompletedItemTotal');
+    
+    if (quantityElement && priceElement && totalElement) {
+        const quantity = parseFloat(quantityElement.value) || 0;
+        const price = parseFloat(priceElement.value) || 0;
+        const total = quantity * price;
+        totalElement.value = total.toFixed(2);
+    }
+}
+
+// Toggle select all checkboxes
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.completed-item-card-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        const itemId = cb.dataset.itemId;
+        if (checkbox.checked) {
+            selectedCompletedItems.add(itemId);
+        } else {
+            selectedCompletedItems.delete(itemId);
+        }
+    });
+    updateInvoiceSelection();
+}
+
+// Update invoice selection summary
+function updateInvoiceSelection() {
+    selectedCompletedItems.clear();
+    const checkboxes = document.querySelectorAll('.completed-item-card-checkbox:checked');
+    let total = 0;
+    
+    checkboxes.forEach(checkbox => {
+        const itemId = checkbox.dataset.itemId;
+        selectedCompletedItems.add(itemId);
+        
+        // Find the item and add to total - look for total price in card
+        const card = checkbox.closest('.completed-item-card');
+        if (card) {
+            const totalElements = card.querySelectorAll('.completed-item-card-detail-value');
+            // The third detail should be the total price
+            if (totalElements.length >= 3) {
+                const totalText = totalElements[2].textContent;
+                const itemTotal = parseFloat(totalText.replace('$', ''));
+                if (!isNaN(itemTotal)) {
+                    total += itemTotal;
+                }
+            }
+        }
+        
+        // Update card visual state
+        if (card) {
+            if (checkbox.checked) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+    });
+    
+    // Update summary
+    const summaryDiv = document.getElementById('invoiceSummary');
+    const countSpan = document.getElementById('selectedCount');
+    const totalSpan = document.getElementById('selectedTotal');
+    
+    if (summaryDiv && countSpan && totalSpan) {
+        if (selectedCompletedItems.size > 0) {
+            summaryDiv.style.display = 'block';
+            countSpan.textContent = selectedCompletedItems.size;
+            totalSpan.textContent = total.toFixed(2);
+        } else {
+            summaryDiv.style.display = 'none';
+        }
+    }
+}
+
+// Select all completed items
+function selectAllCompleted() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = true;
+        toggleSelectAll(selectAllCheckbox);
+    }
+}
+
+// Clear selection
+function clearCompletedSelection() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+        toggleSelectAll(selectAllCheckbox);
+    }
+}
+
+// Print invoice for all currently filtered items
+function printFilteredCompletedItems() {
+    // Get all currently displayed/filtered completed items
+    const filteredItems = getCurrentlyFilteredCompletedItems();
+    
+    if (filteredItems.length === 0) {
+        showNotification('No items found in current filter', 'warning');
+        return;
+    }
+    
+    // Group by customer
+    const byCustomer = {};
+    filteredItems.forEach(item => {
+        const customer = item.customer || 'No Customer';
+        if (!byCustomer[customer]) {
+            byCustomer[customer] = [];
+        }
+        byCustomer[customer].push(item);
+    });
+    
+    // If multiple customers, ask which one to invoice
+    const customers = Object.keys(byCustomer);
+    if (customers.length > 1) {
+        const customerList = customers.join(', ');
+        const selectedCustomer = prompt(`Filtered items belong to multiple customers:\n${customerList}\n\nEnter the customer name for this invoice:`);
+        
+        if (!selectedCustomer || !byCustomer[selectedCustomer]) {
+            showNotification('Invalid customer selection', 'error');
+            return;
+        }
+        
+        generateInvoiceForItems(byCustomer[selectedCustomer], selectedCustomer);
+    } else {
+        generateInvoiceForItems(filteredItems, customers[0]);
+    }
+}
+
+// Helper function to get currently filtered completed items
+function getCurrentlyFilteredCompletedItems() {
+    // Apply the same filters that loadCompletedItemsTable uses
+    const completedProjects = inventory.filter(item => {
+        if (item.status !== 'completed') return false;
+        
+        // Apply search filter
+        const searchTerm = document.getElementById('completedSearchItems')?.value?.toLowerCase() || '';
+        if (searchTerm && !item.description?.toLowerCase().includes(searchTerm)) {
+            return false;
+        }
+        
+        // Apply customer filter
+        const customerFilter = document.getElementById('completedCustomerFilter')?.value || '';
+        if (customerFilter && item.customer !== customerFilter) {
+            return false;
+        }
+        
+        // Apply date filter
+        const dateFilter = document.getElementById('completedDateFilter')?.value || '';
+        if (dateFilter && item.invoicedDate) {
+            const itemDate = new Date(item.invoicedDate);
+            const now = new Date();
+            
+            switch (dateFilter) {
+                case 'today':
+                    if (itemDate.toDateString() !== now.toDateString()) return false;
+                    break;
+                case 'week':
+                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    if (itemDate < weekAgo) return false;
+                    break;
+                case 'month':
+                    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    if (itemDate < monthAgo) return false;
+                    break;
+                case 'quarter':
+                    const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                    if (itemDate < quarterAgo) return false;
+                    break;
+                case 'year':
+                    const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    if (itemDate < yearAgo) return false;
+                    break;
+            }
+        }
+        
+        return true;
+    });
+    
+    return completedProjects;
+}
+
+// Create invoice from selected items
+function createInvoiceFromSelected() {
+    if (selectedCompletedItems.size === 0) {
+        showNotification('Please select at least one item to invoice', 'warning');
+        return;
+    }
+    
+    const selectedItems = [];
+    selectedCompletedItems.forEach(itemId => {
+        const item = inventory.find(i => (i._id || `item-${inventory.indexOf(i)}`) === itemId);
+        if (item) {
+            selectedItems.push(item);
+        }
+    });
+    
+    // Group by customer
+    const byCustomer = {};
+    selectedItems.forEach(item => {
+        const customer = item.customer || 'No Customer';
+        if (!byCustomer[customer]) {
+            byCustomer[customer] = [];
+        }
+        byCustomer[customer].push(item);
+    });
+    
+    // If multiple customers, ask which one to invoice
+    const customers = Object.keys(byCustomer);
+    if (customers.length > 1) {
+        const customerList = customers.join(', ');
+        const selectedCustomer = prompt(`Selected items belong to multiple customers:\n${customerList}\n\nEnter the customer name for this invoice:`);
+        
+        if (!selectedCustomer || !byCustomer[selectedCustomer]) {
+            showNotification('Invalid customer selection', 'error');
+            return;
+        }
+        
+        generateInvoiceForItems(byCustomer[selectedCustomer], selectedCustomer);
+    } else {
+        generateInvoiceForItems(selectedItems, customers[0]);
+    }
+}
+
+// Global variable to store current invoice data for printing
+let currentInvoiceData = null;
+
+// Generate invoice for specific items
+function generateInvoiceForItems(items, customer) {
+    // Handle customer parameter (could be string or object)
+    const customerName = typeof customer === 'string' ? customer : customer.name || customer;
+    
+    // Generate invoice ID from customer name and date
+    const now = new Date();
+    const dateStr = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${now.getFullYear()}`;
+    const cleanCustomerName = customerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const invoiceId = `${cleanCustomerName}${dateStr}`;
+    
+    // Create invoice data
+    const invoice = {
+        id: invoiceId,
+        date: new Date().toISOString(),
+        customer: customerName,
+        items: items.map(item => ({
+            description: item.description || item.name,
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            total: (item.quantity || 1) * (item.price || 0)
+        })),
+        subtotal: items.reduce((sum, item) => sum + ((item.quantity || 1) * (item.price || 0)), 0),
+        tax: 0,
+        total: items.reduce((sum, item) => sum + ((item.quantity || 1) * (item.price || 0)), 0)
+    };
+    
+    // Store current invoice data for printing
+    currentInvoiceData = {
+        businessName: "CyndyP Stitchcraft",
+        businessEmail: "cyndypstitchcraft@gmail.com",
+        invoiceTitle: "INVOICE",
+        id: invoice.id,
+        date: new Date(invoice.date).toLocaleDateString(),
+        customer: customerName,
+        sales: items.map(item => ({
+            itemName: item.description || item.name,
+            dateSold: new Date().toLocaleDateString(),
+            salePrice: item.price || 0
+        })),
+        total: invoice.total
+    };
+    
+    // Display invoice using the existing robust system
+    displayInvoice(invoice);
+    showNotification(`Invoice created for ${customerName} with ${items.length} item(s)`, 'success');
+}
+
+// Display invoice using the existing robust invoice system
+function displayInvoice(invoice) {
+    // Convert the completed items format to the existing invoice format
+    const formattedInvoice = {
+        id: invoice.id,
+        date: new Date(invoice.date).toLocaleDateString(),
+        status: 'completed',
+        customer: invoice.customer,
+        sales: invoice.items.map(item => ({
+            itemName: item.description,
+            dateSold: new Date().toLocaleDateString(),
+            salePrice: item.total
+        })),
+        total: invoice.total,
+        notes: `Generated from ${invoice.items.length} completed item(s)`
+    };
+    
+    // Use the existing invoice preview system
+    showInvoicePreview(formattedInvoice);
+}
+

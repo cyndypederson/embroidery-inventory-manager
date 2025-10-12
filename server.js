@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { MongoClient, ObjectId } = require('mongodb');
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
 
 // Load environment variables
 require('dotenv').config();
@@ -36,6 +38,53 @@ async function connectToDatabase() {
         console.error('❌ MongoDB connection error:', error.message);
         console.error('❌ Full error:', error);
         return null;
+    }
+}
+
+// Auto-backup function
+async function createAutoBackup() {
+    try {
+        const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+        const backupDir = path.join(__dirname, 'backups', `auto_backup_${timestamp}`);
+        
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+        
+        // Fetch all collections
+        const inventory = await db.collection('inventory').find({}).toArray();
+        const customers = await db.collection('customers').find({}).toArray();
+        const sales = await db.collection('sales').find({}).toArray();
+        const gallery = await db.collection('gallery').find({}).toArray();
+        const ideas = await db.collection('ideas').find({}).toArray();
+        
+        // Save to files
+        fs.writeFileSync(path.join(backupDir, 'inventory.json'), JSON.stringify(inventory, null, 2));
+        fs.writeFileSync(path.join(backupDir, 'customers.json'), JSON.stringify(customers, null, 2));
+        fs.writeFileSync(path.join(backupDir, 'sales.json'), JSON.stringify(sales, null, 2));
+        fs.writeFileSync(path.join(backupDir, 'gallery.json'), JSON.stringify(gallery, null, 2));
+        fs.writeFileSync(path.join(backupDir, 'ideas.json'), JSON.stringify(ideas, null, 2));
+        
+        console.log(`💾 Auto-backup created: ${backupDir}`);
+        
+        // Cleanup old backups (keep last 30)
+        const backupsDir = path.join(__dirname, 'backups');
+        const backups = fs.readdirSync(backupsDir)
+            .filter(dir => dir.startsWith('auto_backup_'))
+            .map(dir => ({
+                name: dir,
+                path: path.join(backupsDir, dir),
+                time: fs.statSync(path.join(backupsDir, dir)).mtime.getTime()
+            }))
+            .sort((a, b) => b.time - a.time);
+        
+        if (backups.length > 30) {
+            backups.slice(30).forEach(backup => {
+                fs.rmSync(backup.path, { recursive: true, force: true });
+            });
+        }
+    } catch (error) {
+        console.error('❌ Auto-backup failed:', error);
     }
 }
 
@@ -88,9 +137,141 @@ async function initializeCollections() {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
+
+// Session middleware for authentication
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'embroidery-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Load auth configuration
+function loadAuthConfig() {
+    try {
+        const authPath = path.join(__dirname, 'data', 'auth.json');
+        if (fs.existsSync(authPath)) {
+            return JSON.parse(fs.readFileSync(authPath, 'utf8'));
+        }
+    } catch (error) {
+        console.error('Error loading auth config:', error);
+    }
+    return { username: 'admin', password: 'embroidery2024', enabled: false };
+}
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+    const authConfig = loadAuthConfig();
+    
+    // If authentication is disabled, allow all requests
+    if (!authConfig.enabled) {
+        return next();
+    }
+    
+    // Check if user is authenticated
+    if (req.session && req.session.authenticated) {
+        return next();
+    }
+    
+    // Not authenticated
+    res.status(401).json({ error: 'Authentication required', authEnabled: true });
+}
+
+// Special middleware for ideas - allow POST without auth, but require auth for PUT/DELETE
+function requireAuthForIdeasModify(req, res, next) {
+    const authConfig = loadAuthConfig();
+    
+    // If authentication is disabled, allow all requests
+    if (!authConfig.enabled) {
+        return next();
+    }
+    
+    // Allow POST (create) without authentication
+    if (req.method === 'POST') {
+        return next();
+    }
+    
+    // Require auth for PUT and DELETE
+    if (req.session && req.session.authenticated) {
+        return next();
+    }
+    
+    res.status(401).json({ error: 'Authentication required for this operation', authEnabled: true });
+}
+
+// Authentication routes
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    const authConfig = loadAuthConfig();
+    
+    // Check if authentication is enabled
+    if (!authConfig.enabled) {
+        return res.json({ success: false, message: 'Authentication is not enabled', authEnabled: false });
+    }
+    
+    // Verify credentials
+    if (username === authConfig.username && password === authConfig.password) {
+        req.session.authenticated = true;
+        req.session.username = username;
+        res.json({ success: true, message: 'Login successful', username: username });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid username or password' });
+    }
+});
+
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            res.status(500).json({ success: false, message: 'Logout failed' });
+        } else {
+            res.json({ success: true, message: 'Logout successful' });
+        }
+    });
+});
+
+app.get('/api/auth/status', (req, res) => {
+    const authConfig = loadAuthConfig();
+    res.json({
+        authenticated: req.session && req.session.authenticated,
+        username: req.session && req.session.username,
+        authEnabled: authConfig.enabled
+    });
+});
+
+app.post('/api/auth/config', requireAuth, (req, res) => {
+    try {
+        const { username, password, enabled } = req.body;
+        const authPath = path.join(__dirname, 'data', 'auth.json');
+        
+        // Hash password before saving
+        const authConfig = {
+            username: username || 'admin',
+            password: password || 'embroidery2024',
+            enabled: enabled !== undefined ? enabled : false
+        };
+        
+        fs.writeFileSync(authPath, JSON.stringify(authConfig, null, 2));
+        res.json({ success: true, message: 'Authentication config updated' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to update auth config' });
+    }
+});
+
+// Serve version from package.json
+const packageJson = require('./package.json');
+app.get('/api/version', (req, res) => {
+    res.json({ version: packageJson.version });
+});
 
 // NUCLEAR CACHE CONTROL - Force no caching whatsoever
 app.use((req, res, next) => {
@@ -123,6 +304,52 @@ app.get('/script.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'script.js'));
 });
 
+// Inject version into HTML for automatic cache busting
+app.get('/', (req, res) => {
+    const indexPath = path.join(__dirname, 'index.html');
+    fs.readFile(indexPath, 'utf8', (err, html) => {
+        if (err) {
+            console.error('Error loading index.html:', err);
+            return res.status(500).send('Error loading page');
+        }
+        
+        // Inject version from package.json into HTML
+        const version = packageJson.version;
+        const timestamp = Date.now();
+        
+        // Update script tag
+        html = html.replace(
+            /script\.js\?v=[^"]+"/g,
+            `script.js?v=${version}&t=${timestamp}"`
+        );
+        
+        // Update style tag
+        html = html.replace(
+            /styles\.css\?v=[^"]+"/g,
+            `styles.css?v=${version}&t=${timestamp}"`
+        );
+        
+        // Update meta version tag
+        html = html.replace(
+            /<meta name="version" content="[^"]*">/,
+            `<meta name="version" content="${version}">`
+        );
+        
+        // Replace all hardcoded version numbers in the HTML
+        html = html.replace(/v1\.0\.\d+/g, `v${version}`);
+        html = html.replace(/1\.0\.\d+/g, version);
+        
+        // Update title
+        html = html.replace(
+            /<title>[^<]*<\/title>/,
+            `<title>CyndyP StitchCraft Inventory - v${version}</title>`
+        );
+        
+        console.log(`📦 Serving index.html with version ${version}`);
+        res.send(html);
+    });
+});
+
 // Version check endpoint for debugging
 app.get('/version.json', (req, res) => {
     const packageJson = require('./package.json');
@@ -134,42 +361,6 @@ app.get('/version.json', (req, res) => {
     });
 });
 
-// Serve the main HTML file with dynamic version injection
-app.get('/', async (req, res) => {
-    try {
-        // Read package.json to get current version
-        const packageJson = require('./package.json');
-        const version = packageJson.version;
-        
-        // Read the HTML file
-        const htmlPath = path.join(__dirname, 'index.html');
-        let htmlContent = fs.readFileSync(htmlPath, 'utf8');
-        
-        // Replace all hardcoded version numbers with dynamic version
-        htmlContent = htmlContent.replace(/v1\.0\.\d+/g, `v${version}`);
-        htmlContent = htmlContent.replace(/1\.0\.\d+/g, version);
-        // Also handle the placeholder version 1.0.0
-        htmlContent = htmlContent.replace(/v1\.0\.0/g, `v${version}`);
-        htmlContent = htmlContent.replace(/1\.0\.0/g, version);
-        
-        // Add timestamp to response headers for cache busting
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substring(7);
-        
-        res.setHeader('X-Timestamp', timestamp);
-        res.setHeader('X-Random', random);
-        res.setHeader('X-Cache-Bust', `${timestamp}-${random}`);
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        
-        // Send the modified HTML with dynamic version
-        res.send(htmlContent);
-    } catch (error) {
-        console.error('Error serving index.html:', error);
-        res.status(500).send('Error loading application');
-    }
-});
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -196,7 +387,7 @@ app.get('/api/inventory', async (req, res) => {
     }
 });
 
-app.post('/api/inventory', async (req, res) => {
+app.post('/api/inventory', requireAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -204,8 +395,17 @@ app.post('/api/inventory', async (req, res) => {
         }
         await database.collection('inventory').deleteMany({});
         if (req.body && req.body.length > 0) {
-            await database.collection('inventory').insertMany(req.body);
+            // Remove _id fields to prevent duplicate key errors
+            const cleanData = req.body.map(item => {
+                const { _id, ...rest } = item;
+                return rest;
+            });
+            await database.collection('inventory').insertMany(cleanData);
         }
+        
+        // Create backup after saving inventory
+        createAutoBackup().catch(err => console.error('Backup error:', err));
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving inventory:', error);
@@ -214,7 +414,7 @@ app.post('/api/inventory', async (req, res) => {
 });
 
 // Update individual inventory item
-app.put('/api/inventory/:id', async (req, res) => {
+app.put('/api/inventory/:id', requireAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -254,7 +454,7 @@ app.get('/api/customers', async (req, res) => {
     }
 });
 
-app.post('/api/customers', async (req, res) => {
+app.post('/api/customers', requireAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -262,7 +462,12 @@ app.post('/api/customers', async (req, res) => {
         }
         await database.collection('customers').deleteMany({});
         if (req.body && req.body.length > 0) {
-            await database.collection('customers').insertMany(req.body);
+            // Remove _id fields to prevent duplicate key errors
+            const cleanData = req.body.map(item => {
+                const { _id, ...rest } = item;
+                return rest;
+            });
+            await database.collection('customers').insertMany(cleanData);
         }
         res.json({ success: true });
     } catch (error) {
@@ -285,7 +490,7 @@ app.get('/api/sales', async (req, res) => {
     }
 });
 
-app.post('/api/sales', async (req, res) => {
+app.post('/api/sales', requireAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -293,7 +498,12 @@ app.post('/api/sales', async (req, res) => {
         }
         await database.collection('sales').deleteMany({});
         if (req.body && req.body.length > 0) {
-            await database.collection('sales').insertMany(req.body);
+            // Remove _id fields to prevent duplicate key errors
+            const cleanData = req.body.map(item => {
+                const { _id, ...rest } = item;
+                return rest;
+            });
+            await database.collection('sales').insertMany(cleanData);
         }
         res.json({ success: true });
     } catch (error) {
@@ -316,7 +526,7 @@ app.get('/api/gallery', async (req, res) => {
     }
 });
 
-app.post('/api/gallery', async (req, res) => {
+app.post('/api/gallery', requireAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -324,12 +534,67 @@ app.post('/api/gallery', async (req, res) => {
         }
         await database.collection('gallery').deleteMany({});
         if (req.body && req.body.length > 0) {
-            await database.collection('gallery').insertMany(req.body);
+            // Remove _id fields to prevent duplicate key errors
+            const cleanData = req.body.map(item => {
+                const { _id, ...rest } = item;
+                return rest;
+            });
+            await database.collection('gallery').insertMany(cleanData);
         }
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving gallery:', error);
         res.status(500).json({ error: 'Failed to save gallery data' });
+    }
+});
+
+// Compress gallery images - create thumbnails
+app.post('/api/gallery/compress', requireAuth, async (req, res) => {
+    try {
+        console.log('🗜️ Starting gallery compression...');
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const gallery = await database.collection('gallery').find({}).toArray();
+        console.log(`📊 Found ${gallery.length} gallery items to compress`);
+        
+        let compressedCount = 0;
+        let totalSizeReduction = 0;
+        const results = [];
+        
+        for (let i = 0; i < gallery.length; i++) {
+            const item = gallery[i];
+            
+            if (item.dataUrl && item.dataUrl.length > 10000 && !item.thumbnail) {
+                const originalSize = item.dataUrl.length;
+                console.log(`📷 Item ${i + 1}: ${item.title || 'Untitled'} - Original: ${Math.round(originalSize / 1024)}KB`);
+                
+                // For server-side, we'll mark it as needing compression
+                // The actual compression will happen client-side when needed
+                results.push({
+                    title: item.title,
+                    originalSize: Math.round(originalSize / 1024),
+                    needsCompression: true
+                });
+                
+                compressedCount++;
+            }
+        }
+        
+        console.log(`✅ Identified ${compressedCount} items for compression`);
+        
+        res.json({ 
+            success: true, 
+            itemsToCompress: compressedCount,
+            results: results,
+            message: 'Gallery items identified for compression. Client-side compression needed.'
+        });
+        
+    } catch (error) {
+        console.error('Error compressing gallery:', error);
+        res.status(500).json({ error: 'Failed to compress gallery data' });
     }
 });
 
@@ -367,6 +632,7 @@ app.get('/api/ideas', async (req, res) => {
     }
 });
 
+// Ideas endpoint - allow anyone to add, but client-side will control edit/delete UI
 app.post('/api/ideas', async (req, res) => {
     try {
         console.log('💾 Server: Saving ideas, count:', req.body ? req.body.length : 'no body');
@@ -374,19 +640,29 @@ app.post('/api/ideas', async (req, res) => {
         if (!database) {
             return res.status(500).json({ error: 'Database not connected' });
         }
-        await database.collection('ideas').deleteMany({});
-        console.log('💾 Server: Cleared all ideas from database');
-        if (req.body && req.body.length > 0) {
-            await database.collection('ideas').insertMany(req.body);
-            console.log('💾 Server: Inserted', req.body.length, 'ideas into database');
-        } else {
-            console.log('💾 Server: No ideas to insert (empty body)');
-        }
+        // Only clear and update if the data is actually different
+        const existingIdeas = await database.collection('ideas').find({}).toArray();
+        const isDataDifferent = JSON.stringify(existingIdeas) !== JSON.stringify(req.body);
         
-        // Clear the cache when data is updated
-        ideasCache = null;
-        ideasCacheTime = 0;
-        console.log('💾 Server: Cleared ideas cache');
+        if (isDataDifferent && req.body && req.body.length > 0) {
+            await database.collection('ideas').deleteMany({});
+            console.log('💾 Server: Cleared all ideas from database');
+            
+            // Remove _id fields to prevent duplicate key errors
+            const cleanData = req.body.map(item => {
+                const { _id, ...rest } = item;
+                return rest;
+            });
+            await database.collection('ideas').insertMany(cleanData);
+            console.log('💾 Server: Inserted', cleanData.length, 'ideas into database');
+            
+            // Clear the cache when data is updated
+            ideasCache = null;
+            ideasCacheTime = 0;
+            console.log('💾 Server: Cleared ideas cache');
+        } else {
+            console.log('💾 Server: Ideas data unchanged, skipping save');
+        }
         
         res.json({ success: true });
     } catch (error) {

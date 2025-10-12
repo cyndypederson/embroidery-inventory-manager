@@ -1,0 +1,44 @@
+[
+  {
+    "_id": "68eaeeada51960434fabe26e",
+    "name": "Joey",
+    "contact": "",
+    "location": "Illinois",
+    "dateAdded": "2025-09-11T01:21:30.951Z"
+  },
+  {
+    "_id": "68eaeeada51960434fabe26f",
+    "name": "Flippin' Happy",
+    "contact": "",
+    "location": "Grand Forks",
+    "dateAdded": "2025-09-11T01:21:45.432Z"
+  },
+  {
+    "_id": "68eaeeada51960434fabe270",
+    "name": "First Avenue Market",
+    "contact": "",
+    "location": "Fargo",
+    "dateAdded": "2025-09-11T01:21:58.417Z"
+  },
+  {
+    "_id": "68eaeeada51960434fabe271",
+    "name": "Kathy Pratt",
+    "contact": "",
+    "location": "Illinois",
+    "dateAdded": "2025-09-11T01:22:20.765Z"
+  },
+  {
+    "_id": "68eaeeada51960434fabe272",
+    "name": "Nicole",
+    "contact": "",
+    "location": "Flippin' Happy",
+    "dateAdded": "2025-09-11T01:29:15.473Z"
+  },
+  {
+    "_id": "68eaeeada51960434fabe273",
+    "name": "Sierra",
+    "contact": "",
+    "location": "Flippin' Happy",
+    "dateAdded": "2025-09-11T01:29:26.689Z"
+  }
+]
