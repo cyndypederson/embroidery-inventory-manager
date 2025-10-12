@@ -4863,6 +4863,18 @@ async function checkAuthentication() {
     return status.authenticated;
 }
 
+// Require authentication for protected operations
+// Returns true if authenticated, false if not (and shows login modal)
+async function requireAuthentication(operationName = 'this action') {
+    const isAuth = await checkAuthentication();
+    if (!isAuth) {
+        showNotification(`You must be logged in to ${operationName}`, 'error');
+        showAuthModal();
+        return false;
+    }
+    return true;
+}
+
 // Show login modal
 function showAuthModal() {
     document.getElementById('authModal').style.display = 'block';
@@ -4953,16 +4965,15 @@ async function logout() {
     }
 }
 
-function requireAuth(tabName) {
-    // Skip authentication on localhost
-    if (isLocalhost()) {
-        return true;
-    }
+async function requireAuth(tabName) {
+    // Require auth for completed items, sales, reports, and data management
+    const protectedTabs = ['completed', 'sales', 'reports', 'data'];
     
-    // Only require auth for sales, reports, and data management on production
-    if (tabName === 'sales' || tabName === 'reports' || tabName === 'data') {
-        if (!checkAuthentication()) {
+    if (protectedTabs.includes(tabName)) {
+        const isAuth = await checkAuthentication();
+        if (!isAuth) {
             sessionStorage.setItem('requestedTab', tabName);
+            showNotification(`You must be logged in to access ${tabName}`, 'error');
             showAuthModal();
             return false;
         }
@@ -5333,7 +5344,12 @@ function calculateEditProjectTotalValue() {
     }
 }
 
-function editItem(itemIdOrIndex) {
+async function editItem(itemIdOrIndex) {
+    // Require authentication
+    if (!await requireAuthentication('edit this item')) {
+        return;
+    }
+    
     console.log('📦 editItem called with ID/Index:', itemIdOrIndex); // Debug log
     
     let item;
@@ -6040,9 +6056,9 @@ function clearAllMobileCards() {
     MobileCardManager.clearAll();
 }
 
-function switchTab(tabName) {
+async function switchTab(tabName) {
     // Check authentication for protected tabs
-    if (!requireAuth(tabName)) {
+    if (!await requireAuth(tabName)) {
         return; // Authentication modal will be shown
     }
     
@@ -7629,7 +7645,12 @@ function setupMobileModalEnhancements() {
     console.log('📱 Mobile modal enhancements setup complete');
 }
 
-function openAddInventoryModal(prefilledData = null) {
+async function openAddInventoryModal(prefilledData = null) {
+    // Require authentication
+    if (!await requireAuthentication('add inventory')) {
+        return;
+    }
+    
     const modal = document.getElementById('addInventoryModal');
     const form = document.getElementById('addInventoryForm');
     
@@ -7691,7 +7712,12 @@ function openAddInventoryModal(prefilledData = null) {
 }
 
 // Dedicated Project Modal Functions  
-function openAddProjectModal(prefilledData = null) {
+async function openAddProjectModal(prefilledData = null) {
+    // Require authentication
+    if (!await requireAuthentication('add a project')) {
+        return;
+    }
+    
     const modal = document.getElementById('addProjectModal');
     const form = document.getElementById('addProjectForm');
     
@@ -8257,7 +8283,12 @@ function loadCustomersTable() {
     // Desktop table loaded
 }
 
-function openAddCustomerModal() {
+async function openAddCustomerModal() {
+    // Require authentication
+    if (!await requireAuthentication('add a customer')) {
+        return;
+    }
+    
     const modal = document.getElementById('addCustomerModal');
     const form = document.getElementById('addCustomerForm');
     
@@ -8764,7 +8795,12 @@ function loadSalesTable() {
     // Desktop table loaded
 }
 
-function openAddSaleModal() {
+async function openAddSaleModal() {
+    // Require authentication
+    if (!await requireAuthentication('add a sale')) {
+        return;
+    }
+    
     const modal = document.getElementById('addSaleModal');
     const form = document.getElementById('addSaleForm');
     
@@ -9356,6 +9392,11 @@ function closeConfirmModal() {
 }
 
 async function deleteItem(itemIdOrIndex) {
+    // Require authentication
+    if (!await requireAuthentication('delete this item')) {
+        return;
+    }
+    
     console.log('🗑️ Delete item function called with ID/Index:', itemIdOrIndex);
     
     // Check if parameter is valid
@@ -9426,6 +9467,11 @@ async function proceedWithDeletion(itemIdOrIndex) {
 }
 
 async function copyItem(index) {
+    // Require authentication
+    if (!await requireAuthentication('copy this item')) {
+        return;
+    }
+    
     try {
         console.log('copyItem called with index:', index); // Debug log
         
@@ -9566,7 +9612,12 @@ async function copyCurrentItem() {
     showNotification('Item copied successfully!', 'success');
 }
 
-function editCustomer(index) {
+async function editCustomer(index) {
+    // Require authentication
+    if (!await requireAuthentication('edit this customer')) {
+        return;
+    }
+    
     const customer = customers[index];
     if (!customer) return;
     
@@ -9623,7 +9674,12 @@ function createProjectForCustomer(customerName) {
     showNotification(`Creating new project for ${customerName}`, 'info');
 }
 
-function deleteCustomer(customerIdOrIndex) {
+async function deleteCustomer(customerIdOrIndex) {
+    // Require authentication
+    if (!await requireAuthentication('delete this customer')) {
+        return;
+    }
+    
     showConfirmModal(
         'Delete Customer',
         'Are you sure you want to delete this customer? This will also delete all associated items.',
@@ -9820,7 +9876,12 @@ function exportCustomerList() {
     showNotification('Customer list exported as CSV!', 'success');
 }
 
-function editSale(index) {
+async function editSale(index) {
+    // Require authentication
+    if (!await requireAuthentication('edit this sale')) {
+        return;
+    }
+    
     const sale = sales[index];
     if (!sale) return;
     
@@ -9914,7 +9975,12 @@ function handleEditSale(e) {
     showNotification('Sale updated successfully!', 'success');
 }
 
-function deleteSale(saleIdOrIndex) {
+async function deleteSale(saleIdOrIndex) {
+    // Require authentication
+    if (!await requireAuthentication('delete this sale')) {
+        return;
+    }
+    
     showConfirmModal(
         'Delete Sale',
         'Are you sure you want to delete this sale record?',
@@ -10995,7 +11061,12 @@ function loadGallery() {
     // Desktop table loaded
 }
 
-function openAddPhotoModal() {
+async function openAddPhotoModal() {
+    // Require authentication
+    if (!await requireAuthentication('add a photo')) {
+        return;
+    }
+    
     const modal = document.getElementById('addPhotoModal');
     const form = document.getElementById('addPhotoForm');
     
@@ -11805,7 +11876,12 @@ function filterIdeas() {
     });
 }
 
-function editIdea(ideaIdOrIndex) {
+async function editIdea(ideaIdOrIndex) {
+    // Require authentication
+    if (!await requireAuthentication('edit this idea')) {
+        return;
+    }
+    
     console.log('🔧 editIdea called with parameter:', ideaIdOrIndex);
     console.log('🔧 Current ideas array length:', ideas.length);
     
@@ -11941,7 +12017,12 @@ function convertIdeaToProject(index) {
     }
 }
 
-function deleteIdea(ideaIdOrIndex) {
+async function deleteIdea(ideaIdOrIndex) {
+    // Require authentication
+    if (!await requireAuthentication('delete this idea')) {
+        return;
+    }
+    
     console.log('🗑️ deleteIdea called with ID/Index:', ideaIdOrIndex);
     console.log('🗑️ Current ideas count before delete:', ideas.length);
     console.log('🗑️ Ideas before delete:', ideas.map(i => ({ id: i.id, title: i.title })));
@@ -13262,7 +13343,12 @@ function loadCompletedItemsTable() {
 }
 
 // Edit a completed item
-function editCompletedItem(index) {
+async function editCompletedItem(index) {
+    // Require authentication
+    if (!await requireAuthentication('edit this completed item')) {
+        return;
+    }
+    
     if (index < 0 || index >= inventory.length) {
         showNotification('Invalid item index', 'error');
         return;
@@ -13330,7 +13416,12 @@ function copyCurrentCompletedItem() {
 }
 
 // Manually add a completed item (for items made without a specific customer)
-function addCompletedItem() {
+async function addCompletedItem() {
+    // Require authentication
+    if (!await requireAuthentication('add a completed item')) {
+        return;
+    }
+    
     // Clear the form
     const form = document.getElementById('addCompletedItemForm');
     if (form) {
