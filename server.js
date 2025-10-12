@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { MongoClient, ObjectId } = require('mongodb');
 
 // Load environment variables
@@ -10,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://cyndypstitchcraft_db_user:4G2vcEQSjAvJoUxY@embroider-inventory.2x57teq.mongodb.net/?retryWrites=true&w=majority&appName=embroider-inventory';
+const MONGODB_URI = process.env.MONGODB_URI || null; // Disabled to use local files
 const DB_NAME = 'embroidery_inventory';
 let db;
 
@@ -163,12 +164,28 @@ app.get('/api/inventory', async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
-            return res.status(500).json({ error: 'Database not connected' });
+            // Fallback to local files
+            const inventoryPath = path.join(__dirname, 'data', 'inventory.json');
+            if (fs.existsSync(inventoryPath)) {
+                const inventoryData = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+                return res.json(inventoryData);
+            }
+            return res.status(500).json({ error: 'Database not connected and no local files' });
         }
         const inventory = await database.collection('inventory').find({}).toArray();
         res.json(inventory);
     } catch (error) {
         console.error('Error fetching inventory:', error);
+        // Fallback to local files
+        try {
+            const inventoryPath = path.join(__dirname, 'data', 'inventory.json');
+            if (fs.existsSync(inventoryPath)) {
+                const inventoryData = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+                return res.json(inventoryData);
+            }
+        } catch (fileError) {
+            console.error('Error reading local file:', fileError);
+        }
         res.status(500).json({ error: 'Failed to fetch inventory data' });
     }
 });
