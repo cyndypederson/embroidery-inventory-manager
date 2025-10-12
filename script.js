@@ -6099,10 +6099,13 @@ async function switchTab(tabName) {
     // Load data for the tab
     if (tabName === 'projects') {
         loadProjectsCards(); // Load projects as cards
-        // Load mobile cards for projects
-        if (isMobile()) {
-            loadMobileInventoryCards();
-        }
+    // Load mobile cards for projects (ONLY on mobile)
+    if (isMobile()) {
+        console.log('📱 Mobile detected - loading mobile cards');
+        loadMobileInventoryCards();
+    } else {
+        console.log('🖥️ Desktop detected - skipping mobile cards');
+    }
         // Hide pagination for projects - not needed
         const projectsPagination = document.getElementById('projectsPagination');
         if (projectsPagination) {
@@ -12578,7 +12581,9 @@ function dismissInstallBanner() {
 
 // Mobile detection utility - centralized for consistency
 function isMobile() {
-    return window.innerWidth <= 768;
+    const isMobileDevice = window.innerWidth <= 768;
+    console.log(`📏 isMobile() check: window.innerWidth=${window.innerWidth}, isMobile=${isMobileDevice}`);
+    return isMobileDevice;
 }
 
 // Enhanced mobile detection with device type
