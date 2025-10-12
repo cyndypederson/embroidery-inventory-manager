@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="version" content="1.0.95">
-    <title>CyndyP StitchCraft Inventory - v1.0.95 - CACHE BUST - 2025-10-12</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.95 - SECURITY UPDATE - 2025-10-12-MOBILE-FIX</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -35,7 +35,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.95&t=202501121800&cb=5&r=&force=clear&duplicate=fix&signature=horizontal" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.95&t=202510122200&cb=6&r=mobile&force=clear&security=update&bust=now" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -2322,17 +2322,27 @@
                 });
             }
             
+            // Clear service worker cache (mobile fix)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                        console.log('🗑️ Service worker unregistered');
+                    }
+                });
+            }
+            
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.94') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.95') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
             }, 1000);
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.94');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.95 - SECURITY UPDATE - MOBILE FIX');
         })();
     </script>
-    <script src="script.js?v=1.0.94&t=202501111700&cb=4&r=&force=clear&duplicate=fix" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.95&t=202510122200&cb=6&r=mobile&force=clear&security=update&bust=now" id="js-cache-bust"></script>
 </body>
 </html>
