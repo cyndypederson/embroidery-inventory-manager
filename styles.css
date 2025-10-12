@@ -170,51 +170,28 @@ header {
 nav {
     display: flex;
     justify-content: center;
-    gap: 0.3rem;
-    flex-wrap: nowrap;
-    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.75rem 2rem;
     background: #34495E;
     position: relative;
     z-index: 1;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* Hide scrollbar but keep functionality */
-nav::-webkit-scrollbar {
-    height: 6px;
-}
-
-nav::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-}
-
-nav::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.3);
-    border-radius: 3px;
-}
-
-nav::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.5);
 }
 
 .nav-btn {
     background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.4);
     color: white;
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 1rem;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 500;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     letter-spacing: 0.3px;
     backdrop-filter: blur(10px);
     position: relative;
     overflow: hidden;
-    white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .nav-btn::before {
@@ -449,13 +426,15 @@ header {
     /* Improve scrolling behavior */
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    /* Prevent scroll conflicts with sticky headers */
+    contain: layout style;
 }
 
 /* Sticky table headers - functionality over scroll behavior */
 th {
     position: sticky;
     top: 0;
-    z-index: 5;
+    z-index: 997;
     background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 100%);
     color: white;
     padding: 1.5rem 1rem;
@@ -595,58 +574,12 @@ th::after {
 
 /* Customer Grouping Styles */
 .customer-header {
-    background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 100%) !important;
-    color: white !important;
+    background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 100%);
+    color: white;
     cursor: pointer;
     border: none;
-    /* Don't make customer headers sticky to avoid conflicts with main table headers */
     position: relative;
-    z-index: 1;
-    /* Ensure headers are visible */
-    display: table-row !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    /* Force visibility */
-    min-height: 60px;
-}
-
-
-/* Ensure customer header content is visible on desktop */
-@media (min-width: 769px) {
-    .customer-header-content {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-    
-    /* Hide mobile customer headers in desktop mode */
-    .mobile-customer-header,
-    .mobile-customer-header-content {
-        display: none !important;
-    }
-    
-    /* Hide all mobile card containers in desktop mode */
-    #mobileInventoryCards,
-    #mobileInventoryItemsCards,
-    #mobileCustomerCards,
-    #mobileWIPCards,
-    #mobileGalleryCards,
-    #mobileSalesCards,
-    #mobileIdeasCards {
-        display: none !important;
-    }
-    
-    .customer-toggle {
-        display: inline-block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-    
-    .customer-stats {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 0.9 !important;
-    }
+    z-index: 10;
 }
 
 .customer-header:hover {
@@ -1688,7 +1621,59 @@ tr:nth-child(even) {
     background: white;
 }
 
-/* Modal form styles are now handled by inline CSS for consistency */
+/* Professional Form Layout - ULTRA AGGRESSIVE OVERRIDE */
+.modal-form {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.75rem !important;
+    align-items: start !important;
+    margin-top: 1rem !important;
+    width: 100% !important;
+    flex: none !important;
+    flex-direction: unset !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+    min-width: 600px !important;
+    max-width: none !important;
+}
+
+/* DESKTOP OVERRIDE - Force 2 column layout on desktop */
+@media (min-width: 769px) {
+    .modal-form {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 1.75rem !important;
+        align-items: start !important;
+        margin-top: 1rem !important;
+        width: 100% !important;
+        min-width: 600px !important;
+        max-width: none !important;
+    }
+    
+    .modal-form .form-group.full-width {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+    }
+    
+    .modal-form .form-group.half-width {
+        grid-column: span 1 !important;
+        width: 100% !important;
+    }
+}
+
+.modal-form .form-group.full-width {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: block !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.modal-form .form-group.half-width {
+    grid-column: span 1 !important;
+    width: 100% !important;
+    display: block !important;
+    margin-bottom: 1.5rem !important;
+}
 
 /* Force all modal form groups to behave properly */
 .modal-form .form-group {
@@ -1794,40 +1779,16 @@ tr:nth-child(even) {
 
 .input-with-button select {
     flex: 1;
-    min-width: 0; /* Allow select to shrink if needed */
 }
 
 .input-with-button .btn {
     flex-shrink: 0;
-    padding: 0.375rem 0.5rem; /* Reduced padding */
-    min-width: 36px; /* Smaller minimum width */
-    max-width: 44px; /* Maximum width constraint */
-    height: 36px; /* Smaller height */
+    padding: 0.5rem;
+    min-width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.875rem; /* Slightly smaller font */
-}
-
-/* Mobile-specific input-with-button styling */
-@media (max-width: 768px) {
-    .input-with-button {
-        gap: 0.375rem; /* Smaller gap on mobile */
-    }
-    
-    .input-with-button select {
-        flex: 1;
-        min-width: 0;
-        font-size: 16px; /* Prevent zoom on iOS */
-    }
-    
-    .input-with-button .btn {
-        min-width: 40px; /* Slightly larger on mobile for touch */
-        max-width: 48px;
-        height: 40px;
-        padding: 0.5rem;
-        font-size: 0.9rem;
-    }
 }
 
 /* Commission and net amount styling */
@@ -2443,24 +2404,6 @@ tr:nth-child(even) {
     padding: 1rem 0;
 }
 
-.idea-image {
-    position: relative;
-}
-
-.item-type-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(44, 95, 124, 0.9);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
 .idea-card {
     background: white;
     border-radius: 12px;
@@ -2698,7 +2641,7 @@ tr:nth-child(even) {
     align-items: center;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #000;
+    border-bottom: 2px solid #6B8E5A;
 }
 
 .invoice-content {
@@ -2711,7 +2654,7 @@ tr:nth-child(even) {
 .invoice-document {
     font-family: Arial, sans-serif;
     line-height: 1.6;
-    color: #000;
+    color: #333;
 }
 
 .invoice-header-section {
@@ -2719,17 +2662,17 @@ tr:nth-child(even) {
     justify-content: space-between;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #000;
+    border-bottom: 2px solid #6B8E5A;
 }
 
 .business-info h1 {
-    color: #000;
+    color: #2C5F7C;
     margin-bottom: 0.5rem;
     font-size: 2rem;
 }
 
 .invoice-info h2 {
-    color: #000;
+    color: #6B8E5A;
     margin-bottom: 0.5rem;
     font-size: 1.5rem;
 }
@@ -2739,7 +2682,7 @@ tr:nth-child(even) {
 }
 
 .customer-info h3 {
-    color: #000;
+    color: #2C5F7C;
     margin-bottom: 0.5rem;
 }
 
@@ -2751,29 +2694,15 @@ tr:nth-child(even) {
 
 .invoice-table th,
 .invoice-table td {
-    border: 1px solid #000;
+    border: 1px solid #ddd;
     padding: 0.75rem;
     text-align: left;
 }
 
 .invoice-table th {
-    background-color: #f5f5f5 !important;
+    background-color: #f5f5f5;
     font-weight: bold;
-    color: #000 !important;
-}
-
-/* Force black and white for invoice modal */
-#invoicePreviewModal .invoice-table th {
-    background-color: #f5f5f5 !important;
-    color: #000 !important;
-}
-
-#invoicePreviewModal .invoice-info h2 {
-    color: #000 !important;
-}
-
-#invoicePreviewModal .business-info h1 {
-    color: #000 !important;
+    color: #2C5F7C;
 }
 
 .total-row {
@@ -2790,7 +2719,7 @@ tr:nth-child(even) {
 }
 
 .invoice-notes h3 {
-    color: #000;
+    color: #2C5F7C;
     margin-bottom: 0.5rem;
 }
 
@@ -2798,8 +2727,8 @@ tr:nth-child(even) {
     margin-top: 2rem;
     text-align: center;
     padding-top: 1rem;
-    border-top: 1px solid #000;
-    color: #000;
+    border-top: 1px solid #ddd;
+    color: #666;
 }
 
 .status-badge {
@@ -3006,7 +2935,7 @@ tr:nth-child(even) {
     font-weight: bold;
 }
 
-/* Print styles for invoices - Black and White Only */
+/* Print styles for invoices */
 @media print {
     .invoice-header {
         display: none !important;
@@ -3015,94 +2944,6 @@ tr:nth-child(even) {
     .invoice-content {
         box-shadow: none !important;
         padding: 0 !important;
-    }
-    
-    /* Remove all colors for printing */
-    .invoice-document {
-        color: black !important;
-    }
-    
-    .invoice-header-section {
-        border-bottom: 2px solid black !important;
-    }
-    
-    .invoice-info h2 {
-        color: black !important;
-    }
-    
-    .invoice-table th {
-        background-color: #f0f0f0 !important;
-        color: black !important;
-    }
-    
-    .invoice-table th,
-    .invoice-table td {
-        border: 1px solid black !important;
-        color: black !important;
-    }
-    
-    .invoice-notes {
-        background-color: #f0f0f0 !important;
-        border: 1px solid black !important;
-    }
-    
-    .invoice-notes h3 {
-        color: black !important;
-    }
-    
-    .invoice-footer {
-        color: black !important;
-        border-top: 1px solid black !important;
-    }
-    
-    /* Print invoice styles */
-    .print-invoice-title {
-        color: black !important;
-    }
-    
-    .print-invoice-date {
-        color: black !important;
-    }
-    
-    .print-invoice-items th {
-        background-color: #f0f0f0 !important;
-        color: black !important;
-    }
-    
-    .print-invoice-items th,
-    .print-invoice-items td {
-        border-bottom: 1px solid black !important;
-        color: black !important;
-    }
-    
-    .print-invoice-total {
-        border-top: 2px solid black !important;
-    }
-    
-    .print-invoice-total .total-amount {
-        color: black !important;
-    }
-    
-    .print-invoice-notes {
-        background-color: #f0f0f0 !important;
-        border-left: 4px solid black !important;
-    }
-    
-    .print-invoice-notes h4 {
-        color: black !important;
-    }
-    
-    .print-invoice-notes p {
-        color: black !important;
-    }
-    
-    /* Signature lines */
-    .signature-line {
-        border-bottom: 1px solid black !important;
-    }
-    
-    .signature-label {
-        color: black !important;
     }
     
     .no-print {
@@ -3678,7 +3519,7 @@ body {
 
 /* Touch-friendly buttons */
 @media (max-width: 768px) {
-    .btn:not(.mobile-add-btn) {
+    .btn {
         min-height: 44px;
         min-width: 44px;
         padding: 12px 16px;
@@ -3702,60 +3543,11 @@ body {
     
     /* Enhanced modal for mobile */
     .modal-content {
-        margin: 0;
-        width: 100vw;
-        height: 100vh;
-        max-height: 100vh;
-        padding: 1rem;
-        border-radius: 0;
+        margin: 2% auto;
+        max-height: 96vh;
+        max-height: calc(var(--vh, 1vh) * 96);
         overflow-y: auto;
-        overflow-x: hidden;
-        position: relative;
-        box-sizing: border-box;
         -webkit-overflow-scrolling: touch;
-    }
-    
-    /* Mobile-friendly form elements */
-    .modal-content input,
-    .modal-content textarea,
-    .modal-content select {
-        width: 100% !important;
-        padding: 1rem !important;
-        font-size: 16px !important; /* Prevents zoom on iOS */
-        border: 2px solid #e9ecef !important;
-        border-radius: 8px !important;
-        box-sizing: border-box !important;
-        margin-bottom: 1rem !important;
-    }
-    
-    .modal-content textarea {
-        min-height: 120px !important;
-        resize: vertical !important;
-    }
-    
-    .modal-content label {
-        display: block !important;
-        margin-bottom: 0.5rem !important;
-        font-weight: 600 !important;
-        color: #495057 !important;
-        font-size: 1rem !important;
-    }
-    
-    .modal-content .form-group {
-        margin-bottom: 1.5rem !important;
-    }
-    
-    .modal-content .photo-input-container {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 1rem !important;
-    }
-    
-    .modal-content .btn {
-        width: 100% !important;
-        padding: 1rem !important;
-        font-size: 1rem !important;
-        margin-bottom: 0.5rem !important;
     }
     
     /* Mobile-optimized camera */
@@ -3899,20 +3691,6 @@ body {
     .photo-preview {
         max-width: 100%;
         max-height: 200px;
-        width: 100%;
-        height: auto;
-        object-fit: cover;
-        border-radius: 8px;
-    }
-    
-    /* Mobile image optimization */
-    .gallery-item-image,
-    .idea-image img,
-    .photo-preview img {
-        max-width: 100%;
-        height: auto;
-        object-fit: cover;
-        border-radius: 8px;
     }
     
     /* Mobile-optimized gallery */
@@ -4115,12 +3893,11 @@ body {
         padding: 10px;
     }
     
-    /* iPhone buttons - ensure minimum touch target */
-    .btn:not(.mobile-add-btn) {
-        padding: 12px 16px;
-        font-size: 16px; /* Prevents zoom on iOS */
-        min-height: 44px;
-        min-width: 44px;
+    /* iPhone buttons */
+    .btn {
+        padding: 10px 14px;
+        font-size: 14px;
+        min-height: 40px;
     }
 }
 
@@ -4180,53 +3957,9 @@ body {
         display: none !important;
     }
     
-    /* Hide desktop customer headers on mobile - but ensure they're visible on desktop */
-    .customer-header-content,
-    .customer-toggle,
-    .customer-stats:not(.mobile-customer-header-content .customer-stats) {
-        display: none !important;
-    }
-    
-    /* Hide all desktop customer action buttons on mobile */
-    #customers .customer-actions {
-        display: none !important;
-    }
-    
-    /* Hide the entire customer section header on mobile */
-    #customers .section-header {
-        display: none !important;
-    }
-    
-    /* Hide the entire gallery section header on mobile */
-    #gallery .section-header {
-        display: none !important;
-    }
-    
-    /* Hide gallery desktop buttons on mobile, but keep card action buttons */
-    #gallery .gallery-actions,
-    #gallery .section-header .btn,
-    #gallery .section-header button:not(.mobile-add-btn) {
-        display: none !important;
-    }
-    
-    /* Keep gallery card action buttons visible on mobile */
-    #gallery .gallery-item-actions {
-        display: flex !important;
-    }
-    
-    /* Hide desktop gallery grid on mobile */
-    #gallery .gallery-grid {
-        display: none !important;
-    }
-    
-    
-    /* Hide the entire projects section header on mobile */
-    #projects .section-header {
-        display: none !important;
-    }
-    
-    /* Hide the entire inventory section header on mobile */
-    #inventory .section-header {
+    /* Hide print and export buttons on mobile */
+    .customer-actions .btn-info,
+    .customer-actions .btn-success {
         display: none !important;
     }
     
@@ -4236,27 +3969,9 @@ body {
     }
     
     /* Hide Inspiration & Ideas header on mobile */
-    #ideas .section-header {
+    #ideas .section-header h2 {
         display: none !important;
     }
-    
-    /* Hide desktop ideas buttons on mobile, but keep card action buttons */
-    #ideas .ideas-actions,
-    #ideas .section-header .btn,
-    #ideas .section-header button:not(.mobile-add-btn) {
-        display: none !important;
-    }
-    
-    /* Keep idea card action buttons visible on mobile */
-    #ideas .idea-card .idea-actions {
-        display: flex !important;
-    }
-    
-    /* Hide desktop ideas grid on mobile */
-    #ideas .ideas-grid {
-        display: none !important;
-    }
-    
     
     /* Hide export button on ideas tab mobile */
     #ideas .ideas-actions .btn-secondary {
@@ -4374,7 +4089,7 @@ body {
     .mobile-cards-container {
         display: block;
         overflow: visible; /* Remove section scrolling - use page scroll only */
-        padding: 0;
+        padding: 0 1rem;
         margin-bottom: 2rem;
     }
     
@@ -4383,7 +4098,7 @@ body {
         display: grid;
         grid-template-columns: 1fr;
         gap: 1rem;
-        padding: 1rem;
+        padding: 1rem 0;
         min-height: 100%;
     }
     
@@ -4599,14 +4314,11 @@ body {
     /* Better touch targets */
     .nav-btn {
         min-height: 44px;
-        min-width: 44px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 0.25rem;
-        touch-action: manipulation;
-        -webkit-tap-highlight-color: transparent;
     }
     
     .nav-btn i {
@@ -4616,48 +4328,15 @@ body {
 
 /* Mobile form improvements */
 @media (max-width: 768px) {
-    /* Ensure all interactive elements meet minimum touch target size */
-    button, 
-    input[type="button"], 
-    input[type="submit"], 
-    input[type="reset"],
-    select,
-    textarea,
-    .btn,
-    .nav-btn {
-        min-height: 44px;
-        min-width: 44px;
-        font-size: 16px; /* Prevents zoom on iOS */
-    }
-    
-    /* Mobile-optimized form inputs */
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    input[type="number"],
-    input[type="tel"],
-    input[type="url"],
-    input[type="search"],
-    textarea,
-    select {
-        font-size: 16px; /* Prevents zoom on iOS */
-        padding: 12px 16px;
+    /* .filters {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #f8f9fa;
         border-radius: 8px;
-        border: 2px solid #e9ecef;
-        background: white;
-        -webkit-appearance: none;
-        appearance: none;
-        min-height: 44px;
-    }
-    
-    /* Mobile-optimized select dropdowns */
-    select {
-        background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
-        background-size: 16px 12px;
-        padding-right: 40px;
-    }
+        margin-bottom: 1rem;
+    } */
     
     .filters input,
     .filters select {
@@ -4677,7 +4356,7 @@ body {
     }
 }
 
-/* Mobile modal improvements - consolidated with inline styles */
+/* Mobile modal improvements */
 @media (max-width: 768px) {
     /* Prevent horizontal scroll when modal is open */
     body.modal-open {
@@ -4690,10 +4369,44 @@ body {
         padding: 0;
         background: rgba(0, 0, 0, 0.8);
         overflow: hidden;
-        touch-action: pan-y; /* Allow vertical scrolling */
     }
     
-    /* Modal content styles are now handled by inline CSS for consistency */
+    .modal-content {
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        padding: 0;
+        border-radius: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+    
+    /* Mobile modal - single column for small screens */
+    .modal-content .modal-form {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        align-items: start !important;
+        margin-top: 1rem !important;
+        width: 100% !important;
+    }
+    
+    .modal-content .modal-form .form-group.full-width {
+        grid-column: 1 !important;
+    }
+    
+    .modal-content .modal-form .form-group.half-width {
+        grid-column: 1 !important;
+    }
+    
     .modal-content h3 {
         padding: 1rem 1rem 0.5rem;
         margin: 0;
@@ -4722,6 +4435,21 @@ body {
         border: 1px solid #ddd;
     }
     
+    .modal-form {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1.75rem !important;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 1rem;
+        background: white;
+        width: 100% !important;
+        box-sizing: border-box;
+        max-width: 100vw;
+        flex: 1 !important;
+        flex-direction: unset !important;
+    }
+    
     /* Mobile form improvements */
     .form-group {
         margin-bottom: 1.5rem;
@@ -4747,19 +4475,6 @@ body {
         background: white;
         transition: border-color 0.3s ease;
         box-sizing: border-box;
-        min-height: 44px; /* Minimum touch target */
-        -webkit-appearance: none; /* Remove iOS styling */
-        appearance: none;
-    }
-    
-    /* Mobile form input focus states */
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-        outline: none;
-        border-color: #4A90A4;
-        box-shadow: 0 0 0 3px rgba(74, 144, 164, 0.1);
-        transform: none; /* Prevent zoom on focus */
     }
     
     .form-group input:focus,
@@ -4805,32 +4520,6 @@ body {
         border-radius: 8px;
         background: #f8f9fa;
         font-size: 16px;
-        /* Mobile-specific fixes */
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-        cursor: pointer;
-        /* Ensure proper touch target size */
-        min-height: 44px;
-        min-width: 44px;
-        /* Fix iOS Safari file input issues */
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
-    }
-    
-    /* Ensure title field is always visible and properly spaced on mobile */
-    #addPhotoModal .form-group:first-of-type {
-        margin-bottom: 1rem;
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 10;
-        padding: 0.5rem 0;
-    }
-    
-    #addPhotoModal .form-group:first-of-type input {
-        font-size: 16px; /* Prevent zoom on iOS */
-        min-height: 44px;
     }
     
     .photo-input-container .btn {
@@ -4921,25 +4610,23 @@ body {
 }
     
     .mobile-add-btn {
-        width: 100% !important;
-        padding: 1rem !important;
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
-        border-radius: 8px !important;
-        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
-        border: 2px solid #2C5F7C !important;
-        color: white !important;
-        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
-        transition: all 0.3s ease !important;
-        position: relative !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        min-height: auto !important;
-        min-width: auto !important;
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%);
+        border: 2px solid #2C5F7C;
+        color: white;
+        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
     
     .mobile-add-btn::before {
@@ -4976,363 +4663,22 @@ body {
         width: 100%;
     }
     
-    /* Force mobile button centering - HIGHEST SPECIFICITY */
+    /* Force mobile button centering */
     @media (max-width: 768px) {
-        .mobile-cards-grid .mobile-add-card .mobile-add-btn {
+        .mobile-add-btn {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 100% !important;
-            padding: 1rem !important;
-            font-size: 1.1rem !important;
-            min-height: auto !important;
-            background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
-            border: 2px solid #2C5F7C !important;
-            color: white !important;
-            box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            white-space: nowrap !important;
-            flex: 1 !important;
         }
         
-        .mobile-cards-grid .mobile-add-card .mobile-add-btn span {
+        .mobile-add-btn span {
             flex: 1 !important;
             text-align: center !important;
             display: block !important;
         }
-        
-        .mobile-cards-grid .mobile-add-card .mobile-add-btn i {
-            margin-right: 0.5rem !important;
-            flex-shrink: 0 !important;
-        }
-        
-        /* Ensure the card container takes full width */
-        .mobile-cards-grid .mobile-add-card {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-        
-        .mobile-cards-grid .mobile-add-card .mobile-card-content {
-            width: 100% !important;
-            max-width: 100% !important;
-            grid-template-columns: 1fr !important;
-        }
-        
-        /* Force mobile cards grid to single column */
-        .mobile-cards-grid {
-            grid-template-columns: 1fr !important;
-            display: grid !important;
-            gap: 1rem !important;
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-        
-        /* Force mobile add card to take full width */
-        .mobile-cards-grid .mobile-add-card {
-            grid-column: 1 / -1 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-        
-        /* Force ALL mobile add buttons to take full width - ULTRA SPECIFIC */
-        .tab-content .mobile-cards-grid .mobile-add-card .mobile-card-content .mobile-add-btn {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 100% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            text-align: center !important;
-            padding: 1rem !important;
-            font-size: 1.1rem !important;
-            background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
-            border: 2px solid #2C5F7C !important;
-            color: white !important;
-            box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            white-space: nowrap !important;
-            flex: 1 !important;
-        }
     }
     
-/* ========================================
-   DESKTOP LAYOUT - HIDE MOBILE ELEMENTS
-   ======================================== */
-@media (min-width: 769px) {
-    /* Hide all mobile card containers on desktop */
-    .mobile-cards-container,
-    #mobileInventoryCards,
-    #mobileInventoryItemsCards,
-    #mobileCustomerCards,
-    #mobileWIPCards,
-    #mobileGalleryCards,
-    #mobileSalesCards,
-    #mobileIdeasCards {
-        display: none !important;
-    }
-    
-    /* Ensure desktop grids are visible */
-    #gallery .gallery-grid,
-    #ideas .ideas-grid {
-        display: grid !important;
-    }
-}
-
-/* ========================================
-   MOBILE LAYOUT REWRITE - CLEAN & CONSISTENT
-   ======================================== */
-@media (max-width: 768px) {
-    
-    /* Reset all mobile card containers */
-    .mobile-cards-container {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: visible !important;
-    }
-    
-    /* Force all parent containers to full width */
-    .tab-content,
-    .tab-content.active,
-    #projects,
-    #inventory,
-    #customers,
-    #wip,
-    #gallery,
-    #sales,
-    #ideas {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: visible !important;
-    }
-    
-    /* Reset all mobile card grids */
-    .mobile-cards-grid {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 1rem !important;
-        margin: 0 !important;
-        gap: 0 !important;
-        grid-template-columns: none !important;
-    }
-    
-    /* Force specific containers to full width */
-    #mobileInventoryCards,
-    #mobileInventoryItemsCards,
-    #mobileCustomerCards,
-    #mobileWIPCards,
-    #mobileGalleryCards,
-    #mobileSalesCards,
-    #mobileIdeasCards {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 1rem !important;
-        margin: 0 !important;
-        gap: 0 !important;
-        grid-template-columns: none !important;
-    }
-    
-    /* Reset all mobile cards */
-    .mobile-card {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 0 1rem 0 !important;
-        padding: 0 !important;
-        background: white !important;
-        border-radius: 12px !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-        border: 1px solid #e9ecef !important;
-    }
-    
-    /* Reset mobile card content */
-    .mobile-card-content {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 1rem !important;
-        margin: 0 !important;
-        grid-template-columns: none !important;
-        gap: 0 !important;
-    }
-    
-    /* MOBILE CUSTOMER HEADERS */
-    .mobile-customer-header {
-        margin: 1.5rem 0 1rem 0 !important;
-        padding: 0 !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    
-    .mobile-customer-header:first-child {
-        margin-top: 1rem !important;
-    }
-    
-    .mobile-customer-header-content {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        padding: 1rem !important;
-        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
-        border: 1px solid #2C5F7C !important;
-        border-radius: 8px !important;
-        margin: 0 !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        user-select: none !important;
-        box-shadow: 0 2px 8px rgba(44, 95, 124, 0.2) !important;
-    }
-    
-    .mobile-customer-header-content:hover {
-        background: linear-gradient(135deg, #1A4A5C 0%, #3A7A94 50%, #5BA6B7 100%) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
-    }
-    
-    .mobile-customer-header-content:active {
-        transform: translateY(0) !important;
-        box-shadow: 0 2px 8px rgba(44, 95, 124, 0.2) !important;
-    }
-    
-    .mobile-customer-header-content .customer-info {
-        flex: 1 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0.25rem !important;
-    }
-    
-    .mobile-customer-header-content h3 {
-        margin: 0 !important;
-        padding: 0 !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-        color: white !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-    }
-    
-    .mobile-customer-header-content h3 i {
-        color: white !important;
-        font-size: 0.9rem !important;
-    }
-    
-    .mobile-customer-header-content .customer-stats {
-        color: white !important;
-        font-size: 0.8rem !important;
-        font-weight: 400 !important;
-        margin: 0 !important;
-        opacity: 0.9 !important;
-        display: block !important;
-        visibility: visible !important;
-    }
-    
-    .customer-chevron {
-        transition: transform 0.2s ease !important;
-        margin-right: 0.5rem !important;
-        font-size: 0.8rem !important;
-        color: #6c757d !important;
-    }
-    
-    .mobile-customer-projects {
-        margin-top: 0.5rem !important;
-        padding-left: 0 !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .mobile-customer-projects.collapsed {
-        display: none !important;
-    }
-
-    /* MOBILE ADD BUTTONS - COMPLETELY REWRITTEN */
-    .mobile-add-btn {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 100% !important;
-        height: auto !important;
-        min-height: 50px !important;
-        padding: 1rem !important;
-        margin: 0 !important;
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
-        color: white !important;
-        background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 50%, #6BB6C7 100%) !important;
-        border: 2px solid #2C5F7C !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 15px rgba(44, 95, 124, 0.3) !important;
-        white-space: nowrap !important;
-        flex: none !important;
-        flex-shrink: 0 !important;
-        flex-grow: 0 !important;
-        flex-basis: auto !important;
-        position: relative !important;
-        overflow: hidden !important;
-        transition: all 0.3s ease !important;
-        cursor: pointer !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-    }
-    
-    .mobile-add-btn:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(44, 95, 124, 0.4) !important;
-    }
-    
-    .mobile-add-btn:active {
-        transform: translateY(0) !important;
-        box-shadow: 0 2px 10px rgba(44, 95, 124, 0.3) !important;
-    }
-    
-    .mobile-add-btn i {
-        margin-right: 0.5rem !important;
-        flex-shrink: 0 !important;
-        font-size: 1rem !important;
-    }
-    
-    .mobile-add-btn span {
-        flex: 1 !important;
-        text-align: center !important;
-        display: block !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    
-    /* Shimmer effect for add buttons */
-    .mobile-add-btn::before {
-        content: '' !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: -100% !important;
-        width: 100% !important;
-        height: 100% !important;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
-        transition: left 0.5s !important;
-    }
-    
-    .mobile-add-btn:hover::before {
-        left: 100% !important;
-    }
-}
-
 /* Custom Confirmation Modal */
 .confirm-modal {
     max-width: 400px;
@@ -5692,7 +5038,30 @@ body {
 
 /* Final desktop override to ensure horizontal filter layout and proper modal sizing */
 @media (min-width: 769px) {
-    /* Desktop modal styles are now handled by inline CSS for consistency */
+    /* Override mobile modal styles on desktop */
+    .modal-content {
+        width: 95% !important;
+        max-width: 900px !important;
+        min-width: 650px !important;
+        height: auto !important;
+        max-height: 85vh !important;
+        margin: 3% auto !important;
+        padding: 2rem !important;
+        border-radius: 16px !important;
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        display: block !important;
+        flex-direction: unset !important;
+    }
+    
+    .modal {
+        padding: 20px !important;
+        background: rgba(0, 0, 0, 0.5) !important;
+        overflow: auto !important;
+    }
     .filter-row {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
     }
@@ -6030,38 +5399,6 @@ body {
 
 /* Mobile UX improvements */
 @media (max-width: 768px) {
-    /* Performance optimizations for mobile */
-    * {
-        -webkit-tap-highlight-color: transparent;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-    }
-    
-    /* Allow text selection in input fields */
-    input, textarea, [contenteditable] {
-        -webkit-user-select: text;
-        -moz-user-select: text;
-        -ms-user-select: text;
-        user-select: text;
-    }
-    
-    /* Smooth scrolling for mobile */
-    html {
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
-    }
-    
-    /* Optimize animations for mobile */
-    * {
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-    }
-    
     .bulk-actions-container {
         margin: 0.5rem;
         padding: 0.75rem;
@@ -6997,9 +6334,50 @@ body {
     border-radius: 8px;
 }
 
-/* Mobile Modal Improvements - consolidated with inline styles */
+/* Mobile Modal Improvements */
 @media (max-width: 768px) {
-    /* Modal styles are now handled by inline CSS for consistency */
+    .modal-content {
+        padding: 1rem;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .modal-content h3 {
+        font-size: 1.3rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .modal-form {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    .modal-form .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .modal-form .form-group input,
+    .modal-form .form-group select,
+    .modal-form .form-group textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.75rem;
+        border-radius: 8px;
+    }
+    
+    .modal-form .form-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+    
+    .modal-form .form-actions .btn {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+    }
     
     /* Mobile delete buttons in cards */
     .mobile-card-actions {
@@ -7010,928 +6388,10 @@ body {
         margin-top: 1rem;
     }
     
-    .mobile-card-actions .btn,
-    .mobile-card-actions .btn-sm,
-    .mobile-card-actions button {
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-        max-width: 32px !important;
-        min-height: 32px !important;
-        max-height: 32px !important;
-        padding: 0 !important;
-        margin: 0 2px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 4px !important;
-        font-size: 0.8rem !important;
-        transition: all 0.2s ease !important;
-        flex-shrink: 0 !important;
-        flex-grow: 0 !important;
-        box-sizing: border-box !important;
-        line-height: 1 !important;
+    .mobile-card-actions .btn {
+        flex: 1;
+        min-width: 80px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
     }
-    
-    .mobile-card-actions .btn i {
-        margin: 0 !important;
-        font-size: 0.8rem !important;
-    }
-    
-    .mobile-card-actions .btn-edit {
-        background-color: #6c757d !important;
-        border-color: #6c757d !important;
-        color: white !important;
-    }
-    
-    .mobile-card-actions .btn-edit:hover {
-        background-color: #5a6268 !important;
-        border-color: #545b62 !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3) !important;
-    }
-    
-    
-    .mobile-card-actions .btn-delete {
-        background-color: #dc3545 !important;
-        border-color: #dc3545 !important;
-        color: white !important;
-    }
-    
-    .mobile-card-actions .btn-delete:hover {
-        background-color: #c82333 !important;
-        border-color: #bd2130 !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3) !important;
-    }
-}
-
-/* Print Invoice Styles */
-.print-invoice-modal .modal-content {
-    max-width: 800px;
-    width: 90%;
-}
-
-.invoice-items-container {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    background-color: #f9f9f9;
-    margin-bottom: 10px;
-}
-
-.invoice-item-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 10px;
-    padding: 8px;
-    background-color: white;
-    border-radius: 6px;
-    border: 1px solid #e0e0e0;
-}
-
-.invoice-item-row:last-child {
-    margin-bottom: 0;
-}
-
-.invoice-item-row input {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-.invoice-item-row input[name="itemDescription[]"] {
-    flex: 2;
-}
-
-.invoice-item-row input[name="itemQuantity[]"] {
-    flex: 0.5;
-    text-align: center;
-}
-
-.invoice-item-row input[name="itemCost[]"] {
-    flex: 1;
-    text-align: right;
-}
-
-.invoice-item-row .btn {
-    flex: 0 0 auto;
-    padding: 8px 12px;
-    min-width: 40px;
-}
-
-/* Print Invoice Preview and Print Styles */
-#printInvoicePreview {
-    display: none;
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 40px;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.print-invoice-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #333;
-}
-
-.print-invoice-title {
-    font-size: 28px;
-    font-weight: bold;
-    color: #333;
-    margin: 0;
-}
-
-.print-invoice-date {
-    font-size: 16px;
-    color: #666;
-    margin: 0;
-}
-
-.print-vendor-info {
-    text-align: right;
-}
-
-.print-vendor-name {
-    font-size: 24px;
-    font-weight: bold;
-    color: #333;
-    margin: 0 0 10px 0;
-}
-
-.print-vendor-logo {
-    max-width: 120px;
-    max-height: 60px;
-    margin-bottom: 10px;
-}
-
-.print-invoice-items {
-    margin: 30px 0;
-}
-
-.print-invoice-items table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-}
-
-.print-invoice-items th,
-.print-invoice-items td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-.print-invoice-items th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-    color: #333;
-}
-
-.print-invoice-items .item-description {
-    width: 50%;
-}
-
-.print-invoice-items .item-quantity {
-    width: 15%;
-    text-align: center;
-}
-
-.print-invoice-items .item-cost {
-    width: 20%;
-    text-align: right;
-}
-
-.print-invoice-items .item-total {
-    width: 15%;
-    text-align: right;
-    font-weight: bold;
-}
-
-.print-invoice-total {
-    text-align: right;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 2px solid #333;
-}
-
-.print-invoice-total .total-amount {
-    font-size: 24px;
-    font-weight: bold;
-    color: #333;
-}
-
-.print-invoice-notes {
-    margin-top: 30px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 6px;
-    border-left: 4px solid #007bff;
-}
-
-.print-invoice-notes h4 {
-    margin: 0 0 10px 0;
-    color: #333;
-    font-size: 16px;
-}
-
-.print-invoice-notes p {
-    margin: 0;
-    color: #666;
-    line-height: 1.5;
-}
-
-.print-invoice-signature {
-    margin-top: 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-}
-
-.print-signature-line {
-    width: 200px;
-    border-bottom: 1px solid #333;
-    margin-top: 20px;
-}
-
-.print-signature-label {
-    font-size: 14px;
-    color: #666;
-    margin-top: 5px;
-}
-
-/* Invoice signature styles */
-.invoice-signatures {
-    margin-top: 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-.signature-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-}
-
-.signature-line {
-    display: flex !important;
-    align-items: flex-end !important;
-    width: 100% !important;
-    margin-bottom: 15px !important;
-    gap: 15px !important;
-    flex-direction: row !important;
-}
-
-.signature-label {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
-    white-space: nowrap;
-    min-width: 120px;
-}
-
-.signature-space {
-    flex: 1;
-    height: 40px;
-    border-bottom: 1px solid #333;
-    margin: 0 10px;
-}
-
-.signature-date {
-    font-size: 12px;
-    color: #666;
-    white-space: nowrap;
-    min-width: 80px;
-    text-align: right;
-}
-
-/* Print-specific styles */
-@media print {
-    .print-invoice-modal {
-        display: none !important;
-    }
-    
-    #printInvoicePreview {
-        display: block !important;
-        margin: 0 !important;
-        padding: 20px !important;
-        box-shadow: none !important;
-        border: none !important;
-        border-radius: 0 !important;
-    }
-    
-    .print-invoice-header {
-        page-break-inside: avoid;
-    }
-    
-    .print-invoice-items table {
-        page-break-inside: avoid;
-    }
-    
-    .print-invoice-total {
-        page-break-inside: avoid;
-    }
-    
-    .print-invoice-signature {
-        page-break-inside: avoid;
-    }
-    
-    /* Fix signature section layout for printing - horizontal layout */
-    .invoice-signatures {
-        display: block !important;
-        margin-top: 30px !important;
-    }
-    
-    .signature-section {
-        margin-bottom: 25px !important;
-        display: block !important;
-    }
-    
-    .signature-line {
-        display: flex !important;
-        align-items: flex-end !important;
-        width: 100% !important;
-        margin-bottom: 15px !important;
-        gap: 15px !important;
-    }
-    
-    .signature-label {
-        font-size: 14px !important;
-        color: black !important;
-        white-space: nowrap !important;
-        min-width: 120px !important;
-    }
-    
-    .signature-space {
-        flex: 1 !important;
-        height: 30px !important;
-        border-bottom: 1px solid black !important;
-        margin: 0 10px !important;
-    }
-    
-    .signature-date {
-        font-size: 12px !important;
-        color: black !important;
-        white-space: nowrap !important;
-        min-width: 80px !important;
-        text-align: right !important;
-    }
-    
-    body {
-        background: white !important;
-        color: black !important;
-    }
-    
-    .no-print {
-        display: none !important;
-    }
-}
-
-/* Invoice Summary Styles */
-.invoice-summary {
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background: #f5f5f5;
-    border-radius: 8px;
-    border: 1px solid #000;
-    color: #000;
-}
-
-.invoice-summary h3 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-    color: #000;
-}
-
-.invoice-summary p {
-    margin: 0.5rem 0;
-    font-size: 1.1rem;
-}
-
-.invoice-summary strong {
-    color: #000;
-}
-
-/* Completed Items Table Checkbox */
-#completedItemsTable tbody td:first-child {
-    text-align: center;
-    width: 40px;
-}
-
-#completedItemsTable tbody input[type="checkbox"] {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-}
-
-.completed-item-checkbox {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-    margin: 0;
-}
-
-/* Projects Cards Layout */
-.projects-cards-container {
-    padding: 1rem;
-}
-
-.projects-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.project-card {
-    background: white;
-    border: 1px solid #e1e5e9;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.project-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.project-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.project-card-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0;
-    line-height: 1.3;
-}
-
-.project-card-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.project-card-status.pending {
-    background-color: #fef3c7;
-    color: #92400e;
-}
-
-.project-card-status.in-progress {
-    background-color: #dbeafe;
-    color: #1e40af;
-}
-
-.project-card-status.completed {
-    background-color: #d1fae5;
-    color: #065f46;
-}
-
-.project-card-status.work-in-progress {
-    background-color: #f3e8ff;
-    color: #7c3aed;
-}
-
-.project-card-details {
-    margin-bottom: 1rem;
-}
-
-.project-card-detail {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.project-card-detail-label {
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.project-card-detail-value {
-    color: #374151;
-    font-weight: 400;
-}
-
-.project-card-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #f3f4f6;
-}
-
-.project-card-actions .btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-    .projects-cards-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .project-card {
-        padding: 1rem;
-    }
-    
-    .project-card-actions {
-        flex-direction: column;
-    }
-    
-    .project-card-actions .btn {
-        width: 100%;
-    }
-}
-
-/* Inventory Cards Layout */
-.inventory-cards-container {
-    padding: 1rem;
-}
-
-.inventory-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.inventory-card {
-    background: white;
-    border: 1px solid #e1e5e9;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.inventory-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-/* Customers Cards Layout */
-.customers-cards-container {
-    padding: 1rem;
-}
-
-.customers-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.customer-card {
-    background: white;
-    border: 1px solid #e1e5e9;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.customer-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.customer-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f3f4f6;
-}
-
-.customer-card-name {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0;
-}
-
-.customer-card-stats {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.customer-stat {
-    flex: 1;
-    text-align: center;
-    padding: 0.75rem;
-    background: #f9fafb;
-    border-radius: 8px;
-}
-
-.customer-stat-value {
-    display: block;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #2c5f7c;
-}
-
-.customer-stat-label {
-    display: block;
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin-top: 0.25rem;
-}
-
-.customer-card-details {
-    margin-bottom: 1rem;
-}
-
-.customer-card-detail {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    color: #374151;
-}
-
-.customer-card-detail i {
-    color: #6b7280;
-    width: 16px;
-}
-
-.customer-card-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 1px solid #f3f4f6;
-}
-
-/* Sales Cards Layout */
-.sales-cards-container {
-    padding: 1rem;
-}
-
-.sales-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.sale-card {
-    background: white;
-    border: 1px solid #e1e5e9;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.sale-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.sale-card-header {
-    margin-bottom: 1rem;
-}
-
-.sale-card-item {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0 0 0.5rem 0;
-}
-
-.sale-card-customer {
-    color: #6b7280;
-    font-size: 0.9rem;
-}
-
-.sale-card-pricing {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 8px;
-}
-
-.sale-price-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.sale-price-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin-bottom: 0.25rem;
-}
-
-.sale-price-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c5f7c;
-}
-
-.sale-price-value.commission {
-    color: #059669;
-}
-
-.sale-card-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 1px solid #f3f4f6;
-}
-
-/* Mobile responsive for all card layouts */
-@media (max-width: 768px) {
-    .inventory-cards-grid,
-    .customers-cards-grid,
-    .sales-cards-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .customer-card-stats {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .sale-card-pricing {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Completed Items Cards */
-.completed-cards-container {
-    padding: 1rem 0;
-}
-
-.completed-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
-    padding: 1rem 0;
-}
-
-.completed-item-card {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    border: 1px solid #E6E6FA;
-    transition: all 0.3s ease;
-    overflow: hidden;
-    position: relative;
-}
-
-.completed-item-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-}
-
-.completed-item-card.selected {
-    border-color: var(--primary-color);
-    box-shadow: 0 8px 32px rgba(44,95,124,0.2);
-}
-
-.completed-item-card-header {
-    background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 100%);
-    color: white;
-    padding: 1rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.completed-item-card-checkbox {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    cursor: pointer;
-    width: 20px;
-    height: 20px;
-}
-
-.completed-item-card-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0;
-    flex: 1;
-    margin-right: 2rem;
-}
-
-.completed-item-card-body {
-    padding: 1.5rem;
-}
-
-.completed-item-card-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.completed-item-card-customer {
-    font-weight: 600;
-    color: var(--primary-color);
-    font-size: 1rem;
-}
-
-.completed-item-card-date {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.completed-item-card-details {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.completed-item-card-detail {
-    display: flex;
-    flex-direction: column;
-}
-
-.completed-item-card-detail-label {
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.completed-item-card-detail-value {
-    font-weight: 600;
-    color: var(--text-color-dark);
-}
-
-.completed-item-card-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
-}
-
-.completed-item-card-actions .btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
-}
-
-/* Mobile responsiveness for completed cards */
-@media (max-width: 768px) {
-    .completed-cards-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .completed-item-card-header {
-        padding: 0.75rem 1rem;
-    }
-    
-    .completed-item-card-body {
-        padding: 1rem;
-    }
-    
-    .completed-item-card-details {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-}
-
-#completedProjectsTable thead input[type="checkbox"] {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
 }
