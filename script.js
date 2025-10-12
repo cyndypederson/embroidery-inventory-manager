@@ -12581,18 +12581,19 @@ function dismissInstallBanner() {
 
 // Mobile detection utility - centralized for consistency
 function isMobile() {
-    // More sophisticated mobile detection
+    // Very strict mobile detection - only for actual mobile devices
     const width = window.innerWidth;
     const userAgent = navigator.userAgent.toLowerCase();
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     
-    // Check for actual mobile devices, not just narrow windows
+    // Only detect as mobile for actual mobile user agents, not touch laptops
     const isActualMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-    const isNarrowTouchDevice = width <= 768 && isTouchDevice;
     
-    const isMobileDevice = isActualMobile || isNarrowTouchDevice;
+    // Additional check: mobile devices typically have very specific screen sizes
+    const isMobileScreenSize = width <= 480; // Only very narrow screens
     
-    console.log(`📏 isMobile() check: width=${width}, touch=${isTouchDevice}, actualMobile=${isActualMobile}, result=${isMobileDevice}`);
+    const isMobileDevice = isActualMobile && isMobileScreenSize;
+    
+    console.log(`📏 isMobile() check: width=${width}, actualMobile=${isActualMobile}, mobileScreen=${isMobileScreenSize}, result=${isMobileDevice}`);
     return isMobileDevice;
 }
 
