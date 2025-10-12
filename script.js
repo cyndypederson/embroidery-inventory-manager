@@ -266,9 +266,14 @@ function updatePaginationControls(tab) {
 
 // Load Projects as Cards
 function loadProjectsCards() {
+    console.log('🎯 loadProjectsCards() called');
     const container = document.getElementById('projectsCards');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ projectsCards container not found');
+        return;
+    }
     
+    console.log('🧹 Clearing projectsCards container');
     container.innerHTML = '';
     
     // Filter projects only and apply current filters
@@ -7148,10 +7153,15 @@ const MobileCardManager = {
     
     // Load projects
     loadProjects() {
+        console.log('📱 MobileCardManager.loadProjects() called');
         const container = document.getElementById('mobileInventoryCards');
-    if (!container) return;
+        if (!container) {
+            console.error('❌ mobileInventoryCards container not found');
+            return;
+        }
 
-    container.innerHTML = '';
+        console.log('🧹 Clearing mobileInventoryCards container');
+        container.innerHTML = '';
     
         // Add button
         container.appendChild(this.createAddButton('Add New Project', 'openAddProjectModal()'));
