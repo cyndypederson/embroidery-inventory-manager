@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0, private, no-transform">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="version" content="1.0.96">
-    <title>CyndyP StitchCraft Inventory - v1.0.96 - CACHE BUST</title>
+    <meta name="version" content="1.0.95">
+    <title>CyndyP StitchCraft Inventory - v1.0.95 - CACHE BUST - 2025-10-12</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -35,7 +35,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.27&t=202509302356&cb=1&r=&force=grid&cache=bust" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.95&t=202501121800&cb=5&r=&force=clear&duplicate=fix&signature=horizontal" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -45,139 +45,241 @@
                 cssLink.href = cssLink.href.replace(/[?&]t=\d+/, '') + '&t=' + timestamp + '&force=' + timestamp;
             }
             
-            // Force reload if version is old
+            // Force reload if version is old or cached
             if (window.location.search.indexOf('v=1.0.12') !== -1 || 
-                window.location.search.indexOf('v=1.0.13') !== -1) {
+                window.location.search.indexOf('v=1.0.13') !== -1 ||
+                window.location.search.indexOf('v=1.0.80') !== -1 ||
+                window.location.search.indexOf('v=1.0.8') !== -1) {
+                console.log('🔄 Cache bust - forcing reload for version update');
                 window.location.reload(true);
             }
         })();
     </script>
     <style>
-        /* Force modal grid layout - inline CSS to override any caching issues */
-        .modal-form,
-        #editItemForm,
-        #addItemForm,
-        #addIdeaForm,
-        #addPhotoForm,
-        #addCustomerForm,
-        #editCustomerForm,
-        #addSaleForm,
-        #editSaleForm {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 1.75rem !important;
-            align-items: start !important;
-            margin-top: 1rem !important;
-            width: 100% !important;
-            min-width: 600px !important;
-            flex: none !important;
-            flex-direction: unset !important;
-            position: relative !important;
-            box-sizing: border-box !important;
-        }
+        /* Mobile-first modal design - inline CSS to override any caching issues */
         
-        /* Force modal content to be wider for proper grid layout */
-        .modal-content {
-            max-width: 1000px !important;
-            min-width: 800px !important;
-            width: 90% !important;
-        }
-        
-        /* Force grid to use fractional units by removing width constraints */
-        .modal-form,
-        #editItemForm,
-        #addItemForm,
-        #addIdeaForm,
-        #addPhotoForm,
-        #addCustomerForm,
-        #editCustomerForm,
-        #addSaleForm,
-        #editSaleForm {
-            width: auto !important;
-            min-width: 700px !important;
-            max-width: none !important;
-        }
-        
-        /* ULTRA HIGH SPECIFICITY - Force fractional units */
-        .modal-content .modal-form,
-        .modal-content #addItemForm,
-        .modal-content #editItemForm {
-            grid-template-columns: 1fr 1fr !important;
-            display: grid !important;
-        }
-        
-        /* Ensure half-width form groups don't take full width */
-        .modal-form .form-group.half-width,
-        #editItemForm .form-group.half-width,
-        #addItemForm .form-group.half-width,
-        #addIdeaForm .form-group.half-width,
-        #addPhotoForm .form-group.half-width,
-        #addCustomerForm .form-group.half-width,
-        #editCustomerForm .form-group.half-width,
-        #addSaleForm .form-group.half-width,
-        #editSaleForm .form-group.half-width {
-            width: auto !important;
-            max-width: none !important;
-        }
-        .modal-form .form-group.full-width,
-        #editItemForm .form-group.full-width,
-        #addItemForm .form-group.full-width,
-        #addIdeaForm .form-group.full-width,
-        #addPhotoForm .form-group.full-width,
-        #addCustomerForm .form-group.full-width,
-        #editCustomerForm .form-group.full-width,
-        #addSaleForm .form-group.full-width,
-        #editSaleForm .form-group.full-width {
-            grid-column: 1 / -1 !important;
-            width: 100% !important;
-        }
-        .modal-form .form-group.half-width,
-        #editItemForm .form-group.half-width,
-        #addItemForm .form-group.half-width,
-        #addIdeaForm .form-group.half-width,
-        #addPhotoForm .form-group.half-width,
-        #addCustomerForm .form-group.half-width,
-        #editCustomerForm .form-group.half-width,
-        #addSaleForm .form-group.half-width,
-        #editSaleForm .form-group.half-width {
-            grid-column: span 1 !important;
-            width: 100% !important;
-        }
-        
-        /* Override any mobile styles that might be interfering */
+        /* Force single column layout on mobile devices */
         @media (max-width: 768px) {
-            .modal-form {
+            .modal-form,
+            #editItemForm,
+            #addItemForm,
+            #addIdeaForm,
+            #addPhotoForm,
+            #addCustomerForm,
+            #editCustomerForm,
+            #addSaleForm,
+            #editSaleForm {
                 display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 1.75rem !important;
-                align-items: start !important;
-                margin-top: 1rem !important;
-                width: 100% !important;
-                flex: none !important;
-                flex-direction: unset !important;
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
             }
-            .modal-form .form-group.full-width {
+            
+            .modal-form .form-group,
+            #editItemForm .form-group,
+            #addItemForm .form-group,
+            #addIdeaForm .form-group,
+            #addPhotoForm .form-group,
+            #addCustomerForm .form-group,
+            #editCustomerForm .form-group,
+            #addSaleForm .form-group,
+            #editSaleForm .form-group {
+                display: block !important;
+                width: 100% !important;
+                grid-column: 1 / -1 !important;
+                margin-bottom: 1rem !important;
+            }
+            
+            .modal-form .form-group.half-width,
+            #editItemForm .form-group.half-width,
+            #addItemForm .form-group.half-width,
+            #addIdeaForm .form-group.half-width,
+            #addPhotoForm .form-group.half-width,
+            #addCustomerForm .form-group.half-width,
+            #editCustomerForm .form-group.half-width,
+            #addSaleForm .form-group.half-width,
+            #editSaleForm .form-group.half-width {
                 grid-column: 1 / -1 !important;
                 width: 100% !important;
             }
-            .modal-form .form-group.half-width {
-                grid-column: span 1 !important;
-                width: 100% !important;
-            }
+        }
+        .modal-content {
+            max-width: 95vw;
+            width: 95vw;
+            margin: 2% auto;
+            padding: 1rem;
+            max-height: 96vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
-        /* Force all form groups to use proper grid layout */
-        .modal .form-group {
+        .modal-form,
+        #editItemForm,
+        #addItemForm,
+        #addIdeaForm,
+        #addPhotoForm,
+        #addCustomerForm,
+        #editCustomerForm,
+        #addSaleForm,
+        #editSaleForm {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+            margin-top: 1rem !important;
+            width: 100% !important;
+        }
+        
+        .modal-form .form-group,
+        #editItemForm .form-group,
+        #addItemForm .form-group,
+        #addIdeaForm .form-group,
+        #addPhotoForm .form-group,
+        #addCustomerForm .form-group,
+        #editCustomerForm .form-group,
+        #addSaleForm .form-group,
+        #editSaleForm .form-group {
             display: block !important;
             width: 100% !important;
-            margin-bottom: 1.5rem !important;
+            margin-bottom: 1rem !important;
+            grid-column: 1 / -1 !important;
         }
         
-        .modal .form-group input,
-        .modal .form-group select,
-        .modal .form-group textarea {
+        .modal-form .form-group input,
+        .modal-form .form-group select,
+        .modal-form .form-group textarea,
+        #editItemForm .form-group input,
+        #editItemForm .form-group select,
+        #editItemForm .form-group textarea,
+        #addItemForm .form-group input,
+        #addItemForm .form-group select,
+        #addItemForm .form-group textarea,
+        #addIdeaForm .form-group input,
+        #addIdeaForm .form-group select,
+        #addIdeaForm .form-group textarea,
+        #addPhotoForm .form-group input,
+        #addPhotoForm .form-group select,
+        #addPhotoForm .form-group textarea,
+        #addCustomerForm .form-group input,
+        #addCustomerForm .form-group select,
+        #addCustomerForm .form-group textarea,
+        #editCustomerForm .form-group input,
+        #editCustomerForm .form-group select,
+        #editCustomerForm .form-group textarea,
+        #addSaleForm .form-group input,
+        #addSaleForm .form-group select,
+        #addSaleForm .form-group textarea,
+        #editSaleForm .form-group input,
+        #editSaleForm .form-group select,
+        #editSaleForm .form-group textarea {
             width: 100% !important;
             box-sizing: border-box !important;
+            font-size: 16px !important; /* Prevents zoom on iOS */
+            padding: 0.75rem !important;
+            border-radius: 8px !important;
+        }
+        
+        .modal-form .form-actions,
+        #editItemForm .form-actions,
+        #addItemForm .form-actions,
+        #addIdeaForm .form-actions,
+        #addPhotoForm .form-actions,
+        #addCustomerForm .form-actions,
+        #editCustomerForm .form-actions,
+        #addSaleForm .form-actions,
+        #editSaleForm .form-actions {
+            grid-column: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        
+        .modal-form .form-actions .btn,
+        #editItemForm .form-actions .btn,
+        #addItemForm .form-actions .btn,
+        #addIdeaForm .form-actions .btn,
+        #addPhotoForm .form-actions .btn,
+        #addCustomerForm .form-actions .btn,
+        #editCustomerForm .form-actions .btn,
+        #addSaleForm .form-actions .btn,
+        #editSaleForm .form-actions .btn {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            font-size: 1rem;
+        }
+        
+        /* Desktop styles - only apply on larger screens */
+        @media (min-width: 769px) {
+            .modal-content {
+                max-width: 900px;
+                min-width: 650px;
+                width: 90%;
+                padding: 2rem;
+            }
+            
+            .modal-form,
+            #editItemForm,
+            #addItemForm,
+            #addIdeaForm,
+            #addPhotoForm,
+            #addCustomerForm,
+            #editCustomerForm,
+            #addSaleForm,
+            #editSaleForm {
+                grid-template-columns: 1fr 1fr;
+                gap: 1.75rem;
+            }
+            
+            .modal-form .form-group.full-width,
+            #editItemForm .form-group.full-width,
+            #addItemForm .form-group.full-width,
+            #addIdeaForm .form-group.full-width,
+            #addPhotoForm .form-group.full-width,
+            #addCustomerForm .form-group.full-width,
+            #editCustomerForm .form-group.full-width,
+            #addSaleForm .form-group.full-width,
+            #editSaleForm .form-group.full-width {
+                grid-column: 1 / -1;
+            }
+            
+            .modal-form .form-group.half-width,
+            #editItemForm .form-group.half-width,
+            #addItemForm .form-group.half-width,
+            #addIdeaForm .form-group.half-width,
+            #addPhotoForm .form-group.half-width,
+            #addCustomerForm .form-group.half-width,
+            #editCustomerForm .form-group.half-width,
+            #addSaleForm .form-group.half-width,
+            #editSaleForm .form-group.half-width {
+                grid-column: span 1;
+            }
+            
+            .modal-form .form-actions,
+            #editItemForm .form-actions,
+            #addItemForm .form-actions,
+            #addIdeaForm .form-actions,
+            #addPhotoForm .form-actions,
+            #addCustomerForm .form-actions,
+            #editCustomerForm .form-actions,
+            #addSaleForm .form-actions,
+            #editSaleForm .form-actions {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                justify-content: flex-end;
+                gap: 1rem;
+            }
+            
+            .modal-form .form-actions .btn,
+            #editItemForm .form-actions .btn,
+            #addItemForm .form-actions .btn,
+            #addIdeaForm .form-actions .btn,
+            #addPhotoForm .form-actions .btn,
+            #addCustomerForm .form-actions .btn,
+            #editCustomerForm .form-actions .btn,
+            #addSaleForm .form-actions .btn,
+            #editSaleForm .form-actions .btn {
+                width: auto;
+                padding: 0.875rem 1.5rem;
+            }
         }
     </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -193,8 +295,16 @@
                     <h1>CyndyP StitchCraft Inventory Management</h1>
                 </div>
                 <div class="header-right">
+                    <div class="auth-status" id="authStatusContainer" style="display: none;">
+                        <span id="authStatus" class="status-indicator">
+                            <i class="fas fa-user"></i> <span id="authUsername"></span>
+                        </span>
+                        <button class="btn btn-sm btn-secondary" id="logoutBtn" style="margin-left: 0.5rem; padding: 0.25rem 0.75rem;" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
                     <div class="version-display" id="versionDisplay">
-                        <i class="fas fa-tag"></i> v1.0.96
+                        <i class="fas fa-tag"></i> v1.0.95
                     </div>
                     <div class="connection-status" id="connectionStatusContainer">
                         <span id="connectionStatus" class="status-indicator">
@@ -215,6 +325,9 @@
                 </button>
                 <button class="nav-btn" data-tab="wip">
                     <i class="fas fa-tools"></i> Work In Progress
+                </button>
+                <button class="nav-btn" data-tab="completed">
+                    <i class="fas fa-check-circle"></i> Completed Items
                 </button>
                 <button class="nav-btn" data-tab="ideas">
                     <i class="fas fa-lightbulb"></i> Ideas
@@ -242,7 +355,7 @@
                 </div>
                 <div class="filters">
                     <input type="text" id="searchItems" placeholder="Search projects..." onkeyup="debouncedFilterItems()">
-                    <select id="statusFilter" onchange="filterItems()">
+                    <select id="statusFilter" onchange="filterItems()" aria-label="Filter by status">
                         <option value="">All Status</option>
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
@@ -250,19 +363,19 @@
                         <option value="completed">Completed</option>
                         <option value="sold">Sold</option>
                     </select>
-                    <select id="customerFilter" onchange="filterItems()">
+                    <select id="customerFilter" onchange="filterItems()" aria-label="Filter by customer">
                         <option value="">All Customers</option>
                     </select>
-                    <select id="locationFilter" onchange="filterItems()">
+                    <select id="locationFilter" onchange="filterItems()" aria-label="Filter by location">
                         <option value="">All Locations</option>
                     </select>
-                    <select id="priorityFilter" onchange="filterItems()">
+                    <select id="priorityFilter" onchange="filterItems()" aria-label="Filter by priority">
                         <option value="">All Priority</option>
                         <option value="high">High Priority</option>
                         <option value="medium">Medium Priority</option>
                         <option value="low">Low Priority</option>
                     </select>
-                    <select id="dateRangeFilter" onchange="filterItems()">
+                    <select id="dateRangeFilter" onchange="filterItems()" aria-label="Filter by date range">
                         <option value="">All Dates</option>
                         <option value="today">Today</option>
                         <option value="week">This Week</option>
@@ -275,30 +388,18 @@
                     </button>
                 </div>
 
-                <div class="table-container">
-                    <table id="inventoryTable">
-                        <thead>
-                            <tr>
-                                <th>Project</th>
-                                <th>Category</th>
-                                <th>Qty</th>
-                                <th>Status</th>
-                                <th>Due Date</th>
-                                <th>Notes</th>
-                                <th>Link</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventoryTableBody">
-                        </tbody>
-                    </table>
+                <!-- Projects Cards Grid -->
+                <div class="projects-cards-container">
+                    <div class="projects-cards-grid" id="projectsCards">
+                        <!-- Project cards will be populated here -->
+                    </div>
                 </div>
                 
                 <!-- Pagination Controls -->
                 <div class="pagination-container" id="projectsPagination">
                     <div class="pagination-info">
                         <span id="projectsPaginationInfo">Showing 1-50 of 0 items</span>
-                        <select id="projectsPageSize" onchange="changePageSize('projects', this.value)">
+                        <select id="projectsPageSize" onchange="changePageSize('projects', this.value)" aria-label="Items per page">
                             <option value="25">25 per page</option>
                             <option value="50" selected>50 per page</option>
                             <option value="100">100 per page</option>
@@ -337,13 +438,13 @@
                 </div>
                 <div class="filters">
                     <input type="text" id="inventorySearch" placeholder="Search inventory..." onkeyup="filterInventory()">
-                    <select id="inventoryStatusFilter" onchange="filterInventory()">
+                    <select id="inventoryStatusFilter" onchange="filterInventory()" aria-label="Filter inventory by status">
                         <option value="">All Status</option>
                         <option value="available">Available</option>
                         <option value="low-stock">Low Stock</option>
                         <option value="out-of-stock">Out of Stock</option>
                     </select>
-                    <select id="inventoryCategoryFilter" onchange="filterInventory()">
+                    <select id="inventoryCategoryFilter" onchange="filterInventory()" aria-label="Filter inventory by category">
                         <option value="">All Categories</option>
                         <option value="kits">Kits</option>
                         <option value="hoops">Hoops</option>
@@ -351,7 +452,7 @@
                         <option value="thread">Thread</option>
                         <option value="supplies">Other Supplies</option>
                     </select>
-                    <select id="inventoryLocationFilter" onchange="filterInventory()">
+                    <select id="inventoryLocationFilter" onchange="filterInventory()" aria-label="Filter inventory by location">
                         <option value="">All Locations</option>
                     </select>
                     <button class="btn btn-primary" onclick="openAddInventoryModal()">
@@ -359,27 +460,18 @@
                     </button>
                 </div>
 
-                <div class="table-container">
-                    <table id="inventoryItemsTable">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Qty</th>
-                                <th>Status</th>
-                                <th>Notes</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventoryItemsTableBody">
-                        </tbody>
-                    </table>
+                <!-- Inventory Cards Grid -->
+                <div class="inventory-cards-container">
+                    <div class="inventory-cards-grid" id="inventoryCards">
+                        <!-- Inventory cards will be populated here -->
+                    </div>
                 </div>
                 
                 <!-- Pagination Controls -->
                 <div class="pagination-container" id="inventoryPagination">
                     <div class="pagination-info">
                         <span id="inventoryPaginationInfo">Showing 1-50 of 0 items</span>
-                        <select id="inventoryPageSize" onchange="changePageSize('inventory', this.value)">
+                        <select id="inventoryPageSize" onchange="changePageSize('inventory', this.value)" aria-label="Inventory items per page">
                             <option value="25">25 per page</option>
                             <option value="50" selected>50 per page</option>
                             <option value="100">100 per page</option>
@@ -428,21 +520,11 @@
                     </div>
                 </div>
 
-                <div class="table-container">
-                    <table id="customersTable">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Contact</th>
-                                <th>Location</th>
-                                <th>Total Orders</th>
-                                <th>Total Spent</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customersTableBody">
-                        </tbody>
-                    </table>
+                <!-- Customers Cards Grid -->
+                <div class="customers-cards-container">
+                    <div class="customers-cards-grid" id="customersCards">
+                        <!-- Customer cards will be populated here -->
+                    </div>
                 </div>
                 
                 <!-- Mobile Cards Container for Customers -->
@@ -479,13 +561,13 @@
 
                 <div class="wip-filters">
                     <input type="text" id="wipSearch" placeholder="Search WIP items..." onkeyup="filterWIP()">
-                    <select id="wipStatusFilter" onchange="filterWIP()">
+                    <select id="wipStatusFilter" onchange="filterWIP()" aria-label="Filter work in progress by status">
                         <option value="">All Status</option>
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
                         <option value="work-in-progress">Work in Progress</option>
                     </select>
-                    <select id="wipPriorityFilter" onchange="filterWIP()">
+                    <select id="wipPriorityFilter" onchange="filterWIP()" aria-label="Filter work in progress by priority">
                         <option value="">All Priority</option>
                         <option value="high">High Priority</option>
                         <option value="medium">Medium Priority</option>
@@ -513,7 +595,7 @@
                 </div>
 
                 <div class="gallery-filters">
-                    <select id="galleryStatusFilter" onchange="filterGallery()">
+                    <select id="galleryStatusFilter" onchange="filterGallery()" aria-label="Filter gallery by status">
                         <option value="">All Items</option>
                         <option value="completed">Completed</option>
                         <option value="sold">Sold</option>
@@ -546,39 +628,108 @@
                         <button class="btn btn-secondary" onclick="openAddSaleModal()">
                             <i class="fas fa-plus"></i> Record Sale
                         </button>
-                        <button class="btn btn-primary" onclick="generateInvoice()">
-                            <i class="fas fa-file-invoice"></i> Generate Invoice
-                        </button>
-                        <button class="btn btn-info" onclick="generateTestInvoice()" title="Generate a test invoice with sample data">
-                            <i class="fas fa-flask"></i> Generate Test Invoice
-                        </button>
-                        <button class="btn btn-info" onclick="viewInvoices()">
-                            <i class="fas fa-list"></i> View Invoices
+                        <button class="btn btn-outline" onclick="toggleDetailedView()" id="toggleViewBtn">
+                            <i class="fas fa-list"></i> Detailed View
                         </button>
                     </div>
                 </div>
 
-                <div class="table-container">
-                    <table id="salesTable">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Customer</th>
-                                <th>List Price</th>
-                                <th>Net Price</th>
-                                <th>Commission %</th>
-                                <th>Commission Amount</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="salesTableBody">
-                        </tbody>
-                    </table>
+                <!-- Sales Cards Grid -->
+                <div class="sales-cards-container">
+                    <div class="sales-cards-grid" id="salesCards">
+                        <!-- Sales cards will be populated here -->
+                    </div>
                 </div>
                 
                 <!-- Mobile Cards Container for Sales -->
                 <div class="mobile-cards-container">
                     <div class="mobile-cards-grid" id="mobileSalesCards"></div>
+                </div>
+            </div>
+
+        <!-- Completed Items Tab -->
+        <div id="completed" class="tab-content">
+            <div class="section-header">
+                <h2>Completed Items</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-success" onclick="addCompletedItem()">
+                            <i class="fas fa-plus"></i> Add Completed Item
+                        </button>
+                        <button class="btn btn-primary" onclick="createInvoiceFromSelected()">
+                            <i class="fas fa-file-invoice"></i> Create Invoice from Selected
+                        </button>
+                        <button class="btn btn-info" onclick="printFilteredCompletedItems()">
+                            <i class="fas fa-print"></i> Print Filtered Items
+                        </button>
+                        <button class="btn btn-secondary" onclick="selectAllCompleted()">
+                            <i class="fas fa-check-square"></i> Select All
+                        </button>
+                <button class="btn btn-outline" onclick="clearCompletedSelection()">
+                    <i class="fas fa-square"></i> Clear Selection
+                </button>
+                <button class="btn btn-warning" onclick="clearAllExpandedCustomerGroups()" title="Debug: Clear all expanded customer groups">
+                    <i class="fas fa-compress"></i> Collapse All
+                </button>
+                    </div>
+                </div>
+
+                <!-- Filters Section -->
+                <div class="filters-section" style="margin-bottom: 1rem; padding: 0 1rem;">
+                    <div class="filter-row" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <!-- Search -->
+                        <div class="filter-item">
+                            <input type="text" id="completedSearchItems" placeholder="Search completed items..." 
+                                   oninput="filterCompletedItems()" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
+                        </div>
+                        
+                        <!-- Customer Filter -->
+                        <div class="filter-item">
+                            <select id="completedCustomerFilter" onchange="filterCompletedItems()" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" aria-label="Filter completed items by customer">
+                                <option value="">All Customers</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Date Range Filter -->
+                        <div class="filter-item">
+                            <select id="completedDateFilter" onchange="filterCompletedItems()" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" aria-label="Filter completed items by date">
+                                <option value="">All Dates</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="quarter">This Quarter</option>
+                                <option value="year">This Year</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Clear Filters -->
+                        <div class="filter-item">
+                            <button class="btn btn-outline btn-sm" onclick="clearCompletedFilters()" style="padding: 0.5rem 1rem;">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Select All Checkbox -->
+                <div style="margin-bottom: 1rem; padding: 0 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" style="cursor: pointer;">
+                        <span style="cursor: pointer;" onclick="document.getElementById('selectAllCheckbox').click()">Select All Completed Items</span>
+                    </div>
+                </div>
+
+                <!-- Completed Items Cards Grid -->
+                <div class="completed-cards-container">
+                    <div class="completed-cards-grid" id="completedItemsCards">
+                        <!-- Cards will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Invoice Summary -->
+                <div id="invoiceSummary" class="invoice-summary" style="display: none;">
+                    <h3>Invoice Summary</h3>
+                    <p><strong>Selected Items:</strong> <span id="selectedCount">0</span></p>
+                    <p><strong>Total Amount:</strong> $<span id="selectedTotal">0.00</span></p>
                 </div>
             </div>
 
@@ -598,7 +749,7 @@
 
                 <div class="ideas-filters">
                     <input type="text" id="ideasSearch" placeholder="Search ideas..." onkeyup="filterIdeas()">
-                    <select id="ideasCategoryFilter" onchange="filterIdeas()">
+                    <select id="ideasCategoryFilter" onchange="filterIdeas()" aria-label="Filter ideas by category">
                         <option value="">All Categories</option>
                         <option value="web">Web Inspiration</option>
                         <option value="book">Book/Pattern</option>
@@ -608,7 +759,7 @@
                         <option value="style">Style</option>
                         <option value="other">Other</option>
                     </select>
-                    <select id="ideasStatusFilter" onchange="filterIdeas()">
+                    <select id="ideasStatusFilter" onchange="filterIdeas()" aria-label="Filter ideas by status">
                         <option value="">All Status</option>
                         <option value="new">New Idea</option>
                         <option value="in-progress">In Progress</option>
@@ -840,9 +991,13 @@
     <div id="authModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeAuthModal">&times;</span>
-            <h2><i class="fas fa-lock"></i> Admin Access Required</h2>
-            <p>Please enter the admin password to access Sales and Reports:</p>
+            <h2><i class="fas fa-lock"></i> Authentication Required</h2>
+            <p>Please login to add/edit/delete items:</p>
             <form id="authForm" novalidate>
+                <div class="form-group">
+                    <label for="adminUsername">Username:</label>
+                    <input type="text" id="adminUsername" name="adminUsername" required autocomplete="username" maxlength="50" value="admin">
+                </div>
                 <div class="form-group">
                     <label for="adminPassword">Password:</label>
                     <div class="password-input-container">
@@ -862,12 +1017,10 @@
                 </div>
             </form>
             <div id="authError" class="error-message" style="display: none;">
-                <i class="fas fa-exclamation-triangle"></i> Invalid password. Please try again.
+                <i class="fas fa-exclamation-triangle"></i> <span id="authErrorText">Invalid credentials. Please try again.</span>
             </div>
-            <div class="auth-footer">
-                <button type="button" class="btn btn-link" id="changePasswordBtn">
-                    <i class="fas fa-key"></i> Change Password
-                </button>
+            <div class="auth-footer" style="display: none;">
+                <p class="text-muted"><small>To enable/disable authentication or change credentials, edit <code>data/auth.json</code> and restart the server.</small></p>
             </div>
         </div>
     </div>
@@ -945,19 +1098,6 @@
                         <option value="project">Project (Customer Work)</option>
                     </select>
                 </div>
-                <div class="form-group half-width">
-                    <label for="itemCategory">Category</label>
-                    <select id="itemCategory">
-                        <option value="">Select Category</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom</option>
-                        <option value="gift">Gift</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
                 <!-- Inventory-specific fields (hidden for projects) -->
                 <div id="inventoryFields">
                     <div class="form-group half-width">
@@ -997,10 +1137,10 @@
                     <label for="itemPhoto">Photo</label>
                     <div class="photo-input-container">
                         <input type="file" id="itemPhoto" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForInventory()" title="Take Photo with Camera">
+                        <button type="button" class="btn btn-outline" onclick="openCameraForProject()" title="Take Photo with Camera">
                             <i class="fas fa-camera"></i> Take Photo
                         </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForInventory()" title="Analyze Photo to Auto-Fill Fields" id="analyzeInventoryBtn" disabled>
+                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForProject()" title="Analyze Photo to Auto-Fill Fields" id="analyzeProjectBtn" disabled>
                             <i class="fas fa-search"></i> Analyze Photo
                         </button>
                     </div>
@@ -1078,19 +1218,6 @@
                     <input type="number" id="inventoryQuantity" min="1" value="1">
                 </div>
                 <div class="form-group half-width">
-                    <label for="inventoryCategory">Category</label>
-                    <select id="inventoryCategory">
-                        <option value="">Select Category</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom</option>
-                        <option value="gift">Gift</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
                     <label for="inventoryStatus">Status</label>
                     <select id="inventoryStatus">
                         <option value="available">Available</option>
@@ -1105,10 +1232,6 @@
                 <div class="form-group half-width">
                     <label for="inventoryTotalPrice">Total Value</label>
                     <input type="number" id="inventoryTotalPrice" step="0.01" min="0" readonly>
-                </div>
-                <div class="form-group half-width">
-                    <label for="inventoryLocation">Location</label>
-                    <input type="text" id="inventoryLocation" placeholder="e.g., Craft Room, Garage" maxlength="100">
                 </div>
                 <div class="form-group half-width">
                     <label for="inventorySupplier">Supplier</label>
@@ -1161,19 +1284,6 @@
                 <div class="form-group half-width">
                     <label for="projectQuantity">Quantity</label>
                     <input type="number" id="projectQuantity" min="1" value="1">
-                </div>
-                <div class="form-group half-width">
-                    <label for="projectCategory">Category</label>
-                    <select id="projectCategory">
-                        <option value="">Select Category</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom</option>
-                        <option value="gift">Gift</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
                 </div>
                 <div class="form-group half-width">
                     <label for="projectStatus">Status</label>
@@ -1229,19 +1339,7 @@
                     <label for="projectNotes">Notes</label>
                     <textarea id="projectNotes" placeholder="Special instructions, color preferences, size requirements, etc." maxlength="500" rows="3"></textarea>
                 </div>
-                <div class="form-group full-width">
-                    <label for="projectPhoto">Photo</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="projectPhoto" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForProject()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="analyzePhotoForProject()" title="Analyze Photo to Auto-Fill Fields" id="analyzeProjectBtn" disabled>
-                            <i class="fas fa-search"></i> Analyze Photo
-                        </button>
-                    </div>
-                    <small>Add a photo of your project. Use "Analyze Photo" to auto-fill fields from text in the image.</small>
-                </div>
+                <!-- Projects don't need images - they're tracked through inventory, ideas, and gallery -->
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addProjectModal')">Cancel</button>
                     <button type="button" class="btn btn-info" onclick="copyFromLastProject()" title="Copy from last added project">
@@ -1503,6 +1601,10 @@
             <h3>Add Photo to Gallery</h3>
             <form id="addPhotoForm" class="modal-form" novalidate>
                 <div class="form-group full-width">
+                    <label for="photoTitle">Photo Title *</label>
+                    <input type="text" id="photoTitle" required maxlength="100" placeholder="e.g., Custom Embroidered T-Shirt">
+                </div>
+                <div class="form-group full-width">
                     <label for="photoFile">Photo *</label>
                     <div class="photo-input-container">
                         <input type="file" id="photoFile" accept="image/*" required>
@@ -1512,27 +1614,9 @@
                     </div>
                     <small>Upload a photo or take one with your camera.</small>
                 </div>
-                <div class="form-group half-width">
-                    <label for="photoTitle">Photo Title *</label>
-                    <input type="text" id="photoTitle" required maxlength="100" placeholder="e.g., Custom Embroidered T-Shirt">
-                </div>
-                <div class="form-group half-width">
-                    <label for="photoItem">Related Item</label>
-                    <select id="photoItem">
-                        <option value="">Select Item (Optional)</option>
-                    </select>
-                </div>
                 <div class="form-group full-width">
                     <label for="photoDescription">Description</label>
                     <textarea id="photoDescription" rows="3" maxlength="500" placeholder="Describe the work, techniques used, etc."></textarea>
-                </div>
-                <div class="form-group half-width">
-                    <label for="photoStatus">Status</label>
-                    <select id="photoStatus">
-                        <option value="completed">Completed</option>
-                        <option value="work-in-progress">Work in Progress</option>
-                        <option value="sold">Sold</option>
-                    </select>
                 </div>
                 <div class="form-group half-width">
                     <label for="photoTags">Tags</label>
@@ -1541,6 +1625,40 @@
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addPhotoModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Photo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editPhotoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editPhotoModal')">&times;</span>
+            <h3>Edit Photo</h3>
+            <form id="editPhotoForm" class="modal-form" novalidate>
+                <div class="form-group full-width">
+                    <label for="editPhotoTitle">Photo Title *</label>
+                    <input type="text" id="editPhotoTitle" required maxlength="100" placeholder="e.g., Custom T-Shirt Design">
+                </div>
+                <div class="form-group full-width">
+                    <label for="editPhotoDescription">Description</label>
+                    <textarea id="editPhotoDescription" rows="3" maxlength="500" placeholder="Describe the work, techniques used, etc."></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label for="editPhotoImage">Update Image (optional)</label>
+                    <div class="photo-input-container">
+                        <input type="file" id="editPhotoImage" accept="image/*">
+                        <button type="button" class="btn btn-outline" onclick="openCameraForEditPhoto()" title="Take Photo with Camera">
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="editPhotoNotes">Notes</label>
+                    <textarea id="editPhotoNotes" rows="2" maxlength="300" placeholder="Additional notes about this photo"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editPhotoModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Photo</button>
                 </div>
             </form>
         </div>
@@ -1558,19 +1676,6 @@
                 <div class="form-group full-width">
                     <label for="ideaDescription">Description</label>
                     <textarea id="ideaDescription" rows="3" maxlength="500" placeholder="Describe the idea, inspiration, techniques, etc."></textarea>
-                </div>
-                <div class="form-group half-width">
-                    <label for="ideaCategory">Category</label>
-                    <select id="ideaCategory">
-                        <option value="">Select Category</option>
-                        <option value="web">Web Inspiration</option>
-                        <option value="book">Book/Pattern</option>
-                        <option value="custom">Custom Design</option>
-                        <option value="technique">Technique</option>
-                        <option value="color">Color Scheme</option>
-                        <option value="style">Style</option>
-                        <option value="other">Other</option>
-                    </select>
                 </div>
                 <div class="form-group half-width">
                     <label for="ideaStatus">Status</label>
@@ -1627,32 +1732,28 @@
                     <input type="text" id="editProjectDescription" required placeholder="Project description">
                 </div>
                 
-                <!-- Image Preview Section for Projects -->
-                <div class="form-group full-width" id="editProjectImageSection" style="display: none;">
-                    <label>Current Image</label>
-                    <div id="editProjectImagePreview" class="image-preview-container">
-                        <img id="editProjectImageDisplay" src="" alt="Project Image" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
-                    </div>
-                </div>
+                <!-- Projects don't need images - they're tracked through inventory, ideas, and gallery -->
                 
                 <div class="form-group half-width">
                     <label for="editProjectQuantity">Quantity</label>
-                    <input type="number" id="editProjectQuantity" min="1" value="1">
+                    <input type="number" id="editProjectQuantity" min="1" value="1" oninput="calculateEditTotalValue()">
                 </div>
                 
                 <div class="form-group half-width">
-                    <label for="editProjectCategory">Category</label>
-                    <select id="editProjectCategory">
-                        <option value="">Select Category</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="custom">Custom</option>
-                        <option value="gift">Gift</option>
-                        <option value="home-decor">Home Decor</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="other">Other</option>
-                    </select>
+                    <label for="editProjectPrice">Price Each</label>
+                    <input type="number" id="editProjectPrice" step="0.01" min="0" placeholder="0.00" oninput="calculateEditTotalValue()">
                 </div>
+                
+                <div class="form-group half-width">
+                    <label for="editProjectTotalPrice">Total Price</label>
+                    <input type="number" id="editProjectTotalPrice" step="0.01" min="0" readonly placeholder="0.00">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editProjectLocation">Location</label>
+                    <input type="text" id="editProjectLocation" placeholder="Storage location">
+                </div>
+                
                 
                 <div class="form-group half-width">
                     <label for="editProjectCustomer">Customer</label>
@@ -1668,7 +1769,7 @@
                 
                 <div class="form-group half-width">
                     <label for="editProjectStatus">Status</label>
-                    <select id="editProjectStatus">
+                    <select id="editProjectStatus" onchange="updateEditStatusOptions()">
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
                         <option value="work-in-progress">Work in Progress</option>
@@ -1718,6 +1819,114 @@
         </div>
     </div>
 
+    <!-- Edit Completed Item Modal -->
+    <div id="editCompletedItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editCompletedItemModal')">&times;</span>
+            <h3>Edit Completed Item</h3>
+            <form id="editCompletedItemForm" class="modal-form" novalidate>
+                <input type="hidden" id="editCompletedItemIndex">
+                
+                <div class="form-group full-width">
+                    <label for="editCompletedItemDescription">Description *</label>
+                    <input type="text" id="editCompletedItemDescription" required placeholder="Item description">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editCompletedItemQuantity">Quantity</label>
+                    <input type="number" id="editCompletedItemQuantity" min="1" value="1" oninput="calculateCompletedItemTotal()">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editCompletedItemPrice">Price Each</label>
+                    <input type="number" id="editCompletedItemPrice" step="0.01" min="0" placeholder="0.00" oninput="calculateCompletedItemTotal()">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editCompletedItemTotal">Total Price</label>
+                    <input type="number" id="editCompletedItemTotal" step="0.01" min="0" readonly placeholder="0.00">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editCompletedItemCustomer">Customer</label>
+                    <div class="input-with-button">
+                        <select id="editCompletedItemCustomer">
+                            <option value="">Select Customer (Optional)</option>
+                        </select>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="editCompletedItemInvoicedDate">Date Invoiced</label>
+                    <input type="date" id="editCompletedItemInvoicedDate">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCompletedItemModal')">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="copyCurrentCompletedItem()" title="Create a copy of this item">
+                        <i class="fas fa-copy"></i> Copy Item
+                    </button>
+                    <button type="submit" class="btn btn-primary">Update Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Completed Item Modal -->
+    <div id="addCompletedItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addCompletedItemModal')">&times;</span>
+            <h3>Add Completed Item</h3>
+            <form id="addCompletedItemForm" class="modal-form" novalidate>
+                
+                <div class="form-group full-width">
+                    <label for="addCompletedItemDescription">Description *</label>
+                    <input type="text" id="addCompletedItemDescription" required placeholder="Item description">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="addCompletedItemQuantity">Quantity</label>
+                    <input type="number" id="addCompletedItemQuantity" min="1" value="1" oninput="calculateAddCompletedItemTotal()">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="addCompletedItemPrice">Price Each</label>
+                    <input type="number" id="addCompletedItemPrice" step="0.01" min="0" placeholder="0.00" oninput="calculateAddCompletedItemTotal()">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="addCompletedItemTotal">Total Price</label>
+                    <input type="number" id="addCompletedItemTotal" step="0.01" min="0" readonly placeholder="0.00">
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="addCompletedItemCustomer">Customer</label>
+                    <div class="input-with-button">
+                        <select id="addCompletedItemCustomer">
+                            <option value="">Select Customer (Optional)</option>
+                        </select>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="openAddCustomerModal()" title="Add New Customer">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group half-width">
+                    <label for="addCompletedItemInvoicedDate">Date Invoiced</label>
+                    <input type="date" id="addCompletedItemInvoicedDate">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCompletedItemModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Completed Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Edit Inventory Modal -->
     <div id="editInventoryModal" class="modal">
         <div class="modal-content">
@@ -1737,19 +1946,6 @@
                 </div>
                 
                 <div class="form-group half-width">
-                    <label for="editInventoryCategory">Category</label>
-                    <select id="editInventoryCategory">
-                        <option value="">Select Category</option>
-                        <option value="thread">Thread</option>
-                        <option value="fabric">Fabric</option>
-                        <option value="hoop">Hoop</option>
-                        <option value="needle">Needle</option>
-                        <option value="stabilizer">Stabilizer</option>
-                        <option value="supplies">Other Supplies</option>
-                    </select>
-                </div>
-                
-                <div class="form-group half-width">
                     <label for="editInventoryPrice">Cost (per item)</label>
                     <input type="number" id="editInventoryPrice" step="0.01" min="0" placeholder="0.00" onchange="calculateEditInventoryTotalValue()">
                 </div>
@@ -1757,11 +1953,6 @@
                 <div class="form-group half-width">
                     <label for="editInventoryTotalPrice">Total Value</label>
                     <input type="number" id="editInventoryTotalPrice" step="0.01" min="0" readonly>
-                </div>
-                
-                <div class="form-group half-width">
-                    <label for="editInventoryLocation">Location</label>
-                    <input type="text" id="editInventoryLocation" placeholder="e.g., Craft Room, Garage">
                 </div>
                 
                 <div class="form-group half-width">
@@ -1841,10 +2032,10 @@
     <div id="invoicePreviewModal" class="modal">
         <div class="modal-content invoice-preview">
             <div class="invoice-header">
-                <button class="btn btn-primary" onclick="printInvoice()">
+                <button class="btn" onclick="printInvoice()" style="background: #000; color: white; border: 1px solid #000;">
                     <i class="fas fa-print"></i> Print Invoice
                 </button>
-                <button class="btn btn-secondary" onclick="closeModal('invoicePreviewModal')">
+                <button class="btn" onclick="closeModal('invoicePreviewModal')" style="background: #666; color: white; border: 1px solid #666;">
                     <i class="fas fa-times"></i> Close
                 </button>
             </div>
@@ -2033,6 +2224,69 @@
         </div>
     </div>
 
+    <!-- Print Invoice Modal -->
+    <div id="printInvoiceModal" class="modal">
+        <div class="modal-content print-invoice-modal">
+            <span class="close" onclick="closeModal('printInvoiceModal')">&times;</span>
+            <h3><i class="fas fa-print"></i> Print Invoice</h3>
+            
+            <form id="printInvoiceForm" class="modal-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="printVendorName">Vendor Name *</label>
+                        <input type="text" id="printVendorName" name="vendorName" required 
+                               placeholder="e.g., First Avenue Shop">
+                    </div>
+                    <div class="form-group">
+                        <label for="printInvoiceDate">Date *</label>
+                        <input type="date" id="printInvoiceDate" name="invoiceDate" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="printVendorLogo">Vendor Logo URL (optional)</label>
+                    <input type="url" id="printVendorLogo" name="vendorLogo" 
+                           placeholder="https://example.com/logo.png">
+                </div>
+                
+                <div class="form-group">
+                    <label>Invoice Items *</label>
+                    <div id="printInvoiceItems" class="invoice-items-container">
+                        <div class="invoice-item-row">
+                            <input type="text" name="itemDescription[]" placeholder="Item description" required>
+                            <input type="number" name="itemQuantity[]" placeholder="Qty" min="1" value="1" required>
+                            <input type="number" name="itemCost[]" placeholder="Cost" min="0" step="0.01" required>
+                            <button type="button" class="btn btn-sm btn-outline" onclick="removeInvoiceItem(this)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="addInvoiceItem()">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="printNotes">Notes (optional)</label>
+                    <textarea id="printNotes" name="notes" rows="3" 
+                              placeholder="Additional notes for the vendor..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('printInvoiceModal')">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="previewPrintInvoice()">
+                        <i class="fas fa-eye"></i> Preview
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-print"></i> Print Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // NUCLEAR CACHE BUSTING - Force reload of CSS and JS on every page load
         (function() {
@@ -2040,7 +2294,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.96 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.95 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2070,15 +2324,15 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.12') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.94') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
             }, 1000);
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.15');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.94');
         })();
     </script>
-    <script src="script.js?v=1.0.27&t=202509302356&cb=1&r=" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.94&t=202501111700&cb=4&r=&force=clear&duplicate=fix" id="js-cache-bust"></script>
 </body>
 </html>

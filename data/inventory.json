@@ -1,6 +1,6 @@
 [
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcb9",
+    "_id": "68eaf4891ceb3071ebf1bc2b",
     "name": "Home is where",
     "description": "8\" Home is where",
     "customer": "Joey",
@@ -15,7 +15,7 @@
     "invoicedDate": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcba",
+    "_id": "68eaf4891ceb3071ebf1bc2c",
     "name": "Home is where",
     "description": "6\" Mother of the Bride",
     "customer": "Joey",
@@ -30,7 +30,7 @@
     "invoicedDate": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcbb",
+    "_id": "68eaf4891ceb3071ebf1bc2d",
     "name": "Mother of the Bride",
     "description": "6\" Mother of the Bride",
     "customer": "Joey",
@@ -49,7 +49,7 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcbc",
+    "_id": "68eaf4891ceb3071ebf1bc2e",
     "name": "Wedding Day",
     "description": "5x7 Bridal Gift",
     "customer": "Joey",
@@ -68,7 +68,7 @@
     "notes": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcbd",
+    "_id": "68eaf4891ceb3071ebf1bc2f",
     "name": "Charlie",
     "description": "4\" Charlie",
     "customer": "Joey",
@@ -87,7 +87,7 @@
     "notes": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcbe",
+    "_id": "68eaf4891ceb3071ebf1bc30",
     "name": "Sweatshirt",
     "description": "BFF embroidery sweatshirt size L",
     "customer": "Joey",
@@ -101,7 +101,7 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcbf",
+    "_id": "68eaf4891ceb3071ebf1bc31",
     "name": "Kid picture",
     "description": "Safiyyah drawing",
     "customer": "Joey",
@@ -115,7 +115,7 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc0",
+    "_id": "68eaf4891ceb3071ebf1bc32",
     "name": "Kid picture",
     "description": "Junayd drawing",
     "customer": "Joey",
@@ -129,7 +129,7 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc1",
+    "_id": "68eaf4891ceb3071ebf1bc33",
     "name": "Safiyyah Name",
     "description": "4\" Safiyyah",
     "customer": "Joey",
@@ -148,7 +148,7 @@
     "notes": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc2",
+    "_id": "68eaf4891ceb3071ebf1bc34",
     "name": "Junayd name",
     "description": "4\" Junayd",
     "customer": "Joey",
@@ -167,7 +167,7 @@
     "notes": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc3",
+    "_id": "68eaf4891ceb3071ebf1bc35",
     "name": "Jewelry",
     "description": "Bracelet and pendant",
     "customer": "Kathy Pratt",
@@ -181,7 +181,7 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc4",
+    "_id": "68eaf4891ceb3071ebf1bc36",
     "name": "Gives me shits",
     "description": "6\" Dairy gives me the shits",
     "customer": "Nicole",
@@ -195,7 +195,7 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc5",
+    "_id": "68eaf4891ceb3071ebf1bc37",
     "name": "Sword Hoop",
     "description": "Purple Starburst w sword",
     "customer": "First Avenue Market",
@@ -211,11 +211,10 @@
     "dueDate": "",
     "tags": "",
     "patternLink": "",
-    "notes": "",
-    "invoicedDate": "2025-10-11"
+    "notes": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc6",
+    "_id": "68eaf4891ceb3071ebf1bc38",
     "name": "Sword Hoop",
     "description": "Butterfly w swords",
     "customer": "First Avenue Market",
@@ -231,11 +230,10 @@
     "type": "project",
     "category": "",
     "tags": "",
-    "patternLink": "",
-    "invoicedDate": "2025-10-11"
+    "patternLink": ""
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc7",
+    "_id": "68eaf4891ceb3071ebf1bc39",
     "name": "Brooch",
     "description": "Raven and black heart brooch",
     "customer": "First Avenue Market",
@@ -254,13 +252,13 @@
     "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc8",
+    "_id": "68eaf4891ceb3071ebf1bc3a",
     "name": "Brooch",
     "description": "Rose and sword brooch",
     "customer": "First Avenue Market",
     "location": "Not specified",
     "quantity": 1,
-    "price": 40,
+    "price": 0,
     "totalValue": 0,
     "status": "completed",
     "priority": "medium",
@@ -270,11 +268,10 @@
     "tags": "",
     "patternLink": "",
     "dateAdded": "2025-09-13T16:15:44.011Z",
-    "type": "project",
-    "invoicedDate": "2025-10-11"
+    "type": "project"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcc9",
+    "_id": "68eaf4891ceb3071ebf1bc3b",
     "name": "Beaded Dragon",
     "description": "Purple beaded dragon with 5x7 black frame",
     "customer": "First Avenue Market",
@@ -294,7 +291,7 @@
     "invoicedDate": "2025-10-11"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcca",
+    "_id": "68eaf4891ceb3071ebf1bc3c",
     "name": "Beaded Bee",
     "customer": "First Avenue Market",
     "location": "Not specified",
@@ -314,7 +311,7 @@
     "invoicedDate": "2025-10-11"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bccb",
+    "_id": "68eaf4891ceb3071ebf1bc3d",
     "name": "Beaded Moth ",
     "customer": "First Avenue Market",
     "location": "Not specified",
@@ -334,7 +331,7 @@
     "invoicedDate": "2025-10-11"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bccc",
+    "_id": "68eaf4891ceb3071ebf1bc3e",
     "description": "Black beaded dragon w 5x7 Frame",
     "quantity": 1,
     "price": 55,
@@ -345,7 +342,7 @@
     "createdAt": "2025-10-11T23:38:29.740Z"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bccd",
+    "_id": "68eaf4891ceb3071ebf1bc3f",
     "name": "6\" Home is where",
     "description": "6\" Home is where",
     "quantity": 1,
@@ -365,7 +362,7 @@
     "photo": null
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcce",
+    "_id": "68eaf4891ceb3071ebf1bc40",
     "name": "Uno family",
     "description": "Uno family",
     "quantity": 1,
@@ -385,7 +382,7 @@
     "photo": null
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bccf",
+    "_id": "68eaf4891ceb3071ebf1bc41",
     "description": "5\" Hoop Suck at apologies",
     "quantity": 1,
     "price": 35,
@@ -396,7 +393,7 @@
     "createdAt": "2025-10-12T00:07:52.515Z"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcd0",
+    "_id": "68eaf4891ceb3071ebf1bc42",
     "description": "6\" Hoop Home is Where",
     "quantity": 1,
     "price": 35,
@@ -407,7 +404,7 @@
     "createdAt": "2025-10-12T00:08:37.859Z"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcd1",
+    "_id": "68eaf4891ceb3071ebf1bc43",
     "description": "6\" Hoop Uno Family",
     "quantity": 1,
     "price": 35,
@@ -418,18 +415,18 @@
     "createdAt": "2025-10-12T00:20:29.688Z"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcd2",
+    "_id": "68eaf4891ceb3071ebf1bc44",
     "description": "6\" Despite the look",
     "quantity": 1,
     "price": 35,
-    "customer": "First Avenue Market",
+    "customer": "Flippin' Happy",
     "invoicedDate": "2025-10-11",
     "status": "completed",
     "type": "project",
     "createdAt": "2025-10-12T00:21:01.476Z"
   },
   {
-    "_id": "68eaf4ee1ceb3071ebf1bcd3",
+    "_id": "68eaf4891ceb3071ebf1bc45",
     "description": "6\" I hug",
     "quantity": 1,
     "price": 35,
