@@ -2,8 +2,8 @@
 node_modules/
 npm-debug.log*
 
-# Data files (will be created on server)
-data/
+# Data files (included for Vercel deployment)
+# data/
 
 # Logs
 logs/
