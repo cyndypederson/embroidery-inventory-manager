@@ -6098,14 +6098,14 @@ async function switchTab(tabName) {
     
     // Load data for the tab
     if (tabName === 'projects') {
-        loadProjectsCards(); // Load projects as cards
-    // Load mobile cards for projects (ONLY on mobile)
-    if (isMobile()) {
-        console.log('📱 Mobile detected - loading mobile cards');
-        loadMobileInventoryCards();
-    } else {
-        console.log('🖥️ Desktop detected - skipping mobile cards');
-    }
+        // Load projects - use EITHER desktop cards OR mobile cards, not both
+        if (isMobile()) {
+            console.log('📱 Mobile detected - loading mobile cards only');
+            loadMobileInventoryCards();
+        } else {
+            console.log('🖥️ Desktop detected - loading desktop cards only');
+            loadProjectsCards(); // Load projects as cards
+        }
         // Hide pagination for projects - not needed
         const projectsPagination = document.getElementById('projectsPagination');
         if (projectsPagination) {
