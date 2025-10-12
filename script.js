@@ -7186,74 +7186,58 @@ const MobileCardManager = {
         `;
             container.appendChild(emptyCard);
         } else {
-            // Group projects by customer
-            const projectsByCustomer = {};
-            projects.forEach(project => {
-                const customer = project.customer || 'No Customer';
-                if (!projectsByCustomer[customer]) {
-                    projectsByCustomer[customer] = [];
-                }
-                projectsByCustomer[customer].push(project);
-            });
-            
-            // Sort customers alphabetically
-            const sortedCustomers = Object.keys(projectsByCustomer).sort();
-            
-            // Create customer groups
-            sortedCustomers.forEach(customer => {
-                // Add customer header with collapsible functionality
-                const customerHeader = document.createElement('div');
-                customerHeader.className = 'mobile-customer-header';
-                const sanitizedCustomer = customer.replace(/[^a-zA-Z0-9]/g, '-');
+            // Use the same new card layout as desktop, just mobile-optimized
+            projects.forEach((project, index) => {
+                const actualIndex = inventory.findIndex(item => item === project);
                 
-                // Calculate project status breakdown
-                const customerProjects = projectsByCustomer[customer];
-                const statusCounts = {
-                    pending: customerProjects.filter(p => p.status === 'pending').length,
-                    inProgress: customerProjects.filter(p => p.status === 'in progress').length,
-                    completed: customerProjects.filter(p => p.status === 'completed').length,
-                    sold: customerProjects.filter(p => p.status === 'sold').length
-                };
+                const card = document.createElement('div');
+                card.className = 'mobile-card project-card-mobile';
                 
-                const statusText = `${customerProjects.length} project${customerProjects.length !== 1 ? 's' : ''} (${statusCounts.pending} pending, ${statusCounts.inProgress} in progress, ${statusCounts.completed} completed, ${statusCounts.sold} sold)`;
+                const statusClass = project.status ? project.status.toLowerCase().replace(/\s+/g, '-') : 'pending';
+                const dueDate = project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'Not set';
+                const customer = project.customer || 'No customer';
                 
-                customerHeader.innerHTML = `
-                    <div class="mobile-customer-header-content" onclick="toggleCustomerGroup('${sanitizedCustomer}')" data-customer="${sanitizedCustomer}">
-                        <div class="customer-info">
-                            <h3>
-                                <i class="fas fa-chevron-right customer-chevron"></i>
-                                <i class="fas fa-user"></i> ${customer}
-                            </h3>
-                            <div class="customer-stats">${statusText}</div>
-            </div>
-            </div>
-        `;
-                container.appendChild(customerHeader);
+                card.innerHTML = `
+                    <div class="mobile-card-content">
+                        <div class="project-card-header">
+                            <h3 class="project-card-title">${project.description || project.name || 'Untitled Project'}</h3>
+                            <span class="project-card-status ${statusClass}">${project.status || 'pending'}</span>
+                        </div>
+                        <div class="project-card-details">
+                            <div class="project-card-detail">
+                                <span class="project-card-detail-label">Customer:</span>
+                                <span class="project-card-detail-value">${customer}</span>
+                            </div>
+                            <div class="project-card-detail">
+                                <span class="project-card-detail-label">Due Date:</span>
+                                <span class="project-card-detail-value">${dueDate}</span>
+                            </div>
+                            <div class="project-card-detail">
+                                <span class="project-card-detail-label">Quantity:</span>
+                                <span class="project-card-detail-value">${project.quantity || 1}</span>
+                            </div>
+                            ${project.price ? `
+                            <div class="project-card-detail">
+                                <span class="project-card-detail-label">Price:</span>
+                                <span class="project-card-detail-value">$${(project.price || 0).toFixed(2)}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="project-card-actions">
+                            <button class="btn btn-outline btn-sm" onclick="editItem(${actualIndex})" title="Edit Project">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="copyItem(${actualIndex})" title="Copy Project">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteItem(${actualIndex})" title="Delete Project">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
                 
-                // Add collapsible container for projects
-                const projectsContainer = document.createElement('div');
-                projectsContainer.className = 'mobile-customer-projects';
-                projectsContainer.id = `customer-projects-${customer.replace(/[^a-zA-Z0-9]/g, '-')}`;
-                projectsContainer.style.display = 'none'; // Start collapsed
-                
-                // Add projects for this customer
-                projectsByCustomer[customer].forEach((project, customerIndex) => {
-                    const originalIndex = projects.findIndex(p => p === project);
-                    const details = `
-                        <p><strong>Status:</strong> ${project.status || 'Unknown'}</p>
-                        <p><strong>Value:</strong> $${(project.totalValue || 0).toFixed(2)}</p>
-                        <p><strong>Priority:</strong> ${project.priority || 'Medium'}</p>
-                    `;
-                    projectsContainer.appendChild(this.createDataCard(
-                        project.description || 'Untitled Project',
-                        'Project',
-                        details,
-                        `editProject(${originalIndex})`,
-                        `deleteProject(${originalIndex})`
-                    ));
-                });
-                
-                container.appendChild(projectsContainer);
+                container.appendChild(card);
             });
         }
     },
