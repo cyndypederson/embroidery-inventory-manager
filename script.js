@@ -3971,9 +3971,9 @@ function isLocalhost() {
 }
 
 // Function to change password (you can call this from browser console)
+// Note: Password is now managed server-side
 function changePassword(newPassword) {
-    ADMIN_PASSWORD = newPassword;
-    console.log('Password changed successfully!');
+    console.log('Password changes must be made server-side in server.js or environment variables');
 }
 
 function logout() {
@@ -4017,10 +4017,10 @@ function handleChangePassword(event) {
     document.getElementById('changePasswordError').style.display = 'none';
     document.getElementById('changePasswordSuccess').style.display = 'none';
     
-    // Validate current password
-    if (currentPassword !== ADMIN_PASSWORD) {
-        const errorText = document.getElementById('changePasswordErrorText');
-        const errorDiv = document.getElementById('changePasswordError');
+    // Validate current password - now handled server-side
+    console.log('Password validation is now handled server-side');
+    const errorText = document.getElementById('changePasswordErrorText');
+    const errorDiv = document.getElementById('changePasswordError');
         
         if (errorText) errorText.textContent = 'Current password is incorrect.';
         if (errorDiv) errorDiv.style.display = 'block';
@@ -4047,8 +4047,8 @@ function handleChangePassword(event) {
         return;
     }
     
-    // Change password
-    ADMIN_PASSWORD = newPassword;
+    // Change password - now handled server-side
+    console.log('Password changes must be made server-side');
     document.getElementById('changePasswordSuccess').style.display = 'block';
     
     // Hide success message after 2 seconds and close modal

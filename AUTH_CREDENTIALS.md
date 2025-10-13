@@ -13,7 +13,7 @@ admin
 
 ### **Password:**
 ```
-embroidery2024
+Kobedavis#1
 ```
 
 ---
@@ -34,7 +34,7 @@ http://localhost:3002
 2. Try to perform a protected action (e.g., "Add Project" or click "Completed Items" tab)
 3. Login modal will appear
 4. Enter username: `admin`
-5. Enter password: `embroidery2024`
+5. Enter password: `Kobedavis#1`
 6. Click "Login"
 7. You now have full access
 
@@ -55,7 +55,7 @@ ADMIN_PASSWORD=your_password
 Find lines 179-180 in `server.js`:
 ```javascript
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'embroidery2024';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
 ```
 
 Change the default values after `||`
@@ -84,7 +84,7 @@ Should return: `{"authenticated": false, "authEnabled": true}`
 ```bash
 curl -X POST https://embroidery-inventory-manager.vercel.app/api/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"embroidery2024"}'
+  -d '{"username":"admin","password":"Kobedavis#1"}'
 ```
 Should return: `{"success": true, "message": "Login successful", "username": "admin"}`
 
@@ -134,7 +134,7 @@ Check: `https://embroidery-inventory-manager.vercel.app/api/auth/status`
 | Field | Value |
 |-------|-------|
 | **Username** | `admin` |
-| **Password** | `embroidery2024` |
+| **Password** | `Kobedavis#1` |
 | **Session Duration** | 24 hours |
 | **Change Password** | Via environment variables |
 

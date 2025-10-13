@@ -2,7 +2,7 @@
 
 ## 🔐 Authentication (Required First!)
 - [ ] Open http://localhost:3002
-- [ ] Login with username: `admin`, password: `Kobe#1`
+- [ ] Login with username: `admin`, password: `Kobedavis#1`
 - [ ] Verify "admin" appears in top right with Logout button
 
 ---
