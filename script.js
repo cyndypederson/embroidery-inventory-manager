@@ -4820,14 +4820,17 @@ let currentUsername = null;
 
 // Check auth status with server
 async function checkAuthStatus() {
+    console.log('🔍 checkAuthStatus called');
     try {
         const response = await fetch('/api/auth/status', {
             credentials: 'include'
         });
         const data = await response.json();
+        console.log('🔍 Auth status response:', data);
         isAuthenticated = data.authenticated;
         authEnabled = data.authEnabled;
         currentUsername = data.username;
+        console.log('🔍 Setting auth state from server:', { isAuthenticated, authEnabled, currentUsername });
         updateAuthUI();
         return { authenticated: isAuthenticated, authEnabled: authEnabled };
     } catch (error) {
