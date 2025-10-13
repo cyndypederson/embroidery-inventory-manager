@@ -4019,13 +4019,7 @@ function handleChangePassword(event) {
     
     // Validate current password - now handled server-side
     console.log('Password validation is now handled server-side');
-    const errorText = document.getElementById('changePasswordErrorText');
-    const errorDiv = document.getElementById('changePasswordError');
-        
-        if (errorText) errorText.textContent = 'Current password is incorrect.';
-        if (errorDiv) errorDiv.style.display = 'block';
-        return;
-    }
+    // Note: Password validation is now handled server-side, so we skip client-side validation
     
     // Validate new password
     if (newPassword.length < 4) {
