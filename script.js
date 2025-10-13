@@ -4899,6 +4899,8 @@ async function handleAuthSubmit(event) {
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
     
+    console.log('🔐 Login attempt:', { username, password: password.substring(0, 3) + '***' });
+    
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
@@ -4909,7 +4911,9 @@ async function handleAuthSubmit(event) {
             body: JSON.stringify({ username, password })
         });
         
+        console.log('📡 Login response status:', response.status);
         const data = await response.json();
+        console.log('📡 Login response data:', data);
         
         if (data.success) {
             isAuthenticated = true;
