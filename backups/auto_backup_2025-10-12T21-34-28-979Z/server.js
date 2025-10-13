@@ -87,26 +87,9 @@ async function initializeCollections() {
 }
 
 // Middleware
-app.use(cors({
-    origin: true,
-    credentials: true
-}));
+app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
-
-// Session middleware
-const session = require('express-session');
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'embroidery-secret-key-change-in-production',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: false, // Set to false for local development (http)
-        httpOnly: true,
-        sameSite: 'lax', // Required for modern browsers
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
 
 // NUCLEAR CACHE CONTROL - Force no caching whatsoever
 app.use((req, res, next) => {
@@ -172,73 +155,6 @@ app.get('/health', async (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         database: database ? 'Connected' : 'Disconnected'
-    });
-});
-
-// Authentication endpoints
-// Default admin credentials (should be changed in production)
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
-
-// Check auth status
-app.get('/api/auth/status', (req, res) => {
-    console.log('🔍 Server auth status check:', { 
-        sessionID: req.sessionID,
-        authenticated: req.session && req.session.authenticated,
-        username: req.session && req.session.username,
-        sessionExists: !!req.session
-    });
-    res.json({
-        authenticated: req.session && req.session.authenticated === true,
-        username: req.session && req.session.username,
-        authEnabled: true
-    });
-});
-
-// Login endpoint
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    console.log('🔐 Server login attempt:', { username, password: password ? password.substring(0, 3) + '***' : 'undefined' });
-    console.log('🔐 Expected credentials:', { username: ADMIN_USERNAME, password: ADMIN_PASSWORD ? ADMIN_PASSWORD.substring(0, 3) + '***' : 'undefined' });
-    
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        console.log('✅ Server login successful, setting session');
-        req.session.authenticated = true;
-        req.session.username = username;
-        console.log('🔐 Session after login:', { 
-            authenticated: req.session.authenticated, 
-            username: req.session.username,
-            sessionID: req.sessionID 
-        });
-        res.json({
-            success: true,
-            message: 'Login successful',
-            username: username
-        });
-    } else {
-        console.log('❌ Server login failed');
-        res.status(401).json({
-            success: false,
-            message: 'Invalid username or password'
-        });
-    }
-});
-
-// Logout endpoint
-app.post('/api/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            res.status(500).json({
-                success: false,
-                message: 'Logout failed'
-            });
-        } else {
-            res.json({
-                success: true,
-                message: 'Logged out successfully'
-            });
-        }
     });
 });
 

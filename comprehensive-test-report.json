@@ -1,29 +1,36 @@
 {
-  "timestamp": "2025-10-11T20:44:17.091Z",
+  "timestamp": "2025-10-12T21:46:07.628Z",
   "summary": {
-    "total": 23,
-    "passed": 3,
+    "total": 25,
+    "passed": 5,
     "failed": 20,
-    "successRate": "13.0%"
+    "successRate": "20.0%"
   },
   "testedFeatures": [
     {
       "name": "Server Connection",
       "category": "Core",
       "status": "PASSED",
-      "duration": 2860
+      "duration": 3079
+    },
+    "Data Loading & DOM Integrity",
+    {
+      "name": "Data Loading & DOM Integrity",
+      "category": "Core",
+      "status": "PASSED",
+      "duration": 5213
     },
     {
       "name": "All Navigation Tabs",
       "category": "Core",
       "status": "PASSED",
-      "duration": 9322
+      "duration": 9332
     },
     {
       "name": "Projects Add Button",
       "category": "Projects",
       "status": "PASSED",
-      "duration": 558
+      "duration": 567
     },
     {
       "name": "Projects Form Fields",
@@ -53,85 +60,85 @@
       "name": "Projects Edit Fields",
       "category": "Projects",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Protocol error (Runtime.callFunctionOn): Target closed"
     },
     {
       "name": "Projects Edit Submission",
       "category": "Projects",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Projects Delete Button",
       "category": "Projects",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Projects Search",
       "category": "Projects",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Projects Filters",
       "category": "Projects",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Inventory Tab",
       "category": "Inventory",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Customers Tab",
       "category": "Customers",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Ideas Tab",
       "category": "Ideas",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Photo Upload",
       "category": "Media",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Mobile View",
       "category": "Mobile",
       "status": "FAILED",
-      "error": "Emulation.setDeviceMetricsOverride timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Protocol error (Emulation.setTouchEmulationEnabled): Session closed. Most likely the page has been closed."
     },
     {
       "name": "Mobile (iPhone) Ideas Cards",
       "category": "Mobile",
       "status": "FAILED",
-      "error": "Emulation.setTouchEmulationEnabled timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Protocol error (Emulation.setTouchEmulationEnabled): Session closed. Most likely the page has been closed."
     },
     {
       "name": "Rapid Clicking",
       "category": "Edge Cases",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Large Data Input",
       "category": "Edge Cases",
       "status": "FAILED",
-      "error": "Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Special Characters",
       "category": "Edge Cases",
       "status": "FAILED",
-      "error": "Protocol error (Runtime.callFunctionOn): Target closed"
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     },
     {
       "name": "Keyboard Navigation",
@@ -143,30 +150,32 @@
       "name": "Performance",
       "category": "Performance",
       "status": "FAILED",
-      "error": "Attempted to use detached Frame '85C0B6345849A66E003AF607BDDEAD8E'."
+      "error": "Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
     }
   ],
   "errors": [
+    "Console Error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Console Error: Failed to check auth status: JSHandle@error",
     "Projects Form Fields: Field projectCustomer value not set correctly",
     "Projects Form Validation: Input.dispatchMouseEvent timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
     "Projects Form Submission: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
     "Projects Edit Button: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Projects Edit Fields: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Projects Edit Submission: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Projects Delete Button: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Projects Search: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Projects Filters: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Inventory Tab: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Customers Tab: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Ideas Tab: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Photo Upload: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Mobile View: Emulation.setDeviceMetricsOverride timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Mobile (iPhone) Ideas Cards: Emulation.setTouchEmulationEnabled timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Rapid Clicking: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Large Data Input: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.",
-    "Special Characters: Protocol error (Runtime.callFunctionOn): Target closed",
+    "Projects Edit Fields: Protocol error (Runtime.callFunctionOn): Target closed",
+    "Projects Edit Submission: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Projects Delete Button: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Projects Search: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Projects Filters: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Inventory Tab: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Customers Tab: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Ideas Tab: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Photo Upload: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Mobile View: Protocol error (Emulation.setTouchEmulationEnabled): Session closed. Most likely the page has been closed.",
+    "Mobile (iPhone) Ideas Cards: Protocol error (Emulation.setTouchEmulationEnabled): Session closed. Most likely the page has been closed.",
+    "Rapid Clicking: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Large Data Input: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
+    "Special Characters: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'.",
     "Keyboard Navigation: Protocol error (Input.dispatchKeyEvent): Session closed. Most likely the page has been closed.",
-    "Performance: Attempted to use detached Frame '85C0B6345849A66E003AF607BDDEAD8E'."
+    "Performance: Attempted to use detached Frame 'E6724771D51B1B9C966BD73EC912F22D'."
   ],
   "warnings": [],
   "performance": {}

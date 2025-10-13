@@ -266,14 +266,9 @@ function updatePaginationControls(tab) {
 
 // Load Projects as Cards
 function loadProjectsCards() {
-    console.log('🎯 loadProjectsCards() called');
     const container = document.getElementById('projectsCards');
-    if (!container) {
-        console.error('❌ projectsCards container not found');
-        return;
-    }
+    if (!container) return;
     
-    console.log('🧹 Clearing projectsCards container');
     container.innerHTML = '';
     
     // Filter projects only and apply current filters
@@ -1561,7 +1556,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.97'
+                appVersion: '1.0.94'
             }
         };
         
@@ -3103,7 +3098,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.97'; // Current app version
+                const currentVersion = '1.0.95'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -3971,9 +3966,9 @@ function isLocalhost() {
 }
 
 // Function to change password (you can call this from browser console)
-// Note: Password is now managed server-side
 function changePassword(newPassword) {
-    console.log('Password changes must be made server-side in server.js or environment variables');
+    ADMIN_PASSWORD = newPassword;
+    console.log('Password changed successfully!');
 }
 
 function logout() {
@@ -4017,9 +4012,15 @@ function handleChangePassword(event) {
     document.getElementById('changePasswordError').style.display = 'none';
     document.getElementById('changePasswordSuccess').style.display = 'none';
     
-    // Validate current password - now handled server-side
-    console.log('Password validation is now handled server-side');
-    // Note: Password validation is now handled server-side, so we skip client-side validation
+    // Validate current password
+    if (currentPassword !== ADMIN_PASSWORD) {
+        const errorText = document.getElementById('changePasswordErrorText');
+        const errorDiv = document.getElementById('changePasswordError');
+        
+        if (errorText) errorText.textContent = 'Current password is incorrect.';
+        if (errorDiv) errorDiv.style.display = 'block';
+        return;
+    }
     
     // Validate new password
     if (newPassword.length < 4) {
@@ -4041,8 +4042,8 @@ function handleChangePassword(event) {
         return;
     }
     
-    // Change password - now handled server-side
-    console.log('Password changes must be made server-side');
+    // Change password
+    ADMIN_PASSWORD = newPassword;
     document.getElementById('changePasswordSuccess').style.display = 'block';
     
     // Hide success message after 2 seconds and close modal
@@ -4820,17 +4821,14 @@ let currentUsername = null;
 
 // Check auth status with server
 async function checkAuthStatus() {
-    console.log('🔍 checkAuthStatus called');
     try {
         const response = await fetch('/api/auth/status', {
             credentials: 'include'
         });
         const data = await response.json();
-        console.log('🔍 Auth status response:', data);
         isAuthenticated = data.authenticated;
         authEnabled = data.authEnabled;
         currentUsername = data.username;
-        console.log('🔍 Setting auth state from server:', { isAuthenticated, authEnabled, currentUsername });
         updateAuthUI();
         return { authenticated: isAuthenticated, authEnabled: authEnabled };
     } catch (error) {
@@ -4841,16 +4839,13 @@ async function checkAuthStatus() {
 
 // Update auth UI elements
 function updateAuthUI() {
-    console.log('🔄 updateAuthUI called:', { authEnabled, isAuthenticated, currentUsername });
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
     
     if (authEnabled && isAuthenticated && currentUsername) {
-        console.log('✅ Showing authenticated UI');
         authContainer.style.display = 'flex';
         authUsernameSpan.textContent = currentUsername;
     } else {
-        console.log('❌ Hiding authenticated UI');
         authContainer.style.display = 'none';
     }
 }
@@ -4866,18 +4861,6 @@ async function checkAuthentication() {
     
     // If auth is enabled, check if authenticated
     return status.authenticated;
-}
-
-// Require authentication for protected operations
-// Returns true if authenticated, false if not (and shows login modal)
-async function requireAuthentication(operationName = 'this action') {
-    const isAuth = await checkAuthentication();
-    if (!isAuth) {
-        showNotification(`You must be logged in to ${operationName}`, 'error');
-        showAuthModal();
-        return false;
-    }
-    return true;
 }
 
 // Show login modal
@@ -4905,8 +4888,6 @@ async function handleAuthSubmit(event) {
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
     
-    console.log('🔐 Login attempt:', { username, password: password.substring(0, 3) + '***' });
-    
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
@@ -4917,15 +4898,11 @@ async function handleAuthSubmit(event) {
             body: JSON.stringify({ username, password })
         });
         
-        console.log('📡 Login response status:', response.status);
         const data = await response.json();
-        console.log('📡 Login response data:', data);
         
         if (data.success) {
-            console.log('✅ Login successful, setting authentication state');
             isAuthenticated = true;
             currentUsername = data.username;
-            console.log('🔐 Authentication state:', { isAuthenticated, currentUsername, authEnabled });
             hideAuthModal();
             updateAuthUI();
             showNotification('Login successful!', 'success');
@@ -4976,15 +4953,16 @@ async function logout() {
     }
 }
 
-async function requireAuth(tabName) {
-    // Require auth for completed items, sales, reports, and data management
-    const protectedTabs = ['completed', 'sales', 'reports', 'data'];
+function requireAuth(tabName) {
+    // Skip authentication on localhost
+    if (isLocalhost()) {
+        return true;
+    }
     
-    if (protectedTabs.includes(tabName)) {
-        const isAuth = await checkAuthentication();
-        if (!isAuth) {
+    // Only require auth for sales, reports, and data management on production
+    if (tabName === 'sales' || tabName === 'reports' || tabName === 'data') {
+        if (!checkAuthentication()) {
             sessionStorage.setItem('requestedTab', tabName);
-            showNotification(`You must be logged in to access ${tabName}`, 'error');
             showAuthModal();
             return false;
         }
@@ -5073,7 +5051,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.97';
+        const currentVersion = '1.0.95';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -5355,12 +5333,7 @@ function calculateEditProjectTotalValue() {
     }
 }
 
-async function editItem(itemIdOrIndex) {
-    // Require authentication
-    if (!await requireAuthentication('edit this item')) {
-        return;
-    }
-    
+function editItem(itemIdOrIndex) {
     console.log('📦 editItem called with ID/Index:', itemIdOrIndex); // Debug log
     
     let item;
@@ -6067,9 +6040,9 @@ function clearAllMobileCards() {
     MobileCardManager.clearAll();
 }
 
-async function switchTab(tabName) {
+function switchTab(tabName) {
     // Check authentication for protected tabs
-    if (!await requireAuth(tabName)) {
+    if (!requireAuth(tabName)) {
         return; // Authentication modal will be shown
     }
     
@@ -6104,13 +6077,10 @@ async function switchTab(tabName) {
     
     // Load data for the tab
     if (tabName === 'projects') {
-        // Load projects - use EITHER desktop cards OR mobile cards, not both
+        loadProjectsCards(); // Load projects as cards
+        // Load mobile cards for projects
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile cards only');
             loadMobileInventoryCards();
-        } else {
-            console.log('🖥️ Desktop detected - loading desktop cards only');
-            loadProjectsCards(); // Load projects as cards
         }
         // Hide pagination for projects - not needed
         const projectsPagination = document.getElementById('projectsPagination');
@@ -6118,13 +6088,11 @@ async function switchTab(tabName) {
             projectsPagination.style.display = 'none';
         }
     } else if (tabName === 'inventory') {
-        // Load inventory - use EITHER desktop cards OR mobile cards, not both
+        // Load inventory items as cards
+        loadInventoryCards();
+        // Load mobile cards for inventory items
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile inventory cards only');
             loadMobileInventoryItemsCards();
-        } else {
-            console.log('🖥️ Desktop detected - loading desktop inventory cards only');
-            loadInventoryCards();
         }
         // Hide pagination for inventory - not needed
         const inventoryPagination = document.getElementById('inventoryPagination');
@@ -6132,13 +6100,11 @@ async function switchTab(tabName) {
             inventoryPagination.style.display = 'none';
         }
     } else if (tabName === 'customers') {
-        // Load customers - use EITHER desktop cards OR mobile cards, not both
+        // Load customers as cards
+        loadCustomersCards();
+        // Load mobile cards for customers
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile customer cards only');
             loadMobileCustomerCards();
-        } else {
-            console.log('🖥️ Desktop detected - loading desktop customer cards only');
-            loadCustomersCards();
         }
     } else if (tabName === 'wip') {
         loadWIPTab();
@@ -6147,22 +6113,17 @@ async function switchTab(tabName) {
             loadMobileWIPCards();
         }
     } else if (tabName === 'gallery') {
-        // Load gallery - use EITHER desktop cards OR mobile cards, not both
+        loadGallery();
+        // Load mobile cards for gallery
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile gallery cards only');
             loadMobileGalleryCards();
-        } else {
-            console.log('🖥️ Desktop detected - loading desktop gallery only');
-            loadGallery();
         }
     } else if (tabName === 'sales') {
-        // Load sales - use EITHER desktop cards OR mobile cards, not both
+        // Load sales as cards
+        loadSalesCards();
+        // Load mobile cards for sales
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile sales cards only');
             loadMobileSalesCards();
-        } else {
-            console.log('🖥️ Desktop detected - loading desktop sales cards only');
-            loadSalesCards();
         }
         // Show bulk actions integrated with sales actions
         if (bulkContainer) {
@@ -6199,13 +6160,10 @@ async function switchTab(tabName) {
             }
         }
     } else if (tabName === 'ideas') {
-        // Load ideas - use EITHER desktop cards OR mobile cards, not both
+        loadIdeasGrid();
+        // Load mobile cards for ideas
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile ideas cards only');
             loadMobileIdeasCards();
-        } else {
-            console.log('🖥️ Desktop detected - loading desktop ideas grid only');
-            loadIdeasGrid();
         }
     }
 }
@@ -7174,15 +7132,10 @@ const MobileCardManager = {
     
     // Load projects
     loadProjects() {
-        console.log('📱 MobileCardManager.loadProjects() called');
         const container = document.getElementById('mobileInventoryCards');
-        if (!container) {
-            console.error('❌ mobileInventoryCards container not found');
-            return;
-        }
+    if (!container) return;
 
-        console.log('🧹 Clearing mobileInventoryCards container');
-        container.innerHTML = '';
+    container.innerHTML = '';
     
         // Add button
         container.appendChild(this.createAddButton('Add New Project', 'openAddProjectModal()'));
@@ -7204,58 +7157,74 @@ const MobileCardManager = {
         `;
             container.appendChild(emptyCard);
         } else {
-            // Use the same new card layout as desktop, just mobile-optimized
-            projects.forEach((project, index) => {
-                const actualIndex = inventory.findIndex(item => item === project);
+            // Group projects by customer
+            const projectsByCustomer = {};
+            projects.forEach(project => {
+                const customer = project.customer || 'No Customer';
+                if (!projectsByCustomer[customer]) {
+                    projectsByCustomer[customer] = [];
+                }
+                projectsByCustomer[customer].push(project);
+            });
+            
+            // Sort customers alphabetically
+            const sortedCustomers = Object.keys(projectsByCustomer).sort();
+            
+            // Create customer groups
+            sortedCustomers.forEach(customer => {
+                // Add customer header with collapsible functionality
+                const customerHeader = document.createElement('div');
+                customerHeader.className = 'mobile-customer-header';
+                const sanitizedCustomer = customer.replace(/[^a-zA-Z0-9]/g, '-');
                 
-                const card = document.createElement('div');
-                card.className = 'mobile-card project-card-mobile';
+                // Calculate project status breakdown
+                const customerProjects = projectsByCustomer[customer];
+                const statusCounts = {
+                    pending: customerProjects.filter(p => p.status === 'pending').length,
+                    inProgress: customerProjects.filter(p => p.status === 'in progress').length,
+                    completed: customerProjects.filter(p => p.status === 'completed').length,
+                    sold: customerProjects.filter(p => p.status === 'sold').length
+                };
                 
-                const statusClass = project.status ? project.status.toLowerCase().replace(/\s+/g, '-') : 'pending';
-                const dueDate = project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'Not set';
-                const customer = project.customer || 'No customer';
+                const statusText = `${customerProjects.length} project${customerProjects.length !== 1 ? 's' : ''} (${statusCounts.pending} pending, ${statusCounts.inProgress} in progress, ${statusCounts.completed} completed, ${statusCounts.sold} sold)`;
                 
-                card.innerHTML = `
-                    <div class="mobile-card-content">
-                        <div class="project-card-header">
-                            <h3 class="project-card-title">${project.description || project.name || 'Untitled Project'}</h3>
-                            <span class="project-card-status ${statusClass}">${project.status || 'pending'}</span>
-                        </div>
-                        <div class="project-card-details">
-                            <div class="project-card-detail">
-                                <span class="project-card-detail-label">Customer:</span>
-                                <span class="project-card-detail-value">${customer}</span>
-                            </div>
-                            <div class="project-card-detail">
-                                <span class="project-card-detail-label">Due Date:</span>
-                                <span class="project-card-detail-value">${dueDate}</span>
-                            </div>
-                            <div class="project-card-detail">
-                                <span class="project-card-detail-label">Quantity:</span>
-                                <span class="project-card-detail-value">${project.quantity || 1}</span>
-                            </div>
-                            ${project.price ? `
-                            <div class="project-card-detail">
-                                <span class="project-card-detail-label">Price:</span>
-                                <span class="project-card-detail-value">$${(project.price || 0).toFixed(2)}</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                        <div class="project-card-actions">
-                            <button class="btn btn-outline btn-sm" onclick="editItem(${actualIndex})" title="Edit Project">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                            <button class="btn btn-outline btn-sm" onclick="copyItem(${actualIndex})" title="Copy Project">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteItem(${actualIndex})" title="Delete Project">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
+                customerHeader.innerHTML = `
+                    <div class="mobile-customer-header-content" onclick="toggleCustomerGroup('${sanitizedCustomer}')" data-customer="${sanitizedCustomer}">
+                        <div class="customer-info">
+                            <h3>
+                                <i class="fas fa-chevron-right customer-chevron"></i>
+                                <i class="fas fa-user"></i> ${customer}
+                            </h3>
+                            <div class="customer-stats">${statusText}</div>
+            </div>
+            </div>
+        `;
+                container.appendChild(customerHeader);
                 
-                container.appendChild(card);
+                // Add collapsible container for projects
+                const projectsContainer = document.createElement('div');
+                projectsContainer.className = 'mobile-customer-projects';
+                projectsContainer.id = `customer-projects-${customer.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                projectsContainer.style.display = 'none'; // Start collapsed
+                
+                // Add projects for this customer
+                projectsByCustomer[customer].forEach((project, customerIndex) => {
+                    const originalIndex = projects.findIndex(p => p === project);
+                    const details = `
+                        <p><strong>Status:</strong> ${project.status || 'Unknown'}</p>
+                        <p><strong>Value:</strong> $${(project.totalValue || 0).toFixed(2)}</p>
+                        <p><strong>Priority:</strong> ${project.priority || 'Medium'}</p>
+                    `;
+                    projectsContainer.appendChild(this.createDataCard(
+                        project.description || 'Untitled Project',
+                        'Project',
+                        details,
+                        `editProject(${originalIndex})`,
+                        `deleteProject(${originalIndex})`
+                    ));
+                });
+                
+                container.appendChild(projectsContainer);
             });
         }
     },
@@ -7660,12 +7629,7 @@ function setupMobileModalEnhancements() {
     console.log('📱 Mobile modal enhancements setup complete');
 }
 
-async function openAddInventoryModal(prefilledData = null) {
-    // Require authentication
-    if (!await requireAuthentication('add inventory')) {
-        return;
-    }
-    
+function openAddInventoryModal(prefilledData = null) {
     const modal = document.getElementById('addInventoryModal');
     const form = document.getElementById('addInventoryForm');
     
@@ -7727,12 +7691,7 @@ async function openAddInventoryModal(prefilledData = null) {
 }
 
 // Dedicated Project Modal Functions  
-async function openAddProjectModal(prefilledData = null) {
-    // Require authentication
-    if (!await requireAuthentication('add a project')) {
-        return;
-    }
-    
+function openAddProjectModal(prefilledData = null) {
     const modal = document.getElementById('addProjectModal');
     const form = document.getElementById('addProjectForm');
     
@@ -8298,12 +8257,7 @@ function loadCustomersTable() {
     // Desktop table loaded
 }
 
-async function openAddCustomerModal() {
-    // Require authentication
-    if (!await requireAuthentication('add a customer')) {
-        return;
-    }
-    
+function openAddCustomerModal() {
     const modal = document.getElementById('addCustomerModal');
     const form = document.getElementById('addCustomerForm');
     
@@ -8810,12 +8764,7 @@ function loadSalesTable() {
     // Desktop table loaded
 }
 
-async function openAddSaleModal() {
-    // Require authentication
-    if (!await requireAuthentication('add a sale')) {
-        return;
-    }
-    
+function openAddSaleModal() {
     const modal = document.getElementById('addSaleModal');
     const form = document.getElementById('addSaleForm');
     
@@ -9407,11 +9356,6 @@ function closeConfirmModal() {
 }
 
 async function deleteItem(itemIdOrIndex) {
-    // Require authentication
-    if (!await requireAuthentication('delete this item')) {
-        return;
-    }
-    
     console.log('🗑️ Delete item function called with ID/Index:', itemIdOrIndex);
     
     // Check if parameter is valid
@@ -9482,11 +9426,6 @@ async function proceedWithDeletion(itemIdOrIndex) {
 }
 
 async function copyItem(index) {
-    // Require authentication
-    if (!await requireAuthentication('copy this item')) {
-        return;
-    }
-    
     try {
         console.log('copyItem called with index:', index); // Debug log
         
@@ -9627,12 +9566,7 @@ async function copyCurrentItem() {
     showNotification('Item copied successfully!', 'success');
 }
 
-async function editCustomer(index) {
-    // Require authentication
-    if (!await requireAuthentication('edit this customer')) {
-        return;
-    }
-    
+function editCustomer(index) {
     const customer = customers[index];
     if (!customer) return;
     
@@ -9689,12 +9623,7 @@ function createProjectForCustomer(customerName) {
     showNotification(`Creating new project for ${customerName}`, 'info');
 }
 
-async function deleteCustomer(customerIdOrIndex) {
-    // Require authentication
-    if (!await requireAuthentication('delete this customer')) {
-        return;
-    }
-    
+function deleteCustomer(customerIdOrIndex) {
     showConfirmModal(
         'Delete Customer',
         'Are you sure you want to delete this customer? This will also delete all associated items.',
@@ -9891,12 +9820,7 @@ function exportCustomerList() {
     showNotification('Customer list exported as CSV!', 'success');
 }
 
-async function editSale(index) {
-    // Require authentication
-    if (!await requireAuthentication('edit this sale')) {
-        return;
-    }
-    
+function editSale(index) {
     const sale = sales[index];
     if (!sale) return;
     
@@ -9990,12 +9914,7 @@ function handleEditSale(e) {
     showNotification('Sale updated successfully!', 'success');
 }
 
-async function deleteSale(saleIdOrIndex) {
-    // Require authentication
-    if (!await requireAuthentication('delete this sale')) {
-        return;
-    }
-    
+function deleteSale(saleIdOrIndex) {
     showConfirmModal(
         'Delete Sale',
         'Are you sure you want to delete this sale record?',
@@ -11076,12 +10995,7 @@ function loadGallery() {
     // Desktop table loaded
 }
 
-async function openAddPhotoModal() {
-    // Require authentication
-    if (!await requireAuthentication('add a photo')) {
-        return;
-    }
-    
+function openAddPhotoModal() {
     const modal = document.getElementById('addPhotoModal');
     const form = document.getElementById('addPhotoForm');
     
@@ -11891,12 +11805,7 @@ function filterIdeas() {
     });
 }
 
-async function editIdea(ideaIdOrIndex) {
-    // Require authentication
-    if (!await requireAuthentication('edit this idea')) {
-        return;
-    }
-    
+function editIdea(ideaIdOrIndex) {
     console.log('🔧 editIdea called with parameter:', ideaIdOrIndex);
     console.log('🔧 Current ideas array length:', ideas.length);
     
@@ -12032,12 +11941,7 @@ function convertIdeaToProject(index) {
     }
 }
 
-async function deleteIdea(ideaIdOrIndex) {
-    // Require authentication
-    if (!await requireAuthentication('delete this idea')) {
-        return;
-    }
-    
+function deleteIdea(ideaIdOrIndex) {
     console.log('🗑️ deleteIdea called with ID/Index:', ideaIdOrIndex);
     console.log('🗑️ Current ideas count before delete:', ideas.length);
     console.log('🗑️ Ideas before delete:', ideas.map(i => ({ id: i.id, title: i.title })));
@@ -12583,20 +12487,7 @@ function dismissInstallBanner() {
 
 // Mobile detection utility - centralized for consistency
 function isMobile() {
-    // Very strict mobile detection - only for actual mobile devices
-    const width = window.innerWidth;
-    const userAgent = navigator.userAgent.toLowerCase();
-    
-    // Only detect as mobile for actual mobile user agents, not touch laptops
-    const isActualMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-    
-    // Additional check: mobile devices typically have very specific screen sizes
-    const isMobileScreenSize = width <= 480; // Only very narrow screens
-    
-    const isMobileDevice = isActualMobile && isMobileScreenSize;
-    
-    console.log(`📏 isMobile() check: width=${width}, actualMobile=${isActualMobile}, mobileScreen=${isMobileScreenSize}, result=${isMobileDevice}`);
-    return isMobileDevice;
+    return window.innerWidth <= 768;
 }
 
 // Enhanced mobile detection with device type
@@ -13371,12 +13262,7 @@ function loadCompletedItemsTable() {
 }
 
 // Edit a completed item
-async function editCompletedItem(index) {
-    // Require authentication
-    if (!await requireAuthentication('edit this completed item')) {
-        return;
-    }
-    
+function editCompletedItem(index) {
     if (index < 0 || index >= inventory.length) {
         showNotification('Invalid item index', 'error');
         return;
@@ -13444,12 +13330,7 @@ function copyCurrentCompletedItem() {
 }
 
 // Manually add a completed item (for items made without a specific customer)
-async function addCompletedItem() {
-    // Require authentication
-    if (!await requireAuthentication('add a completed item')) {
-        return;
-    }
-    
+function addCompletedItem() {
     // Clear the form
     const form = document.getElementById('addCompletedItemForm');
     if (form) {

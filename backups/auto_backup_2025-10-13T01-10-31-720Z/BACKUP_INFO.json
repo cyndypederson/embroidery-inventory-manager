@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-10-13T01:10:31.727Z",
+  "counts": {
+    "inventory": 27,
+    "customers": 6,
+    "sales": 0,
+    "gallery": 0,
+    "ideas": 1
+  },
+  "backup_type": "automatic"
+}
