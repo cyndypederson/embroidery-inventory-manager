@@ -4838,13 +4838,16 @@ async function checkAuthStatus() {
 
 // Update auth UI elements
 function updateAuthUI() {
+    console.log('🔄 updateAuthUI called:', { authEnabled, isAuthenticated, currentUsername });
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
     
     if (authEnabled && isAuthenticated && currentUsername) {
+        console.log('✅ Showing authenticated UI');
         authContainer.style.display = 'flex';
         authUsernameSpan.textContent = currentUsername;
     } else {
+        console.log('❌ Hiding authenticated UI');
         authContainer.style.display = 'none';
     }
 }
@@ -4916,8 +4919,10 @@ async function handleAuthSubmit(event) {
         console.log('📡 Login response data:', data);
         
         if (data.success) {
+            console.log('✅ Login successful, setting authentication state');
             isAuthenticated = true;
             currentUsername = data.username;
+            console.log('🔐 Authentication state:', { isAuthenticated, currentUsername, authEnabled });
             hideAuthModal();
             updateAuthUI();
             showNotification('Login successful!', 'success');
