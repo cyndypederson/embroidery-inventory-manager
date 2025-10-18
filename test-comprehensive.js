@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const TestCleanup = require('./test-cleanup');
 
 class ComprehensiveTester {
     constructor() {
@@ -6,6 +7,7 @@ class ComprehensiveTester {
         this.page = null;
         this.testResults = [];
         this.baseUrl = 'http://localhost:3002';
+        this.cleanup = new TestCleanup();
     }
 
     async setup() {
@@ -473,6 +475,14 @@ class ComprehensiveTester {
     }
 
     async cleanup() {
+        try {
+            // Clean up any test data that was added
+            await this.cleanup.completeCleanup();
+            console.log('✅ Test cleanup completed');
+        } catch (error) {
+            console.warn('⚠️ Cleanup error:', error.message);
+        }
+        
         if (this.browser) {
             await this.browser.close();
         }

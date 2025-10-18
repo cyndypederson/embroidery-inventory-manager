@@ -56,6 +56,117 @@ class EventManager {
 
 const eventManager = new EventManager();
 
+// Logging utility - only log on non-localhost environments
+function isLocalhost() {
+    return window.location.hostname === 'localhost' || 
+           window.location.hostname === '127.0.0.1' ||
+           window.location.hostname === '';
+}
+
+function debugLog(...args) {
+    if (!isLocalhost()) {
+        console.log(...args);
+    }
+}
+
+function debugError(...args) {
+    if (!isLocalhost()) {
+        console.error(...args);
+    }
+}
+
+function debugWarn(...args) {
+    if (!isLocalhost()) {
+        console.warn(...args);
+    }
+}
+
+// Filter state management
+const filterState = {
+    projects: {},
+    inventory: {},
+    customers: {},
+    sales: {},
+    wip: {},
+    gallery: {},
+    ideas: {}
+};
+
+function saveCurrentFilters(tabName) {
+    const filters = {};
+    const tabPrefix = tabName === 'projects' ? '' : tabName;
+    
+    // Save search filters
+    const searchInput = document.getElementById(tabName === 'projects' ? 'searchItems' : `${tabPrefix}Search`);
+    if (searchInput) filters.search = searchInput.value;
+    
+    // Save status filters
+    const statusFilter = document.getElementById(tabName === 'projects' ? 'statusFilter' : `${tabPrefix}StatusFilter`);
+    if (statusFilter) filters.status = statusFilter.value;
+    
+    // Save customer filters
+    const customerFilter = document.getElementById(tabName === 'projects' ? 'customerFilter' : `${tabPrefix}CustomerFilter`);
+    if (customerFilter) filters.customer = customerFilter.value;
+    
+    // Save location filters
+    const locationFilter = document.getElementById(tabName === 'projects' ? 'locationFilter' : `${tabPrefix}LocationFilter`);
+    if (locationFilter) filters.location = locationFilter.value;
+    
+    // Save category filters (for inventory)
+    if (tabName === 'inventory') {
+        const categoryFilter = document.getElementById('inventoryCategoryFilter');
+        if (categoryFilter) filters.category = categoryFilter.value;
+    }
+    
+    // Save priority filters (for WIP)
+    if (tabName === 'wip') {
+        const priorityFilter = document.getElementById('wipPriorityFilter');
+        if (priorityFilter) filters.priority = priorityFilter.value;
+    }
+    
+    filterState[tabName] = filters;
+}
+
+function restoreFilters(tabName) {
+    const filters = filterState[tabName] || {};
+    
+    // Restore search filters
+    const searchInput = document.getElementById(tabName === 'projects' ? 'searchItems' : `${tabName}Search`);
+    if (searchInput && filters.search !== undefined) {
+        searchInput.value = filters.search;
+    }
+    
+    // Restore status filters
+    const statusFilter = document.getElementById(tabName === 'projects' ? 'statusFilter' : `${tabName}StatusFilter`);
+    if (statusFilter && filters.status !== undefined) {
+        statusFilter.value = filters.status;
+    }
+    
+    // Restore customer filters
+    const customerFilter = document.getElementById(tabName === 'projects' ? 'customerFilter' : `${tabName}CustomerFilter`);
+    if (customerFilter && filters.customer !== undefined) {
+        customerFilter.value = filters.customer;
+    }
+    
+    // Restore location filters
+    const locationFilter = document.getElementById(tabName === 'projects' ? 'locationFilter' : `${tabName}LocationFilter`);
+    if (locationFilter && filters.location !== undefined) {
+        locationFilter.value = filters.location;
+    }
+    
+    // Restore category filters (for inventory)
+    if (tabName === 'inventory' && filters.category !== undefined) {
+        const categoryFilter = document.getElementById('inventoryCategoryFilter');
+        if (categoryFilter) categoryFilter.value = filters.category;
+    }
+    
+    // Restore priority filters (for WIP)
+    if (tabName === 'wip' && filters.priority !== undefined) {
+        const priorityFilter = document.getElementById('wipPriorityFilter');
+        if (priorityFilter) priorityFilter.value = filters.priority;
+    }
+}
+
 // Security utilities
 class SecurityManager {
     static sanitizeInput(input) {
@@ -266,14 +377,14 @@ function updatePaginationControls(tab) {
 
 // Load Projects as Cards
 function loadProjectsCards() {
-    console.log('🎯 loadProjectsCards() called');
+    debugLog('🎯 loadProjectsCards() called');
     const container = document.getElementById('projectsCards');
     if (!container) {
-        console.error('❌ projectsCards container not found');
+        debugError('❌ projectsCards container not found');
         return;
     }
     
-    console.log('🧹 Clearing projectsCards container');
+    debugLog('🧹 Clearing projectsCards container');
     container.innerHTML = '';
     
     // Filter projects only and apply current filters
@@ -296,6 +407,34 @@ function loadProjectsCards() {
         container.innerHTML = '<div class="no-data">No projects found. <a href="#" onclick="openAddProjectModal()">Add your first project</a></div>';
         return;
     }
+    
+    // Sort projects by status priority: in-progress > pending > completed
+    const statusPriority = {
+        'in-progress': 1,
+        'work-in-progress': 1,
+        'pending': 2,
+        'completed': 3,
+        'sold': 4
+    };
+    
+    projects.sort((a, b) => {
+        const priorityA = statusPriority[a.status] || 2; // Default to pending priority
+        const priorityB = statusPriority[b.status] || 2;
+        
+        // Primary sort by status
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        
+        // Secondary sort by due date (earliest first) within same status
+        if (a.dueDate && b.dueDate) {
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        if (a.dueDate) return -1; // Items with due dates come before those without
+        if (b.dueDate) return 1;
+        
+        return 0;
+    });
     
     projects.forEach((project, index) => {
         // Find the actual inventory index for this project
@@ -1561,7 +1700,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.97'
+                appVersion: '1.0.99'
             }
         };
         
@@ -3103,7 +3242,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.97'; // Current app version
+                const currentVersion = '1.0.99'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -4871,6 +5010,16 @@ async function checkAuthentication() {
 // Require authentication for protected operations
 // Returns true if authenticated, false if not (and shows login modal)
 async function requireAuthentication(operationName = 'this action') {
+    // Bypass authentication for localhost
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.hostname === '';
+    
+    if (isLocalhost) {
+        debugLog('🔓 Localhost detected - bypassing authentication');
+        return true;
+    }
+    
     const isAuth = await checkAuthentication();
     if (!isAuth) {
         showNotification(`You must be logged in to ${operationName}`, 'error');
@@ -5073,7 +5222,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.97';
+        const currentVersion = '1.0.99';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -6073,6 +6222,12 @@ async function switchTab(tabName) {
         return; // Authentication modal will be shown
     }
     
+    // Save current filters before switching tabs
+    const currentActiveTab = document.querySelector('.nav-btn.active')?.getAttribute('data-tab');
+    if (currentActiveTab && currentActiveTab !== tabName) {
+        saveCurrentFilters(currentActiveTab);
+    }
+    
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
@@ -6106,11 +6261,17 @@ async function switchTab(tabName) {
     if (tabName === 'projects') {
         // Load projects - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile cards only');
+            debugLog('📱 Mobile detected - loading mobile cards only');
             loadMobileInventoryCards();
+            // Ensure desktop cards are hidden
+            const desktopContainer = document.getElementById('projectsCards');
+            if (desktopContainer) desktopContainer.style.display = 'none';
         } else {
-            console.log('🖥️ Desktop detected - loading desktop cards only');
+            debugLog('🖥️ Desktop detected - loading desktop cards only');
             loadProjectsCards(); // Load projects as cards
+            // Ensure mobile cards are hidden
+            const mobileContainer = document.getElementById('mobileInventoryCards');
+            if (mobileContainer) mobileContainer.style.display = 'none';
         }
         // Hide pagination for projects - not needed
         const projectsPagination = document.getElementById('projectsPagination');
@@ -6120,11 +6281,17 @@ async function switchTab(tabName) {
     } else if (tabName === 'inventory') {
         // Load inventory - use EITHER desktop cards OR mobile cards, not both
         if (isMobile()) {
-            console.log('📱 Mobile detected - loading mobile inventory cards only');
+            debugLog('📱 Mobile detected - loading mobile inventory cards only');
             loadMobileInventoryItemsCards();
+            // Ensure desktop cards are hidden
+            const desktopContainer = document.getElementById('inventoryCards');
+            if (desktopContainer) desktopContainer.style.display = 'none';
         } else {
-            console.log('🖥️ Desktop detected - loading desktop inventory cards only');
+            debugLog('🖥️ Desktop detected - loading desktop inventory cards only');
             loadInventoryCards();
+            // Ensure mobile cards are hidden
+            const mobileContainer = document.getElementById('mobileInventoryItemsCards');
+            if (mobileContainer) mobileContainer.style.display = 'none';
         }
         // Hide pagination for inventory - not needed
         const inventoryPagination = document.getElementById('inventoryPagination');
@@ -6208,6 +6375,11 @@ async function switchTab(tabName) {
             loadIdeasGrid();
         }
     }
+    
+    // Restore filters for the current tab after loading
+    setTimeout(() => {
+        restoreFilters(tabName);
+    }, 100); // Small delay to ensure DOM is ready
 }
 
 // Add throttling to loadData to prevent excessive calls
@@ -6217,18 +6389,21 @@ const LOAD_DATA_THROTTLE = 1000; // 1 second throttle
 function loadData() {
     const now = Date.now();
     if (now - lastLoadData < LOAD_DATA_THROTTLE) {
-        console.log('📊 loadData throttled, skipping...');
+        debugLog('📊 loadData throttled, skipping...');
         return;
     }
     lastLoadData = now;
     
-    console.log('📊 Loading all data...');
+    debugLog('📊 Loading all data...');
     cleanCopyText();
     
-    // Load the appropriate view based on current active tab
+    // Save current filters before reloading
     const activeTab = document.querySelector('.nav-btn.active');
     if (activeTab) {
         const tabName = activeTab.getAttribute('data-tab');
+        saveCurrentFilters(tabName);
+        
+        // Load the appropriate view based on current active tab
         switchTab(tabName);
     } else {
         // Default to projects tab if no active tab
@@ -8266,36 +8441,8 @@ function filterInventory() {
 
 // Customer Management
 function loadCustomersTable() {
-    const tbody = document.getElementById('customersTableBody');
-    tbody.innerHTML = '';
-    
-    customers.forEach((customer, index) => {
-        const customerItems = inventory.filter(item => item.customer === customer.name);
-        const customerSales = sales.filter(sale => sale.customer === customer.name);
-        const totalSpent = customerSales.reduce((sum, sale) => sum + parseFloat(sale.price), 0);
-        
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><strong>${customer.name}</strong></td>
-            <td>${customer.contact || ''}</td>
-            <td>${customer.location}</td>
-            <td>${customerItems.length}</td>
-            <td>$${totalSpent.toFixed(2)}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-secondary" onclick="editCustomer(${index})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteCustomer(${index})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-    
-    // Desktop table loaded
+    // Since customers use cards layout, call the cards function instead
+    loadCustomersCards();
 }
 
 async function openAddCustomerModal() {

@@ -1,6 +1,6 @@
 {
   "name": "embroidery-inventory-manager",
-  "version": "1.0.97",
+  "version": "1.0.99",
   "description": "A web-based inventory management system for embroidery businesses",
   "main": "server.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "deploy": "./deploy.sh",
     "version:bump": "node update-version.js",
     "version:check": "curl -s http://localhost:3002/version.json | jq .",
+    "version:precommit": "node pre-commit-hook.js",
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop embroidery-inventory",
     "pm2:restart": "pm2 restart embroidery-inventory",
@@ -21,6 +22,7 @@
     "test:modals": "node test-modal-separation.js",
     "test:comprehensive": "node test-comprehensive.js",
     "test:all": "npm run test:smoke && npm run test:modals && npm run test:comprehensive",
+    "test:cleanup": "node test-cleanup.js",
     "test:watch": "nodemon test-smoke.js",
     "pre-deploy": "node pre-deploy.js",
     "deploy:safe": "npm run pre-deploy && npm run deploy"
