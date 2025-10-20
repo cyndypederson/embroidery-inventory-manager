@@ -1700,7 +1700,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.99'
+                appVersion: '1.0.101'
             }
         };
         
@@ -3242,7 +3242,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.99'; // Current app version
+                const currentVersion = '1.0.101'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -4960,12 +4960,62 @@ let currentUsername = null;
 // Check auth status with server
 async function checkAuthStatus() {
     console.log('🔍 checkAuthStatus called');
+    
+    // First check if we're on localhost (bypass auth)
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const isLocalhost = hostname === 'localhost' || 
+                       hostname === '127.0.0.1' ||
+                       hostname === '' ||
+                       hostname === '0.0.0.0' ||
+                       (hostname.startsWith('192.168.') && port === '3002') ||
+                       (hostname.startsWith('10.') && port === '3002') ||
+                       (hostname.startsWith('172.') && port === '3002');
+    
+    if (isLocalhost) {
+        console.log('🔓 Localhost detected in checkAuthStatus - bypassing auth');
+        isAuthenticated = true;
+        authEnabled = false;
+        currentUsername = 'localhost';
+        updateAuthUI();
+        return { authenticated: true, authEnabled: false };
+    }
+    
+    // Check session storage first (for persistence across page reloads)
+    const storedAuth = sessionStorage.getItem('embroidery_auth');
+    if (storedAuth) {
+        try {
+            const authData = JSON.parse(storedAuth);
+            if (authData.authenticated && authData.timestamp && (Date.now() - authData.timestamp) < 24 * 60 * 60 * 1000) {
+                console.log('🔍 Using stored authentication');
+                isAuthenticated = true;
+                authEnabled = true;
+                currentUsername = authData.username;
+                updateAuthUI();
+                return { authenticated: true, authEnabled: true };
+            }
+        } catch (e) {
+            console.log('🔍 Invalid stored auth data, clearing');
+            sessionStorage.removeItem('embroidery_auth');
+        }
+    }
+    
     try {
         const response = await fetch('/api/auth/status', {
             credentials: 'include'
         });
         const data = await response.json();
         console.log('🔍 Auth status response:', data);
+        
+        if (data.authenticated) {
+            // Store auth in session storage for persistence
+            sessionStorage.setItem('embroidery_auth', JSON.stringify({
+                authenticated: true,
+                username: data.username,
+                timestamp: Date.now()
+            }));
+        }
+        
         isAuthenticated = data.authenticated;
         authEnabled = data.authEnabled;
         currentUsername = data.username;
@@ -5010,13 +5060,19 @@ async function checkAuthentication() {
 // Require authentication for protected operations
 // Returns true if authenticated, false if not (and shows login modal)
 async function requireAuthentication(operationName = 'this action') {
-    // Bypass authentication for localhost
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' ||
-                       window.location.hostname === '';
+    // Bypass authentication for localhost and local development
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const isLocalhost = hostname === 'localhost' || 
+                       hostname === '127.0.0.1' ||
+                       hostname === '' ||
+                       hostname === '0.0.0.0' ||
+                       (hostname.startsWith('192.168.') && port === '3002') ||
+                       (hostname.startsWith('10.') && port === '3002') ||
+                       (hostname.startsWith('172.') && port === '3002');
     
     if (isLocalhost) {
-        debugLog('🔓 Localhost detected - bypassing authentication');
+        debugLog('🔓 Localhost detected - bypassing authentication', { hostname, port, isLocalhost });
         return true;
     }
     
@@ -5027,6 +5083,30 @@ async function requireAuthentication(operationName = 'this action') {
         return false;
     }
     return true;
+}
+
+// Debug function to check hostname detection
+function debugHostnameDetection() {
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const href = window.location.href;
+    const isLocalhost = hostname === 'localhost' || 
+                       hostname === '127.0.0.1' ||
+                       hostname === '' ||
+                       hostname === '0.0.0.0' ||
+                       (hostname.startsWith('192.168.') && port === '3002') ||
+                       (hostname.startsWith('10.') && port === '3002') ||
+                       (hostname.startsWith('172.') && port === '3002');
+    
+    console.log('🔍 Hostname Detection Debug:', {
+        hostname,
+        port,
+        href,
+        isLocalhost,
+        willBypassAuth: isLocalhost
+    });
+    
+    return { hostname, port, href, isLocalhost };
 }
 
 // Show login modal
@@ -5074,6 +5154,14 @@ async function handleAuthSubmit(event) {
             console.log('✅ Login successful, setting authentication state');
             isAuthenticated = true;
             currentUsername = data.username;
+            
+            // Store authentication in session storage for persistence
+            sessionStorage.setItem('embroidery_auth', JSON.stringify({
+                authenticated: true,
+                username: data.username,
+                timestamp: Date.now()
+            }));
+            
             console.log('🔐 Authentication state:', { isAuthenticated, currentUsername, authEnabled });
             hideAuthModal();
             updateAuthUI();
@@ -5113,6 +5201,10 @@ async function logout() {
         if (data.success) {
             isAuthenticated = false;
             currentUsername = null;
+            
+            // Clear session storage
+            sessionStorage.removeItem('embroidery_auth');
+            
             updateAuthUI();
             showNotification('Logged out successfully', 'success');
             
@@ -5150,6 +5242,9 @@ if (window.performance && window.performance.navigation.type === 1) {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Embroidery Inventory Manager Initialized');
+    
+    // Debug hostname detection for authentication
+    debugHostnameDetection();
     
     // Remove any existing install banners or sales notifications
     const existingBanner = document.querySelector('.install-banner');
@@ -5222,7 +5317,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.99';
+        const currentVersion = '1.0.101';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
