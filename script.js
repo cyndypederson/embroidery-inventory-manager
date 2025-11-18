@@ -5,6 +5,11 @@ let sales = [];
 let gallery = [];
 let invoices = [];
 let ideas = [];
+let patterns = [];
+
+function generateSaleId() {
+    return `sale-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
 
 // Performance optimization settings
 const PERFORMANCE_CONFIG = {
@@ -89,7 +94,8 @@ const filterState = {
     sales: {},
     wip: {},
     gallery: {},
-    ideas: {}
+    ideas: {},
+    patterns: {}
 };
 
 function saveCurrentFilters(tabName) {
@@ -637,43 +643,47 @@ function loadSalesCards() {
     
     container.innerHTML = '';
     
-    // Filter sales items and apply current filters
-    const salesItems = inventory.filter(item => {
-        if (item.type !== 'sale') return false;
-        
-        // Apply current filters
-        const searchTerm = document.getElementById('searchItems')?.value.toLowerCase() || '';
-        const statusFilter = document.getElementById('statusFilter')?.value || '';
-        const customerFilter = document.getElementById('customerFilter')?.value || '';
-        const locationFilter = document.getElementById('locationFilter')?.value || '';
-        
-        return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
-               (!statusFilter || item.status === statusFilter) &&
-               (!customerFilter || item.customer === customerFilter) &&
-               (!locationFilter || item.location === locationFilter);
+    const filteredSales = sales.filter(sale => {
+        const searchTerm = document.getElementById('salesSearch')?.value?.toLowerCase() || '';
+        const customerFilter = document.getElementById('salesCustomerFilter')?.value || '';
+        if (searchTerm && !(sale.itemName?.toLowerCase().includes(searchTerm) || sale.customer?.toLowerCase().includes(searchTerm))) {
+            return false;
+        }
+        if (customerFilter && sale.customer !== customerFilter) {
+            return false;
+        }
+        return true;
     });
     
-    if (salesItems.length === 0) {
+    if (filteredSales.length === 0) {
         container.innerHTML = '<div class="no-data">No sales recorded. <a href="#" onclick="openAddSaleModal()">Record your first sale</a></div>';
         return;
     }
     
-    salesItems.forEach((sale, index) => {
-        // Find the actual inventory index for this sale
-        const actualIndex = inventory.findIndex(invItem => invItem === sale);
-        
+    filteredSales.forEach((sale) => {
+        const saleIndex = sales.indexOf(sale);
+        if (saleIndex === -1) {
+            return;
+        }
         const card = document.createElement('div');
         card.className = 'sale-card';
         
-        const listPrice = parseFloat(sale.price) || 0;
-        const commissionPercent = parseFloat(sale.commissionPercent) || 0;
-        const commissionAmount = listPrice * (commissionPercent / 100);
-        const netPrice = listPrice - commissionAmount;
+        const listPrice = parseFloat(sale.listedPrice || sale.price || sale.salePrice || 0) || 0;
+        const netPrice = parseFloat(sale.netAmount || sale.salePrice || sale.price || 0) || 0;
+        const commissionPercent = parseFloat(sale.commission || sale.commissionPercent || 0) || 0;
+        const commissionAmount = parseFloat(sale.commissionAmount || (listPrice * commissionPercent / 100)) || 0;
+        const vendorDiscountPercent = parseFloat(sale.vendorDiscount || 0) || 0;
+        const vendorDiscountAmount = parseFloat(sale.vendorDiscountAmount || 0) || 0;
+        const discountValue = parseFloat(sale.discount || 0) || 0;
+        const rawDiscountPercent = sale.discountPercent !== undefined ? sale.discountPercent : (listPrice > 0 ? ((discountValue / listPrice) * 100) : 0);
+        const discountPercentNumeric = parseFloat(rawDiscountPercent) || 0;
+        const vendorDisplay = (vendorDiscountPercent > 0 || vendorDiscountAmount > 0) ? `$${vendorDiscountAmount.toFixed(2)} (${vendorDiscountPercent.toFixed(1)}%)` : '-';
+        const customerSavingsDisplay = discountValue > 0 ? `$${discountValue.toFixed(2)} (${discountPercentNumeric.toFixed(1)}%)` : '-';
         
         card.innerHTML = `
             <div class="sale-card-header">
-                <h3 class="sale-card-item">${sale.description || sale.name || 'Untitled Sale'}</h3>
-                <p class="sale-card-customer">${sale.customer || 'No customer'}</p>
+                <h3 class="sale-card-item">${SecurityManager.escapeHtml(sale.itemName || 'Sale')}</h3>
+                <p class="sale-card-customer">${SecurityManager.escapeHtml(sale.customer || 'No customer')}</p>
             </div>
             <div class="sale-card-pricing">
                 <div class="sale-price-item">
@@ -692,12 +702,24 @@ function loadSalesCards() {
                     <span class="sale-price-label">Commission</span>
                     <span class="sale-price-value commission">$${commissionAmount.toFixed(2)}</span>
                 </div>
+                <div class="sale-price-item">
+                    <span class="sale-price-label">Vendor Discount</span>
+                    <span class="sale-price-value">${vendorDisplay}</span>
+                </div>
+                <div class="sale-price-item">
+                    <span class="sale-price-label">Customer Savings</span>
+                    <span class="sale-price-value">${customerSavingsDisplay}</span>
+                </div>
+            </div>
+            <div class="sale-card-meta">
+                <span class="sale-card-date">${sale.dateSold || 'Date not set'}</span>
+                <span class="sale-card-channel">${sale.saleChannel === 'shop' ? 'Shop Sale' : 'Direct Sale'}</span>
             </div>
             <div class="sale-card-actions">
-                <button class="btn btn-outline btn-sm" onclick="editItem(${actualIndex})" title="Edit Sale">
+                <button class="btn btn-outline btn-sm" onclick="editSale(${saleIndex})" title="Edit Sale">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="deleteItem(${actualIndex})" title="Delete Sale">
+                <button class="btn btn-danger btn-sm" onclick="deleteSale(${saleIndex})" title="Delete Sale">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -5876,14 +5898,19 @@ async function handleEditProject(e) {
         return;
     }
     
+    const newStatus = getElementValue('editProjectStatus');
+    const shouldCreateSale = newStatus === 'sold';
+    
     // Update the project
     inventory[index] = {
         ...inventory[index],
         description: description,
         quantity: parseInt(getElementValue('editProjectQuantity')) || 1,
+        price: parseFloat(getElementValue('editProjectPrice')) || 0,
         category: '', // Field removed
-        status: getElementValue('editProjectStatus'),
+        status: newStatus,
         customer: getElementValue('editProjectCustomer'),
+        location: getElementValue('editProjectLocation'),
         dueDate: getElementValue('editProjectDueDate'),
         priority: getElementValue('editProjectPriority'),
         tags: getElementValue('editProjectTags'),
@@ -5892,11 +5919,27 @@ async function handleEditProject(e) {
         type: 'project'
     };
     
+    if (shouldCreateSale) {
+        createOrUpdateSaleFromProject(index);
+    }
+    
+    // Save current filters before refresh
+    saveCurrentFilters('projects');
+    
     // Save data
     await saveData();
     
+    // Restore filters before refresh so loadProjectsCards uses them
+    restoreFilters('projects');
+    
     // Refresh displays
     loadInventoryTable();
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
+    if (shouldCreateSale) {
+        refreshSalesViews();
+    }
     
     // Close modal
     closeModal('editProjectModal');
@@ -5928,6 +5971,9 @@ async function handleEditInventory(e) {
         return;
     }
     
+    const newStatus = getElementValue('editInventoryStatus');
+    const shouldCreateSale = newStatus === 'sold';
+    
     // Update the inventory item
     inventory[index] = {
         ...inventory[index],
@@ -5938,16 +5984,23 @@ async function handleEditInventory(e) {
         location: '',
         supplier: getElementValue('editInventorySupplier'),
         reorderPoint: parseInt(getElementValue('editInventoryReorderPoint')) || 0,
-        status: getElementValue('editInventoryStatus'),
+        status: newStatus,
         notes: getElementValue('editInventoryNotes'),
         type: 'inventory'
     };
+    
+    if (shouldCreateSale) {
+        createOrUpdateSaleFromProject(index);
+    }
     
     // Save data
     await saveData();
     
     // Refresh displays
     loadInventoryItemsTable();
+    if (shouldCreateSale) {
+        refreshSalesViews();
+    }
     
     // Close modal
     closeModal('editInventoryModal');
@@ -6101,6 +6154,7 @@ async function handleEditItem(e) {
     
     // Get the new status before updating
     const newStatus = getElementValue('editItemStatus');
+    const shouldCreateSale = newStatus === 'sold';
     const oldStatus = inventory[index].status;
     console.log(`🔄 Status change: ${oldStatus} → ${newStatus}`);
     
@@ -6118,7 +6172,7 @@ async function handleEditItem(e) {
         price: pricePerItem,
         totalValue: totalValue,
         type: getElementValue('editItemType'),
-        status: getElementValue('editItemStatus'),
+        status: newStatus,
         priority: getElementValue('editItemPriority') || 'medium',
         dueDate: getElementValue('editItemDueDate') || null,
         notes: getElementValue('editItemNotes'),
@@ -6134,10 +6188,20 @@ async function handleEditItem(e) {
     
     console.log('Item updated:', inventory[index]); // Debug log
     
+    if (shouldCreateSale) {
+        createOrUpdateSaleFromProject(index);
+    }
+    
     await saveData();
     loadInventoryTable(); // Projects table
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
     loadInventoryItemsTable(); // Inventory items table
     loadWIPTab(); // Refresh Work in Progress tab
+    if (shouldCreateSale) {
+        refreshSalesViews();
+    }
     updateCustomerFilters();
     
     // Restore expanded customer groups after reload
@@ -7765,7 +7829,6 @@ function loadMobileGalleryCards() {
 }
 
 function loadMobileSalesCards() {
-    // Sales not implemented yet
     const container = document.getElementById('mobileSalesCards');
     if (!container) return;
 
@@ -7782,18 +7845,48 @@ function loadMobileSalesCards() {
         `;
     container.appendChild(addButtonCard);
     
-    const emptyCard = document.createElement('div');
-    emptyCard.className = 'mobile-card';
-    emptyCard.innerHTML = `
+    if (sales.length === 0) {
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'mobile-card';
+        emptyCard.innerHTML = `
             <div class="mobile-card-content">
-            <div class="empty-state">
-                <i class="fas fa-dollar-sign"></i>
-                <h3>No Sales Yet</h3>
-                <p>Start recording your embroidery sales!</p>
+                <div class="empty-state">
+                    <i class="fas fa-dollar-sign"></i>
+                    <h3>No Sales Yet</h3>
+                    <p>Start recording your embroidery sales!</p>
                 </div>
             </div>
         `;
-    container.appendChild(emptyCard);
+        container.appendChild(emptyCard);
+        return;
+    }
+    
+    sales.forEach((sale, index) => {
+        const listPrice = parseFloat(sale.listedPrice ?? sale.price ?? sale.salePrice ?? 0) || 0;
+        const netPrice = parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0) || 0;
+        const saleCard = document.createElement('div');
+        saleCard.className = 'mobile-card';
+        saleCard.innerHTML = `
+            <div class="mobile-card-content">
+                <h3>${SecurityManager.escapeHtml(sale.itemName || 'Sale')}</h3>
+                <p class="mobile-card-subtitle">${SecurityManager.escapeHtml(sale.customer || 'No customer')}</p>
+                <div class="mobile-card-details">
+                    <div><strong>List:</strong> $${listPrice.toFixed(2)}</div>
+                    <div><strong>Net:</strong> $${netPrice.toFixed(2)}</div>
+                    <div><strong>Date:</strong> ${sale.dateSold || '—'}</div>
+                </div>
+                <div class="mobile-card-actions">
+                    <button class="btn btn-outline btn-sm" onclick="editSale(${index})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteSale(${index})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(saleCard);
+    });
 }
 
 function loadMobileIdeasCards() {
@@ -8092,6 +8185,7 @@ async function handleAddInventory(e) {
         return;
     }
     
+    const status = document.getElementById('inventoryStatus').value;
     const inventoryData = {
         name: description,
         description: description,
@@ -8099,7 +8193,7 @@ async function handleAddInventory(e) {
         price: pricePerItem,
         totalValue: totalValue,
         type: 'inventory',
-        status: document.getElementById('inventoryStatus').value,
+        status: status,
         priority: 'medium',
         dueDate: null,
         notes: document.getElementById('inventoryNotes').value,
@@ -8129,6 +8223,11 @@ async function handleAddInventory(e) {
     
     // Add to inventory array
     inventory.push(inventoryData);
+    const newIndex = inventory.length - 1;
+    const shouldCreateSale = status === 'sold';
+    if (shouldCreateSale) {
+        createOrUpdateSaleFromProject(newIndex);
+    }
     
     // Save data
     await saveData();
@@ -8136,6 +8235,9 @@ async function handleAddInventory(e) {
     // Update UI
     loadInventoryTable();
     updateDashboardStats();
+    if (shouldCreateSale) {
+        refreshSalesViews();
+    }
     
     // Close modal
     closeModal('addInventoryModal');
@@ -8186,6 +8288,7 @@ async function handleAddProject(e) {
         return;
     }
     
+    const status = document.getElementById('projectStatus').value;
     const projectData = {
         name: description,
         description: description,
@@ -8193,7 +8296,7 @@ async function handleAddProject(e) {
         price: price,
         totalValue: quantity * price,
         type: 'project',
-        status: document.getElementById('projectStatus').value,
+        status: status,
         priority: document.getElementById('projectPriority').value,
         dueDate: document.getElementById('projectDueDate').value || null,
         notes: document.getElementById('projectNotes').value,
@@ -8210,6 +8313,11 @@ async function handleAddProject(e) {
     
     // Add to inventory array (projects are stored in the same array)
     inventory.push(projectData);
+    const newIndex = inventory.length - 1;
+    const shouldCreateSale = status === 'sold';
+    if (shouldCreateSale) {
+        createOrUpdateSaleFromProject(newIndex);
+    }
     
     // If adding to a customer, ensure that customer stays expanded
     const customerName = projectData.customer || 'No Customer';
@@ -8253,6 +8361,9 @@ async function handleAddProject(e) {
     // Update UI
     loadInventoryTable();
     updateDashboardStats();
+    if (shouldCreateSale) {
+        refreshSalesViews();
+    }
     
     // Close modal
     closeModal('addProjectModal');
@@ -8573,7 +8684,7 @@ async function openAddCustomerModal() {
     }
 }
 
-function handleAddCustomer(e) {
+async function handleAddCustomer(e) {
     e.preventDefault();
     
     const newCustomer = {
@@ -8589,9 +8700,35 @@ function handleAddCustomer(e) {
     updateLocationFilters();
     updateCustomerFilters();
     
-    // Refresh customer dropdowns in add and edit project modals
-    populateCustomerSelect('itemCustomer');
-    populateCustomerSelect('editItemCustomer');
+    // Refresh customer dropdowns in modals and forms
+    const selectsToUpdate = [
+        'itemCustomer',
+        'editItemCustomer',
+        'projectCustomer',
+        'editProjectCustomer',
+        'addCompletedItemCustomer',
+        'editCompletedItemCustomer'
+    ];
+    
+    selectsToUpdate.forEach(selectId => {
+        try {
+            populateCustomerSelect(selectId);
+        } catch (err) {
+            console.warn(`Unable to populate customer select "${selectId}":`, err);
+        }
+    });
+    
+    // If add project modal is open, auto-select the new customer
+    const projectCustomerSelect = document.getElementById('projectCustomer');
+    if (projectCustomerSelect) {
+        projectCustomerSelect.value = newCustomer.name;
+    }
+    
+    // Also update edit project modal if it's open
+    const editProjectSelect = document.getElementById('editProjectCustomer');
+    if (editProjectSelect && editProjectSelect.value === '') {
+        editProjectSelect.value = newCustomer.name;
+    }
     
     // Auto-expand the newly added customer group in projects view
     setTimeout(() => {
@@ -8633,7 +8770,7 @@ function handleAddCustomer(e) {
     showNotification('Customer added successfully!', 'success');
 }
 
-function handleEditCustomer(e) {
+async function handleEditCustomer(e) {
     e.preventDefault();
     
     const form = e.target;
@@ -8668,18 +8805,33 @@ function handleEditCustomer(e) {
         });
     }
     
-    saveData();
+    await saveData();
+    
+    // Close modal before refreshing UI to ensure it disappears immediately
+    closeModal('editCustomerModal');
+    
     loadCustomersTable();
     loadInventoryTable();
     loadSalesTable();
     updateLocationFilters();
     updateCustomerFilters();
     
-    // Refresh customer dropdowns
-    populateCustomerSelect('itemCustomer');
-    populateCustomerSelect('editItemCustomer');
+    const selectsToUpdate = [
+        'itemCustomer',
+        'editItemCustomer',
+        'projectCustomer',
+        'editProjectCustomer',
+        'addCompletedItemCustomer',
+        'editCompletedItemCustomer'
+    ];
     
-    closeModal('editCustomerModal');
+    selectsToUpdate.forEach(selectId => {
+        try {
+            populateCustomerSelect(selectId);
+        } catch (err) {
+            console.warn(`Unable to populate customer select "${selectId}":`, err);
+        }
+    });
     
     showNotification('Customer updated successfully!', 'success');
 }
@@ -8920,7 +9072,359 @@ document.addEventListener('DOMContentLoaded', function() {
             printCustomInvoice();
         });
     }
+    
+    // Add form submission handler for price tags
+    const priceTagForm = document.getElementById('priceTagForm');
+    if (priceTagForm) {
+        priceTagForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generatePriceTags();
+        });
+    }
 });
+
+// Price Tag Generation Functions
+function openPriceTagModal() {
+    // Get selected completed items
+    const selectedItems = getSelectedCompletedItems();
+    
+    if (selectedItems.length === 0) {
+        showNotification('Please select at least one completed item first', 'warning');
+        return;
+    }
+    
+    // Populate selected items list
+    const itemsList = document.getElementById('priceTagSelectedItems');
+    if (itemsList) {
+        itemsList.innerHTML = '';
+        selectedItems.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'price-tag-item-entry';
+            itemDiv.innerHTML = `
+                <strong>${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}</strong>
+                <span>Qty: ${item.quantity || 1} × $${(item.price || 0).toFixed(2)} = $${((item.quantity || 1) * (item.price || 0)).toFixed(2)}</span>
+            `;
+            itemsList.appendChild(itemDiv);
+        });
+    }
+    
+    // Auto-load logos based on vendor name
+    const vendorNameInput = document.getElementById('priceTagVendorName');
+    if (vendorNameInput) {
+        const vendorName = vendorNameInput.value.trim();
+        if (vendorName) {
+            // Load logos immediately when modal opens
+            loadVendorLogos(vendorName).then(() => {
+                console.log('✅ Logos loaded for vendor:', vendorName);
+            });
+        } else {
+            // Even if vendor name is empty, try to load user's logo
+            loadVendorLogos('');
+        }
+    }
+    
+    // Add event listener to auto-load logos when vendor name changes
+    if (vendorNameInput && !vendorNameInput.dataset.listenerAdded) {
+        vendorNameInput.addEventListener('input', function() {
+            const name = this.value.trim();
+            if (name) {
+                loadVendorLogos(name);
+            }
+        });
+        vendorNameInput.dataset.listenerAdded = 'true';
+    }
+    
+    // Show modal
+    const modal = document.getElementById('priceTagModal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+}
+
+// Function to normalize vendor name for file lookup
+function normalizeVendorName(name) {
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+        .replace(/^-+|-+$/g, '');     // Remove leading/trailing hyphens
+}
+
+// Function to find vendor logo file
+async function findVendorLogo(vendorName) {
+    if (!vendorName) return null;
+    
+    const normalizedName = normalizeVendorName(vendorName);
+    const extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
+    const basePath = '/logos/vendors/';
+    
+    // Try each extension
+    for (const ext of extensions) {
+        const logoPath = `${basePath}${normalizedName}.${ext}`;
+        // Check if file exists by trying to load it
+        const exists = await checkFileExists(logoPath);
+        if (exists) {
+            return logoPath;
+        }
+    }
+    
+    // Also try with original name (with spaces/special chars replaced)
+    const altName = vendorName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    for (const ext of extensions) {
+        const logoPath = `${basePath}${altName}.${ext}`;
+        const exists = await checkFileExists(logoPath);
+        if (exists) {
+            return logoPath;
+        }
+    }
+    
+    return null;
+}
+
+// Function to check if a file exists (with timeout to avoid too many requests)
+function checkFileExists(url) {
+    return new Promise((resolve) => {
+        // Use fetch with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout
+        
+        fetch(url + '?t=' + Date.now(), { 
+            method: 'HEAD',
+            signal: controller.signal
+        })
+            .then(response => {
+                clearTimeout(timeoutId);
+                resolve(response.ok);
+            })
+            .catch(() => {
+                clearTimeout(timeoutId);
+                // Silently fail - don't log 404s for missing files
+                resolve(false);
+            });
+    });
+}
+
+// Function to find user's logo
+async function findMyLogo() {
+    // Try most likely names first (my-logo.png is the standard)
+    const names = ['my-logo', 'logo'];
+    const extensions = ['png', 'jpg', 'jpeg', 'svg'];
+    const basePath = '/logos/';
+    
+    // Try my-logo.png first (most likely)
+    const primaryPath = `${basePath}my-logo.png`;
+    const primaryExists = await checkFileExists(primaryPath);
+    if (primaryExists) {
+        return primaryPath;
+    }
+    
+    // Then try other combinations
+    for (const name of names) {
+        for (const ext of extensions) {
+            if (name === 'my-logo' && ext === 'png') continue; // Already tried
+            const logoPath = `${basePath}${name}.${ext}`;
+            const exists = await checkFileExists(logoPath);
+            if (exists) {
+                return logoPath;
+            }
+        }
+    }
+    
+    return null;
+}
+
+// Function to load vendor logos automatically
+async function loadVendorLogos(vendorName) {
+    // Always try to load user's logo first
+    const myLogoInput = document.getElementById('priceTagMyLogo');
+    if (myLogoInput && !myLogoInput.value) {
+        const myLogo = await findMyLogo();
+        if (myLogo) {
+            myLogoInput.value = myLogo;
+            console.log(`✅ Found your logo: ${myLogo}`);
+        } else {
+            console.log('⚠️ Your logo not found');
+        }
+    }
+    
+    // Find and set vendor logo if vendor name provided
+    if (vendorName) {
+        const vendorLogo = await findVendorLogo(vendorName);
+        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+        if (vendorLogoInput) {
+            if (vendorLogo) {
+                vendorLogoInput.value = vendorLogo;
+                console.log(`✅ Found vendor logo: ${vendorLogo}`);
+            } else {
+                // Clear if not found (user can still enter manually)
+                if (!vendorLogoInput.value) {
+                    vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
+                    console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
+                }
+            }
+        }
+    }
+}
+
+function getSelectedCompletedItems() {
+    const selectedItems = [];
+    const checkboxes = document.querySelectorAll('.completed-item-card-checkbox:checked');
+    
+    checkboxes.forEach(checkbox => {
+        // Use the actual index stored in the data attribute
+        const actualIndex = parseInt(checkbox.dataset.actualIndex);
+        
+        if (actualIndex >= 0 && actualIndex < inventory.length) {
+            const item = inventory[actualIndex];
+            if (item && item.status === 'completed') {
+                selectedItems.push(item);
+            }
+        }
+    });
+    
+    return selectedItems;
+}
+
+function previewPriceTags() {
+    generatePriceTags(true);
+}
+
+function generatePriceTags(previewOnly = false) {
+    const form = document.getElementById('priceTagForm');
+    if (!form) {
+        showNotification('Price tag form not found', 'error');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    const vendorName = formData.get('vendorName');
+    const vendorNumber = formData.get('vendorNumber');
+    let vendorLogo = formData.get('vendorLogo');
+    let myLogo = formData.get('myLogo');
+    
+    if (!vendorName) {
+        showNotification('Please enter a vendor name', 'error');
+        return;
+    }
+    
+    const selectedItems = getSelectedCompletedItems();
+    if (selectedItems.length === 0) {
+        showNotification('Please select at least one completed item', 'error');
+        return;
+    }
+    
+    // If logos are empty, try to load them now
+    if (!vendorLogo && vendorName) {
+        console.log('🔍 Vendor logo empty, attempting to load...');
+        findVendorLogo(vendorName).then(logo => {
+            if (logo) {
+                vendorLogo = logo;
+                console.log('✅ Found vendor logo:', vendorLogo);
+            }
+        });
+    }
+    
+    if (!myLogo) {
+        console.log('🔍 My logo empty, attempting to load...');
+        findMyLogo().then(logo => {
+            if (logo) {
+                myLogo = logo;
+                console.log('✅ Found my logo:', myLogo);
+            }
+        });
+    }
+    
+    // Wait a moment for logos to load if they were empty
+    const loadLogos = async () => {
+        if (!vendorLogo && vendorName) {
+            vendorLogo = await findVendorLogo(vendorName);
+            console.log('🔍 Loaded vendor logo:', vendorLogo);
+        }
+        if (!myLogo) {
+            myLogo = await findMyLogo();
+            console.log('🔍 Loaded my logo:', myLogo);
+        }
+        
+        // Close modal
+        closeModal('priceTagModal');
+        
+        // Generate price tags HTML
+        const priceTagsHTML = generatePriceTagsHTML(selectedItems, vendorName, vendorNumber, vendorLogo, myLogo);
+        
+        // Show preview
+        const preview = document.getElementById('priceTagPreview');
+        if (preview) {
+            preview.innerHTML = priceTagsHTML;
+            preview.style.display = 'block';
+            preview.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // If not preview only, print after a short delay
+        if (!previewOnly) {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+    };
+    
+    loadLogos();
+}
+
+function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo) {
+    console.log('🎨 Generating price tags HTML with logos:', { vendorLogo, myLogo });
+    
+    const tagsHTML = items.map(item => {
+        const itemName = item.description || item.name || 'Untitled';
+        const price = (item.price || 0).toFixed(2);
+        const quantity = item.quantity || 1;
+        
+        // Generate one tag per item (if quantity > 1, we'll duplicate)
+        let tagsForItem = '';
+        for (let i = 0; i < quantity; i++) {
+            // Build logo HTML with error handling
+            let vendorLogoHTML = '';
+            if (vendorLogo) {
+                vendorLogoHTML = `<img src="${vendorLogo}" alt="${vendorName} Logo" class="price-tag-vendor-logo" onerror="console.error('Failed to load vendor logo:', this.src); this.style.display='none';">`;
+            }
+            
+            let myLogoHTML = '';
+            if (myLogo) {
+                myLogoHTML = `<img src="${myLogo}" alt="My Logo" class="price-tag-my-logo" onerror="console.error('Failed to load my logo:', this.src); this.style.display='none';">`;
+            }
+            
+            tagsForItem += `
+                <div class="price-tag">
+                    <div class="price-tag-header">
+                        ${vendorLogoHTML}
+                        ${myLogoHTML}
+                    </div>
+                    <div class="price-tag-body">
+                        <div class="price-tag-item-name">${SecurityManager.escapeHtml(itemName)}</div>
+                        <div class="price-tag-price">$${price}</div>
+                        ${vendorNumber ? `<div class="price-tag-vendor-number">Vendor #${SecurityManager.escapeHtml(vendorNumber)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        return tagsForItem;
+    }).join('');
+    
+    return `
+        <div class="price-tags-container">
+            <div class="price-tags-header">
+                <h2>Price Tags for ${SecurityManager.escapeHtml(vendorName)}</h2>
+                <button class="btn btn-outline" onclick="document.getElementById('priceTagPreview').style.display='none'">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button class="btn btn-primary" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+            <div class="price-tags-grid">
+                ${tagsHTML}
+            </div>
+        </div>
+    `;
+}
 
 // Function to add a project to the invoice
 
@@ -8934,7 +9438,12 @@ function updateExistingSalesWithCommission() {
         if (sale.commission === undefined || sale.commissionAmount === undefined || sale.netAmount === undefined) {
             sale.commission = 0;
             sale.commissionAmount = 0;
-            sale.netAmount = sale.salePrice || sale.price || 0;
+            if (sale.netAmount === undefined) {
+                sale.netAmount = parseFloat(sale.salePrice ?? sale.price ?? 0) || 0;
+            }
+            if (sale.amountPaid === undefined) {
+                sale.amountPaid = parseFloat(sale.listedPrice ?? sale.price ?? sale.netAmount ?? 0) || 0;
+            }
             updated = true;
             updatedCount++;
         }
@@ -8967,7 +9476,7 @@ function loadSalesTable() {
     if (sales.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="8" class="text-center text-muted">
                     <i class="fas fa-shopping-cart"></i><br>
                     No sales recorded yet. <a href="#" onclick="openAddSaleModal()">Record your first sale</a>
                 </td>
@@ -8991,8 +9500,8 @@ function loadSalesTable() {
             `<br><small class="text-muted"><i class="fas fa-sticky-note"></i> ${sale.notes}</small>` : '';
         
         // Calculate discount info for display
-        const listedPrice = sale.listedPrice || sale.price || 0;
-        const salePrice = sale.salePrice || sale.price || 0;
+        const listedPrice = sale.listedPrice || sale.price || sale.netAmount || 0;
+        const salePrice = sale.netAmount || sale.salePrice || sale.price || 0;
         const discount = listedPrice - salePrice;
         const discountPercent = listedPrice > 0 ? ((discount / listedPrice) * 100).toFixed(1) : 0;
         
@@ -9021,7 +9530,8 @@ function loadSalesTable() {
         // Commission and net amount display
         const commissionDisplay = sale.commission ? `${sale.commission}%` : '-';
         const commissionAmountDisplay = sale.commissionAmount ? `$${sale.commissionAmount.toFixed(2)}` : '-';
-        const netAmountDisplay = sale.netAmount ? `$${sale.netAmount.toFixed(2)}` : '-';
+        const vendorDiscountDisplay = sale.vendorDiscount ? `${sale.vendorDiscount.toFixed ? sale.vendorDiscount.toFixed(1) : sale.vendorDiscount}%<br><small>$${(sale.vendorDiscountAmount || 0).toFixed(2)}</small>` : '-';
+        const netAmountDisplay = sale.netAmount ? `$${parseFloat(sale.netAmount).toFixed(2)}` : '-';
         const listPriceDisplay = `$${listedPrice.toFixed(2)}`;
         
         row.innerHTML = `
@@ -9035,6 +9545,7 @@ function loadSalesTable() {
             <td>${netAmountDisplay}</td>
             <td>${commissionDisplay}</td>
             <td>${commissionAmountDisplay}</td>
+            <td>${vendorDiscountDisplay}</td>
             <td>
                 <div class="action-buttons">
                     <button class="btn btn-primary btn-sm" onclick="editSale(${index})" title="Edit Sale">
@@ -9052,7 +9563,7 @@ function loadSalesTable() {
     // Desktop table loaded
 }
 
-async function openAddSaleModal() {
+async function openAddSaleModal(prefill = null) {
     // Require authentication
     if (!await requireAuthentication('add a sale')) {
         return;
@@ -9069,6 +9580,74 @@ async function openAddSaleModal() {
         if (saleDateInput) {
             saleDateInput.value = new Date().toISOString().split('T')[0];
         }
+        const saleSourceIndexField = document.getElementById('saleSourceIndex');
+        if (saleSourceIndexField) saleSourceIndexField.value = '';
+        document.getElementById('saleVendorDiscount').value = '';
+        document.getElementById('saleCommission').value = '';
+        document.getElementById('salePrice').value = '';
+        document.getElementById('saleType').value = '';
+        toggleSaleItemType();
+    }
+    
+    if (prefill) {
+        const {
+            itemIndex,
+            listedPrice,
+            customer,
+            notes,
+            saleChannel,
+            vendorDiscount = 0
+        } = prefill;
+        
+        const saleTypeSelect = document.getElementById('saleType');
+        if (saleTypeSelect) {
+            saleTypeSelect.value = 'inventory';
+            toggleSaleItemType();
+        }
+        
+        const saleSourceIndexField = document.getElementById('saleSourceIndex');
+        if (saleSourceIndexField && itemIndex !== undefined && itemIndex !== null) {
+            saleSourceIndexField.value = itemIndex;
+        }
+        
+        const saleItemSelect = document.getElementById('saleItem');
+        if (saleItemSelect && itemIndex !== undefined && itemIndex !== null) {
+            saleItemSelect.value = String(itemIndex);
+        }
+        
+        if (listedPrice !== undefined && listedPrice !== null) {
+            const listedPriceField = document.getElementById('listedPrice');
+            if (listedPriceField) listedPriceField.value = parseFloat(listedPrice).toFixed(2);
+        }
+        
+        const saleCustomerField = document.getElementById('saleCustomer');
+        if (saleCustomerField && customer !== undefined) {
+            saleCustomerField.value = customer;
+        }
+        
+        const saleNotesField = document.getElementById('saleNotes');
+        if (saleNotesField && notes) {
+            saleNotesField.value = notes;
+        }
+        
+        const saleChannelField = document.getElementById('saleChannel');
+        if (saleChannelField) {
+            if (saleChannel) {
+                saleChannelField.checked = saleChannel !== 'individual';
+            } else if (prefill.location) {
+                saleChannelField.checked = true;
+            }
+        }
+        
+        const vendorDiscountField = document.getElementById('saleVendorDiscount');
+        if (vendorDiscountField) {
+            vendorDiscountField.value = vendorDiscount || '';
+        }
+        
+        calculateSalePriceFromCommission();
+        calculateDiscount();
+    } else {
+        calculateDiscount();
     }
     
     if (modal) {
@@ -9091,41 +9670,42 @@ async function openAddSaleModal() {
     }
 }
 
-function toggleEditSaleItemType() {
-    const saleType = document.getElementById('editSaleType').value;
-    const inventoryFields = document.getElementById('editInventorySaleFields');
-    const customFields = document.getElementById('editCustomSaleFields');
-    const saleItemSelect = document.getElementById('editSaleItem');
-    
-    if (saleType === 'inventory') {
-        if (inventoryFields) inventoryFields.style.display = 'block';
-        if (customFields) customFields.style.display = 'none';
-        populateItemSelect('editSaleItem');
-    } else if (saleType === 'custom') {
-        if (inventoryFields) inventoryFields.style.display = 'none';
-        if (customFields) customFields.style.display = 'block';
-    } else {
-        if (inventoryFields) inventoryFields.style.display = 'none';
-        if (customFields) customFields.style.display = 'none';
-    }
-}
-
 function calculateEditDiscount() {
     const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
     const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
+    const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    const vendorDiscountPercent = parseFloat(document.getElementById('editSaleVendorDiscount').value) || 0;
     const discountInfo = document.getElementById('editDiscountInfo');
     const discountAmount = document.getElementById('editDiscountAmount');
     const discountPercentage = document.getElementById('editDiscountPercentage');
+    const vendorInfo = document.getElementById('editVendorDiscountInfo');
+    const vendorAmountEl = document.getElementById('editVendorDiscountAmount');
+    const vendorPercentEl = document.getElementById('editVendorDiscountPercentage');
     
-    if (listedPrice > 0 && salePrice !== listedPrice) {
-        const discount = listedPrice - salePrice;
-        const discountPercent = ((discount / listedPrice) * 100).toFixed(1);
-        
-        discountAmount.textContent = `$${discount.toFixed(2)}`;
-        discountPercentage.textContent = `${discountPercent}%`;
+    if (!listedPrice || !discountInfo || !discountAmount || !discountPercentage) return;
+    
+    const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+    const commissionBase = listedPrice - vendorDiscountAmount;
+    const commissionAmount = commissionBase * (commission / 100);
+    const actualDiscount = listedPrice - (salePrice + commissionAmount);
+    const actualDiscountPercent = listedPrice > 0 ? ((actualDiscount / listedPrice) * 100).toFixed(1) : 0;
+    
+    if (actualDiscount !== 0) {
+        discountAmount.textContent = `$${actualDiscount.toFixed(2)}`;
+        discountPercentage.textContent = `${actualDiscountPercent}%`;
         discountInfo.style.display = 'block';
     } else {
         discountInfo.style.display = 'none';
+    }
+    
+    if (vendorInfo && vendorAmountEl && vendorPercentEl) {
+        if (vendorDiscountPercent > 0) {
+            vendorAmountEl.textContent = `$${vendorDiscountAmount.toFixed(2)}`;
+            vendorPercentEl.textContent = `${vendorDiscountPercent.toFixed(1)}% vendor discount`;
+            vendorInfo.style.display = 'block';
+        } else {
+            vendorInfo.style.display = 'none';
+        }
     }
 }
 
@@ -9148,15 +9728,15 @@ function calculateEditNetAmount() {
 function calculateSalePriceFromCommission() {
     const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
     const commission = parseFloat(document.getElementById('saleCommission').value) || 0;
+    const vendorDiscountPercent = parseFloat(document.getElementById('saleVendorDiscount').value) || 0;
     const salePriceField = document.getElementById('salePrice');
     const autoCalculateInfo = document.getElementById('autoCalculateInfo');
     
-    if (listedPrice > 0 && commission > 0) {
-        // Calculate net price (what you receive) from list price and commission
-        // If list price is $100 and commission is 20%, you receive $80
-        // Formula: Net Price = List Price - (List Price × Commission/100)
-        const commissionAmount = listedPrice * (commission / 100);
-        const netPrice = listedPrice - commissionAmount;
+    if (listedPrice > 0 && (commission > 0 || vendorDiscountPercent > 0)) {
+        const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+        const commissionBase = listedPrice - vendorDiscountAmount;
+        const commissionAmount = commissionBase * (commission / 100);
+        const netPrice = commissionBase - commissionAmount;
         salePriceField.value = netPrice.toFixed(2);
         
         // Show auto-calculate indicator
@@ -9173,15 +9753,15 @@ function calculateSalePriceFromCommission() {
 function calculateEditSalePriceFromCommission() {
     const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
     const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    const vendorDiscountPercent = parseFloat(document.getElementById('editSaleVendorDiscount').value) || 0;
     const salePriceField = document.getElementById('editSalePrice');
     const autoCalculateInfo = document.getElementById('editAutoCalculateInfo');
     
-    if (listedPrice > 0 && commission > 0) {
-        // Calculate net price (what you receive) from list price and commission
-        // If list price is $100 and commission is 20%, you receive $80
-        // Formula: Net Price = List Price - (List Price × Commission/100)
-        const commissionAmount = listedPrice * (commission / 100);
-        const netPrice = listedPrice - commissionAmount;
+    if (listedPrice > 0 && (commission > 0 || vendorDiscountPercent > 0)) {
+        const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+        const commissionBase = listedPrice - vendorDiscountAmount;
+        const commissionAmount = commissionBase * (commission / 100);
+        const netPrice = commissionBase - commissionAmount;
         salePriceField.value = netPrice.toFixed(2);
         
         // Show auto-calculate indicator
@@ -9207,6 +9787,7 @@ function toggleSaleItemType() {
         customFields.style.display = 'none';
         saleItemSelect.required = true;
         document.getElementById('customItemName').required = false;
+        populateItemSelect('saleItem');
     } else if (saleType === 'custom') {
         inventoryFields.style.display = 'none';
         customFields.style.display = 'block';
@@ -9220,25 +9801,77 @@ function toggleSaleItemType() {
     }
 }
 
+function toggleEditSaleItemType(selectedIndex = null) {
+    const saleType = document.getElementById('editSaleType').value;
+    const inventoryFields = document.getElementById('editInventorySaleFields');
+    const customFields = document.getElementById('editCustomSaleFields');
+    const saleItemSelect = document.getElementById('editSaleItem');
+    
+    if (saleType === 'inventory') {
+        if (inventoryFields) inventoryFields.style.display = 'block';
+        if (customFields) customFields.style.display = 'none';
+        saleItemSelect.required = true;
+        const options = { includeSold: true };
+        if (selectedIndex !== null && selectedIndex !== undefined) {
+            options.selectedIndex = selectedIndex;
+        } else if (saleItemSelect && saleItemSelect.dataset.selectedIndex !== undefined) {
+            options.selectedIndex = saleItemSelect.dataset.selectedIndex;
+        }
+        populateItemSelect('editSaleItem', options);
+        if (saleItemSelect) {
+            if (options.selectedIndex !== undefined) {
+                saleItemSelect.dataset.selectedIndex = options.selectedIndex;
+            } else {
+                delete saleItemSelect.dataset.selectedIndex;
+            }
+        }
+    } else if (saleType === 'custom') {
+        if (inventoryFields) inventoryFields.style.display = 'none';
+        if (customFields) customFields.style.display = 'block';
+        saleItemSelect.required = false;
+        if (saleItemSelect) {
+            delete saleItemSelect.dataset.selectedIndex;
+        }
+    } else {
+        if (inventoryFields) inventoryFields.style.display = 'none';
+        if (customFields) customFields.style.display = 'none';
+        saleItemSelect.required = false;
+        if (saleItemSelect) {
+            delete saleItemSelect.dataset.selectedIndex;
+        }
+    }
+}
+
 function calculateDiscount() {
     const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
     const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
+    const commission = parseFloat(document.getElementById('saleCommission').value) || 0;
+    const vendorDiscountPercent = parseFloat(document.getElementById('saleVendorDiscount').value) || 0;
+    
     const discountInfo = document.getElementById('discountInfo');
     const discountAmount = document.getElementById('discountAmount');
     const discountPercentage = document.getElementById('discountPercentage');
+    const vendorInfo = document.getElementById('vendorDiscountInfo');
+    const vendorAmountEl = document.getElementById('vendorDiscountAmount');
+    const vendorPercentEl = document.getElementById('vendorDiscountPercentage');
     
-    if (listedPrice > 0 && salePrice > 0) {
-        const discount = listedPrice - salePrice;
-        const discountPercent = ((discount / listedPrice) * 100).toFixed(1);
+    if (!discountInfo || !discountAmount || !discountPercentage) return;
+    
+    if (listedPrice > 0) {
+        const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+        const commissionBase = listedPrice - vendorDiscountAmount;
+        const commissionAmount = commissionBase * (commission / 100);
+        const actualDiscount = listedPrice - (salePrice + commissionAmount);
+        const actualDiscountPercent = listedPrice > 0 ? ((actualDiscount / listedPrice) * 100).toFixed(1) : 0;
         
-        if (discount > 0) {
-            discountAmount.textContent = `Discount: $${discount.toFixed(2)}`;
-            discountPercentage.textContent = `${discountPercent}% off`;
+        if (actualDiscount > 0) {
+            discountAmount.textContent = `Discount: $${actualDiscount.toFixed(2)}`;
+            discountPercentage.textContent = `${actualDiscountPercent}% off`;
             discountInfo.style.display = 'block';
             discountInfo.className = 'discount-info discount-applied';
-        } else if (discount < 0) {
-            discountAmount.textContent = `Markup: $${Math.abs(discount).toFixed(2)}`;
-            discountPercentage.textContent = `${Math.abs(discountPercent)}% markup`;
+        } else if (actualDiscount < 0) {
+            discountAmount.textContent = `Markup: $${Math.abs(actualDiscount).toFixed(2)}`;
+            discountPercentage.textContent = `${Math.abs(actualDiscountPercent)}% markup`;
             discountInfo.style.display = 'block';
             discountInfo.className = 'discount-info markup-applied';
         } else {
@@ -9247,49 +9880,88 @@ function calculateDiscount() {
             discountInfo.style.display = 'block';
             discountInfo.className = 'discount-info no-discount';
         }
+        
+        if (vendorInfo && vendorAmountEl && vendorPercentEl) {
+            if (vendorDiscountPercent > 0) {
+                vendorAmountEl.textContent = `Vendor discount: $${vendorDiscountAmount.toFixed(2)}`;
+                vendorPercentEl.textContent = `${vendorDiscountPercent.toFixed(1)}% vendor discount`;
+                vendorInfo.style.display = 'block';
+            } else {
+                vendorInfo.style.display = 'none';
+            }
+        }
     } else {
         discountInfo.style.display = 'none';
+        if (vendorInfo) vendorInfo.style.display = 'none';
     }
 }
 
-function handleAddSale(e) {
+async function handleAddSale(e) {
     e.preventDefault();
     
     const saleType = document.getElementById('saleType').value;
     const saleChannel = document.getElementById('saleChannel').checked ? 'shop' : 'individual';
+    const saleSourceIndexField = document.getElementById('saleSourceIndex');
+    const sourceIndex = saleSourceIndexField ? saleSourceIndexField.value : '';
     const listedPrice = parseFloat(document.getElementById('listedPrice').value) || 0;
-    const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
+    let salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
     const customer = document.getElementById('saleCustomer').value || 'No Customer/Location';
     const dateSold = document.getElementById('saleDate').value;
     const notes = document.getElementById('saleNotes').value;
     const commission = parseFloat(document.getElementById('saleCommission').value) || 0;
+    const vendorDiscountPercent = parseFloat(document.getElementById('saleVendorDiscount').value) || 0;
+    const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+    const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
+    let commissionAmount = commissionBase * (commission / 100);
+    if (commissionAmount < 0) commissionAmount = 0;
+    if (!salePrice && listedPrice > 0) {
+        salePrice = commissionBase - commissionAmount;
+        if (salePrice < 0) salePrice = 0;
+        const salePriceField = document.getElementById('salePrice');
+        if (salePriceField) salePriceField.value = salePrice.toFixed(2);
+    }
+    const discountValue = listedPrice - (salePrice + commissionAmount);
+    const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
     
     // All fields are now optional - no validation required
     
+    const netAmount = salePrice;
     let newSale;
+    
+    let linkedItemIndex = null;
+    let linkedItem = null;
     
     if (saleType === 'inventory') {
         // Handle inventory item sale
-        const selectedItemIndex = document.getElementById('saleItem').value;
-        const item = inventory[selectedItemIndex];
+        let selectedItemIndex = document.getElementById('saleItem').value;
+        if (!selectedItemIndex && sourceIndex !== '') {
+            selectedItemIndex = sourceIndex;
+        }
+        if (selectedItemIndex !== '' && selectedItemIndex !== null && selectedItemIndex !== undefined) {
+            const parsedIndex = parseInt(selectedItemIndex);
+            if (!Number.isNaN(parsedIndex) && parsedIndex >= 0 && parsedIndex < inventory.length) {
+                linkedItemIndex = parsedIndex;
+                linkedItem = inventory[parsedIndex];
+            }
+        }
         
         // Item selection is now optional
-        if (!item) {
+        if (!linkedItem) {
             // Create a generic sale without specific inventory item
-        const commissionAmount = (listedPrice * commission / 100);
-        const netAmount = salePrice; // salePrice is now the net amount (what you receive)
-        
         newSale = {
             itemName: 'Inventory Item (Not Specified)',
             customer: customer,
             location: '',
             listedPrice: listedPrice,
-            salePrice: salePrice, // This is now the net amount (what you receive)
+                salePrice: salePrice,
             commission: commission,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
-            discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
-            discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
+                discount: discountValue,
+                discountPercent: discountPercentValue,
+                vendorDiscount: vendorDiscountPercent,
+                vendorDiscountAmount: vendorDiscountAmount,
+                amountPaid: commissionBase,
             dateSold: dateSold,
             itemIndex: null,
             saleType: 'inventory',
@@ -9297,29 +9969,29 @@ function handleAddSale(e) {
             notes: notes
         };
         } else {
-            const commissionAmount = (listedPrice * commission / 100);
-            const netAmount = salePrice; // salePrice is now the net amount (what you receive)
-            
             newSale = {
-                itemName: item.name,
+                itemName: linkedItem.name,
                 customer: customer,
-                location: item.location,
+                location: linkedItem.location,
                 listedPrice: listedPrice,
-                salePrice: salePrice, // This is now the net amount (what you receive)
+                salePrice: salePrice,
                 commission: commission,
                 commissionAmount: commissionAmount,
                 netAmount: netAmount,
-                discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
-                discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
+                discount: discountValue,
+                discountPercent: discountPercentValue,
+                vendorDiscount: vendorDiscountPercent,
+                vendorDiscountAmount: vendorDiscountAmount,
+                amountPaid: commissionBase,
                 dateSold: dateSold,
-                itemIndex: selectedItemIndex,
+                itemIndex: linkedItemIndex,
                 saleType: 'inventory',
                 saleChannel: saleChannel || 'individual',
                 notes: notes
             };
             
             // Update item status to sold
-            inventory[selectedItemIndex].status = 'sold';
+            linkedItem.status = 'sold';
         }
         
     } else if (saleType === 'custom') {
@@ -9327,20 +9999,20 @@ function handleAddSale(e) {
         const itemName = document.getElementById('customItemName').value.trim() || 'Custom Item';
         const description = document.getElementById('customItemDescription').value.trim();
         
-        const commissionAmount = (listedPrice * commission / 100);
-        const netAmount = salePrice; // salePrice is now the net amount (what you receive)
-        
         newSale = {
             itemName: itemName,
             customer: customer,
             location: '',
             listedPrice: listedPrice,
-            salePrice: salePrice, // This is now the net amount (what you receive)
+            salePrice: salePrice,
             commission: commission,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
-            discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
-            discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
+            discount: discountValue,
+            discountPercent: discountPercentValue,
+            vendorDiscount: vendorDiscountPercent,
+            vendorDiscountAmount: vendorDiscountAmount,
+            amountPaid: commissionBase,
             dateSold: dateSold,
             itemIndex: null, // No inventory item
             saleType: 'custom',
@@ -9350,20 +10022,20 @@ function handleAddSale(e) {
         };
     } else {
         // No sale type selected - create a generic sale
-        const commissionAmount = (listedPrice * commission / 100);
-        const netAmount = salePrice; // salePrice is now the net amount (what you receive)
-        
         newSale = {
             itemName: 'General Sale',
             customer: customer,
             location: '',
             listedPrice: listedPrice,
-            salePrice: salePrice, // This is now the net amount (what you receive)
+            salePrice: salePrice,
             commission: commission,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
-            discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
-            discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0,
+            discount: discountValue,
+            discountPercent: discountPercentValue,
+            vendorDiscount: vendorDiscountPercent,
+            vendorDiscountAmount: vendorDiscountAmount,
+            amountPaid: commissionBase,
             dateSold: dateSold,
             itemIndex: null,
             saleType: 'general',
@@ -9372,12 +10044,20 @@ function handleAddSale(e) {
         };
     }
     
+    newSale.id = generateSaleId();
     sales.push(newSale);
     
-    saveData();
+    if (linkedItem) {
+        linkedItem.saleId = newSale.id;
+    }
+    
+    await saveData();
+    loadSalesCards();
+    loadMobileSalesCards();
     loadSalesTable();
     loadInventoryTable();
     closeModal('addSaleModal');
+    if (saleSourceIndexField) saleSourceIndexField.value = '';
     
     showNotification('Sale recorded successfully!', 'success');
 }
@@ -9428,15 +10108,22 @@ function populateCustomerSelect(selectId) {
     }
 }
 
-function populateItemSelect(selectId) {
+function populateItemSelect(selectId, options = {}) {
     const select = document.getElementById(selectId);
     select.innerHTML = '<option value="">Select Item</option>';
+    
+    const includeSold = options.includeSold || false;
+    const selectedIndex = options.selectedIndex !== undefined ? parseInt(options.selectedIndex) : null;
+    
     inventory.forEach((item, index) => {
-        if (item.status !== 'sold') {
+        if (item.status !== 'sold' || includeSold || index === selectedIndex) {
             const option = document.createElement('option');
             option.value = index;
             const customerDisplay = item.customer || 'No Customer';
             option.textContent = `${item.name} - ${customerDisplay} (${item.status})`;
+            if (index === selectedIndex) {
+                option.selected = true;
+            }
             select.appendChild(option);
         }
     });
@@ -9533,7 +10220,103 @@ function filterItems() {
 }
 
 // Action Functions
-function quickStatusChange(index, newStatus) {
+function getProjectTotalPrice(item) {
+    const quantity = parseFloat(item.quantity) || 1;
+    const pricePerUnit = parseFloat(item.price) || 0;
+    return pricePerUnit * quantity;
+}
+
+function createOrUpdateSaleFromProject(index) {
+    const item = inventory[index];
+    if (!item) return;
+    
+    const existingSaleId = item.saleId;
+    let saleRecord = existingSaleId ? sales.find(sale => sale.id === existingSaleId) : null;
+    
+    const saleId = existingSaleId || generateSaleId();
+    const listedPrice = getProjectTotalPrice(item);
+    const vendorDiscountPercent = 0;
+    const vendorDiscountAmount = 0;
+    const commissionPercent = 0;
+    const commissionAmount = 0;
+    const amountPaid = Math.max(0, listedPrice - vendorDiscountAmount);
+    const netAmount = Math.max(0, amountPaid - commissionAmount);
+    const discountValue = listedPrice - amountPaid;
+    const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
+    const saleDate = new Date().toISOString().split('T')[0];
+    const customerName = (item.customer || '').toLowerCase();
+    const isShopSale = customerName.includes('shop') || customerName.includes('flippin') || customerName.includes('vendor');
+    
+    const saleData = {
+        id: saleId,
+        saleSource: 'project',
+        itemIndex: index,
+        saleType: 'inventory',
+        itemName: item.description || item.name || 'Project Sale',
+        customer: item.customer || 'No Customer/Location',
+        location: item.location || '',
+        quantity: item.quantity || 1,
+        listedPrice,
+        salePrice: netAmount,
+        netAmount,
+        commission: commissionPercent,
+        commissionAmount,
+        vendorDiscount: vendorDiscountPercent,
+        vendorDiscountAmount,
+        discount: discountValue,
+        discountPercent: discountPercentValue,
+        amountPaid,
+        saleChannel: isShopSale ? 'shop' : 'individual',
+        dateSold: saleDate,
+        notes: 'Auto-generated from project sale. Edit to adjust commission or discounts.'
+    };
+    
+    if (saleRecord) {
+        saleRecord.itemName = saleData.itemName;
+        saleRecord.customer = saleData.customer;
+        saleRecord.location = saleData.location;
+        saleRecord.listedPrice = saleData.listedPrice;
+        saleRecord.itemIndex = index;
+        saleRecord.saleSource = 'project';
+        saleRecord.saleType = saleRecord.saleType || 'inventory';
+        saleRecord.saleChannel = saleRecord.saleChannel || saleData.saleChannel;
+        saleRecord.dateSold = saleRecord.dateSold || saleData.dateSold;
+        if (saleRecord.salePrice === undefined) saleRecord.salePrice = saleData.salePrice;
+        if (saleRecord.netAmount === undefined) saleRecord.netAmount = saleData.netAmount;
+        if (saleRecord.amountPaid === undefined) saleRecord.amountPaid = saleData.amountPaid;
+        if (saleRecord.commission === undefined) saleRecord.commission = saleData.commission;
+        if (saleRecord.commissionAmount === undefined) saleRecord.commissionAmount = saleData.commissionAmount;
+        if (saleRecord.vendorDiscount === undefined) saleRecord.vendorDiscount = saleData.vendorDiscount;
+        if (saleRecord.vendorDiscountAmount === undefined) saleRecord.vendorDiscountAmount = saleData.vendorDiscountAmount;
+        if (saleRecord.discount === undefined) saleRecord.discount = saleData.discount;
+        if (saleRecord.discountPercent === undefined) saleRecord.discountPercent = saleData.discountPercent;
+        if (!saleRecord.notes || saleRecord.notes.includes('Auto-generated')) {
+            saleRecord.notes = saleData.notes;
+        }
+    } else {
+        sales.push(saleData);
+    }
+    
+    item.saleId = saleId;
+}
+
+function refreshSalesViews() {
+    const hasSalesCards = document.getElementById('salesCards');
+    const hasMobileSales = document.getElementById('mobileSalesCards');
+    const hasSalesTable = document.getElementById('salesTableBody');
+    
+    if (typeof loadSalesCards === 'function' && hasSalesCards) {
+        loadSalesCards();
+    }
+    if (typeof loadMobileSalesCards === 'function' && hasMobileSales) {
+        loadMobileSalesCards();
+    }
+    if (typeof loadSalesTable === 'function' && hasSalesTable) {
+        loadSalesTable();
+    }
+}
+
+async function quickStatusChange(index, newStatus) {
     const item = inventory[index];
     const statusNames = {
         'pending': 'Pending',
@@ -9547,8 +10330,15 @@ function quickStatusChange(index, newStatus) {
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
     inventory[index].status = newStatus;
-    saveData();
+    if (newStatus === 'sold') {
+        createOrUpdateSaleFromProject(index);
+    }
+    await saveData();
     loadInventoryTable();
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
+    refreshSalesViews();
     
     // Restore expanded customer groups after reload
     restoreExpandedCustomerGroups(expandedCustomers);
@@ -9574,14 +10364,27 @@ function markAsCompleted(index) {
     }
 }
 
-function markAsSold(index) {
+async function markAsSold(index) {
     if (confirm('Mark this item as sold?')) {
+        const item = inventory[index];
+        if (!item) {
+            showNotification('Item not found', 'error');
+            return;
+        }
+        
         // Store expanded customer groups before updating
         const expandedCustomers = getCurrentlyExpandedCustomerGroups();
         
         inventory[index].status = 'sold';
-        saveData();
+        createOrUpdateSaleFromProject(index);
+        await saveData();
         loadInventoryTable();
+        if (typeof loadProjectsCards === 'function') {
+            loadProjectsCards();
+        }
+        loadCompletedItemsTable(); // Ensure completed tab reflects change
+        refreshSalesViews();
+        updateInvoiceSelection();
         
         // Restore expanded customer groups after reload
         restoreExpandedCustomerGroups(expandedCustomers);
@@ -10072,7 +10875,7 @@ function printCustomerList() {
     customers.forEach(customer => {
         const customerItems = inventory.filter(item => item.customer === customer.name);
         const customerSales = sales.filter(sale => sale.customer === customer.name);
-        const totalSpent = customerSales.reduce((sum, sale) => sum + parseFloat(sale.price), 0);
+        const totalSpent = customerSales.reduce((sum, sale) => sum + parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0), 0);
         
         printContent += `
             <tr>
@@ -10114,7 +10917,7 @@ function exportCustomerList() {
     customers.forEach(customer => {
         const customerItems = inventory.filter(item => item.customer === customer.name);
         const customerSales = sales.filter(sale => sale.customer === customer.name);
-        const totalSpent = customerSales.reduce((sum, sale) => sum + parseFloat(sale.price), 0);
+        const totalSpent = customerSales.reduce((sum, sale) => sum + parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0), 0);
         
         csvContent += `"${customer.name}","${customer.contact || ''}","${customer.location}","${customerItems.length}","${totalSpent.toFixed(2)}"\n`;
     });
@@ -10147,23 +10950,35 @@ async function editSale(index) {
     document.getElementById('editSaleType').value = sale.saleType || '';
     document.getElementById('editSaleChannel').checked = sale.saleChannel === 'shop';
     document.getElementById('editListedPrice').value = sale.listedPrice || 0;
-    document.getElementById('editSalePrice').value = sale.salePrice || sale.price || 0;
+    document.getElementById('editSalePrice').value = sale.netAmount || sale.salePrice || sale.price || 0;
     document.getElementById('editSaleCustomer').value = sale.customer || '';
     document.getElementById('editSaleDate').value = sale.dateSold || '';
     document.getElementById('editSaleCommission').value = sale.commission || 0;
     document.getElementById('editSaleNotes').value = sale.notes || '';
+    const vendorField = document.getElementById('editSaleVendorDiscount');
+    if (vendorField) {
+        vendorField.value = sale.vendorDiscount || sale.vendorDiscountPercent || 0;
+    }
+    const saleItemSelect = document.getElementById('editSaleItem');
+    if (saleItemSelect && sale.itemIndex !== undefined && sale.itemIndex !== null) {
+        saleItemSelect.dataset.selectedIndex = sale.itemIndex;
+    } else if (saleItemSelect) {
+        delete saleItemSelect.dataset.selectedIndex;
+    }
     
     // Handle sale type specific fields
-    toggleEditSaleItemType();
+    toggleEditSaleItemType(sale.itemIndex);
     
     if (sale.saleType === 'inventory' && sale.itemIndex !== null) {
-        document.getElementById('editSaleItem').value = sale.itemIndex;
+        const editItemSelect = document.getElementById('editSaleItem');
+        if (editItemSelect) editItemSelect.value = sale.itemIndex;
     } else if (sale.saleType === 'custom') {
         document.getElementById('editCustomItemName').value = sale.itemName || '';
         document.getElementById('editCustomItemDescription').value = sale.description || '';
     }
     
     // Calculate and display discount and net amount
+    calculateEditSalePriceFromCommission();
     calculateEditDiscount();
     calculateEditNetAmount();
     
@@ -10171,26 +10986,39 @@ async function editSale(index) {
     document.getElementById('editSaleModal').style.display = 'block';
 }
 
-function handleEditSale(e) {
+async function handleEditSale(e) {
     e.preventDefault();
     
     const index = parseInt(document.getElementById('editSaleIndex').value);
     const saleType = document.getElementById('editSaleType').value;
     const saleChannel = document.getElementById('editSaleChannel').checked ? 'shop' : 'individual';
     const listedPrice = parseFloat(document.getElementById('editListedPrice').value) || 0;
-    const salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
+    let salePrice = parseFloat(document.getElementById('editSalePrice').value) || 0;
     const customer = document.getElementById('editSaleCustomer').value || 'No Customer/Location';
     const dateSold = document.getElementById('editSaleDate').value;
     const notes = document.getElementById('editSaleNotes').value;
     const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
+    const vendorDiscountPercent = parseFloat(document.getElementById('editSaleVendorDiscount').value) || 0;
+    const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+    const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
+    let commissionAmount = commissionBase * (commission / 100);
+    if (commissionAmount < 0) commissionAmount = 0;
+    if (!salePrice && listedPrice > 0) {
+        salePrice = commissionBase - commissionAmount;
+        if (salePrice < 0) salePrice = 0;
+        const salePriceField = document.getElementById('editSalePrice');
+        if (salePriceField) salePriceField.value = salePrice.toFixed(2);
+    }
+    const netAmount = salePrice;
+    const discountValue = listedPrice - (salePrice + commissionAmount);
+    const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
     
     if (isNaN(index) || index < 0 || index >= sales.length) {
         showNotification('Invalid sale record', 'error');
         return;
     }
     
-    const commissionAmount = (listedPrice * commission / 100);
-    const netAmount = salePrice; // salePrice is now the net amount (what you receive)
+    const previousItemIndex = sales[index].itemIndex !== undefined && sales[index].itemIndex !== null ? parseInt(sales[index].itemIndex) : null;
     
     // Update the sale record
     sales[index] = {
@@ -10205,17 +11033,24 @@ function handleEditSale(e) {
         commission: commission,
         commissionAmount: commissionAmount,
         netAmount: netAmount,
-        discount: listedPrice - (salePrice + commissionAmount), // Total customer pays vs list price
-        discountPercent: listedPrice > 0 ? ((listedPrice - (salePrice + commissionAmount)) / listedPrice * 100).toFixed(1) : 0
+        discount: discountValue,
+        discountPercent: discountPercentValue,
+        vendorDiscount: vendorDiscountPercent,
+        vendorDiscountAmount: vendorDiscountAmount,
+        amountPaid: commissionBase
     };
+    if (!sales[index].id) {
+        sales[index].id = generateSaleId();
+    }
     
     // Handle sale type specific fields
     if (saleType === 'inventory') {
         const selectedItemIndex = document.getElementById('editSaleItem').value;
         if (selectedItemIndex) {
-            sales[index].itemIndex = selectedItemIndex;
-            sales[index].itemName = inventory[selectedItemIndex]?.name || 'Inventory Item';
-            sales[index].location = inventory[selectedItemIndex]?.location || '';
+            const parsedIndex = parseInt(selectedItemIndex);
+            sales[index].itemIndex = !Number.isNaN(parsedIndex) ? parsedIndex : null;
+            sales[index].itemName = inventory[parsedIndex]?.name || 'Inventory Item';
+            sales[index].location = inventory[parsedIndex]?.location || '';
         }
     } else if (saleType === 'custom') {
         const itemName = document.getElementById('editCustomItemName').value.trim() || 'Custom Item';
@@ -10225,8 +11060,35 @@ function handleEditSale(e) {
         sales[index].itemIndex = null;
     }
     
-    saveData();
-    loadSalesTable();
+    const newItemIndex = sales[index].itemIndex !== undefined && sales[index].itemIndex !== null ? parseInt(sales[index].itemIndex) : null;
+    if (!Number.isNaN(newItemIndex) && newItemIndex !== null && inventory[newItemIndex]) {
+        inventory[newItemIndex].saleId = sales[index].id;
+        inventory[newItemIndex].status = 'sold';
+    }
+    if (previousItemIndex !== null && previousItemIndex !== newItemIndex) {
+        const previousItem = inventory[previousItemIndex];
+        if (previousItem && previousItem.saleId === sales[index].id) {
+            delete previousItem.saleId;
+            if (previousItem.status === 'sold') {
+                previousItem.status = 'completed';
+            }
+        }
+    }
+    
+    await saveData();
+    const hasSalesTable = document.getElementById('salesTableBody');
+    const hasSalesCards = document.getElementById('salesCards');
+    const hasMobileSales = document.getElementById('mobileSalesCards');
+    
+    if (typeof loadSalesTable === 'function' && hasSalesTable) {
+        loadSalesTable();
+    }
+    if (typeof loadSalesCards === 'function' && hasSalesCards) {
+        loadSalesCards();
+    }
+    if (typeof loadMobileSalesCards === 'function' && hasMobileSales) {
+        loadMobileSalesCards();
+    }
     closeModal('editSaleModal');
     
     showNotification('Sale updated successfully!', 'success');
@@ -10242,19 +11104,34 @@ async function deleteSale(saleIdOrIndex) {
         'Delete Sale',
         'Are you sure you want to delete this sale record?',
         () => {
-        // Handle both ID and index parameters
+        let removedSale = null;
         if (typeof saleIdOrIndex === 'string' || typeof saleIdOrIndex === 'number' && saleIdOrIndex > 1000) {
-            // It's an ID (string or large number)
-            sales = sales.filter(sale => sale.id !== saleIdOrIndex);
+            const saleIndex = sales.findIndex(sale => sale.id === saleIdOrIndex);
+            if (saleIndex > -1) {
+                removedSale = sales.splice(saleIndex, 1)[0];
+            }
         } else {
-            // It's an index (small number)
             const index = parseInt(saleIdOrIndex);
             if (index >= 0 && index < sales.length) {
-                sales.splice(index, 1);
+                removedSale = sales.splice(index, 1)[0];
             }
         }
+        
+        if (removedSale && removedSale.itemIndex !== undefined && removedSale.itemIndex !== null) {
+            const linkedItem = inventory[removedSale.itemIndex];
+            if (linkedItem && linkedItem.saleId === removedSale.id) {
+                delete linkedItem.saleId;
+                if (linkedItem.status === 'sold') {
+                    linkedItem.status = 'completed';
+                }
+            }
+        }
+        
         saveData();
         loadSalesTable();
+        loadSalesCards();
+        loadMobileSalesCards();
+        loadInventoryTable();
         showNotification('Sale record deleted!', 'success');
     }
     );
@@ -10272,7 +11149,7 @@ function updateDashboardStats() {
     const activeCustomers = new Set(inventory.map(item => item.customer).filter(customer => customer)).size;
     
     // Calculate total revenue from sales
-    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.price || 0), 0);
+    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0), 0);
     
     // Calculate average project value
     const projectsWithValue = inventory.filter(item => item.price && item.price > 0);
@@ -10675,7 +11552,7 @@ function getFilteredData(filters) {
     }
     
     // Calculate statistics
-    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.price || 0), 0);
+    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0), 0);
     const completedProjects = filteredItems.filter(item => item.status === 'completed' || item.status === 'sold').length;
     const uniqueCustomers = new Set(filteredItems.map(item => item.customer).filter(customer => customer)).size;
     const projectsWithValue = filteredItems.filter(item => item.price && item.price > 0);
@@ -13573,7 +14450,7 @@ function loadCompletedItemsTable() {
         card.innerHTML = `
             <div class="completed-item-card-header">
                 <h3 class="completed-item-card-title">${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}</h3>
-                <input type="checkbox" class="completed-item-card-checkbox" data-item-id="${itemId}" onchange="updateInvoiceSelection()">
+                <input type="checkbox" class="completed-item-card-checkbox" data-item-id="${itemId}" data-actual-index="${actualIndex}" onchange="updateInvoiceSelection()">
             </div>
             <div class="completed-item-card-body">
                 <div class="completed-item-card-meta">
@@ -13600,6 +14477,9 @@ function loadCompletedItemsTable() {
                     </button>
                     <button class="btn btn-sm btn-outline" onclick="copyItem(${actualIndex})" title="Copy">
                         <i class="fas fa-copy"></i> Copy
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="markAsSold(${actualIndex})" title="Mark as Sold">
+                        <i class="fas fa-dollar-sign"></i> Mark as Sold
                     </button>
                 </div>
             </div>
@@ -13646,6 +14526,15 @@ async function editCompletedItem(index) {
     setElementValue('editCompletedItemQuantity', item.quantity || 1);
     setElementValue('editCompletedItemPrice', item.price || 0);
     setElementValue('editCompletedItemInvoicedDate', item.invoicedDate || '');
+    
+    // Ensure price field is enabled and editable for completed items
+    const priceField = document.getElementById('editCompletedItemPrice');
+    if (priceField) {
+        priceField.disabled = false;
+        priceField.readOnly = false;
+        priceField.style.pointerEvents = 'auto';
+        priceField.style.opacity = '1';
+    }
     
     // Populate customer dropdown
     populateCustomerSelect('editCompletedItemCustomer');
@@ -14024,3 +14913,481 @@ function displayInvoice(invoice) {
     showInvoicePreview(formattedInvoice);
 }
 
+/* ==================== PATTERNS MANAGEMENT (TEMP DISABLED) ====================
+
+// Load patterns from API
+async function loadPatterns() {
+    try {
+        const response = await fetch('/api/patterns');
+        if (response.ok) {
+            patterns = await response.json();
+            renderPatterns();
+            updatePatternFilters();
+        } else {
+            console.error('Failed to load patterns');
+            showNotification('Failed to load patterns', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading patterns:', error);
+        showNotification('Error loading patterns', 'error');
+    }
+}
+
+// Render patterns grid
+function renderPatterns() {
+    const container = document.getElementById('patternsCards');
+    const emptyMessage = document.getElementById('patternsEmptyMessage');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const filtered = getFilteredPatterns();
+    
+    if (filtered.length === 0) {
+        container.style.display = 'none';
+        if (emptyMessage) emptyMessage.style.display = 'block';
+        return;
+    }
+    
+    container.style.display = 'grid';
+    if (emptyMessage) emptyMessage.style.display = 'none';
+    
+    filtered.forEach(pattern => {
+        const card = document.createElement('div');
+        card.className = 'pattern-card';
+        card.innerHTML = `
+            <div class="pattern-card-image">
+                <img src="${pattern.imageUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'}" 
+                     alt="${SecurityManager.escapeHtml(pattern.name)}" 
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'">
+                <div class="pattern-card-overlay">
+                    <button class="btn btn-sm btn-primary" onclick="viewPattern('${pattern._id}')" title="View Pattern">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline" onclick="editPattern('${pattern._id}')" title="Edit Pattern">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deletePattern('${pattern._id}')" title="Delete Pattern">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="pattern-card-info">
+                <h4 class="pattern-card-name">${SecurityManager.escapeHtml(pattern.name)}</h4>
+                ${pattern.designer ? `<p class="pattern-card-designer"><i class="fas fa-user"></i> ${SecurityManager.escapeHtml(pattern.designer)}</p>` : ''}
+                ${pattern.category ? `<span class="pattern-card-category">${SecurityManager.escapeHtml(pattern.category)}</span>` : ''}
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Get filtered patterns
+function getFilteredPatterns() {
+    let filtered = [...patterns];
+    
+    const searchTerm = document.getElementById('patternsSearch')?.value.toLowerCase().trim() || '';
+    const categoryFilter = document.getElementById('patternsCategoryFilter')?.value || '';
+    const designerFilter = document.getElementById('patternsDesignerFilter')?.value || '';
+    
+    if (searchTerm) {
+        filtered = filtered.filter(pattern => {
+            const nameMatch = pattern.name && pattern.name.toLowerCase().includes(searchTerm);
+            const designerMatch = pattern.designer && pattern.designer.toLowerCase().includes(searchTerm);
+            const categoryMatch = pattern.category && pattern.category.toLowerCase().includes(searchTerm);
+            const tagsMatch = pattern.tags && Array.isArray(pattern.tags) && 
+                           pattern.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+            return nameMatch || designerMatch || categoryMatch || tagsMatch;
+        });
+    }
+    
+    if (categoryFilter) {
+        filtered = filtered.filter(pattern => pattern.category === categoryFilter);
+    }
+    
+    if (designerFilter) {
+        filtered = filtered.filter(pattern => pattern.designer === designerFilter);
+    }
+    
+    return filtered;
+}
+
+// Filter patterns
+function filterPatterns() {
+    renderPatterns();
+}
+
+// Update pattern filters (populate designer dropdown)
+function updatePatternFilters() {
+    const designerFilter = document.getElementById('patternsDesignerFilter');
+    if (!designerFilter) return;
+    
+    const designers = [...new Set(patterns.filter(p => p.designer).map(p => p.designer))].sort();
+    designerFilter.innerHTML = '<option value="">All Designers</option>';
+    designers.forEach(designer => {
+        const option = document.createElement('option');
+        option.value = designer;
+        option.textContent = designer;
+        designerFilter.appendChild(option);
+    });
+}
+
+// Open add pattern modal
+function openAddPatternModal() {
+    document.getElementById('addPatternForm').reset();
+    document.getElementById('patternDuplicateWarning').style.display = 'none';
+    document.getElementById('addPatternModal').style.display = 'block';
+}
+
+// Check for duplicate pattern (before adding)
+let pendingPatternData = null;
+let duplicateCheckInProgress = false;
+
+async function checkPatternDuplicate() {
+    const name = document.getElementById('patternName')?.value.trim();
+    if (!name || duplicateCheckInProgress) return;
+    
+    duplicateCheckInProgress = true;
+    try {
+        const response = await fetch('/api/patterns/check-duplicate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        
+        const result = await response.json();
+        
+        if (result.isDuplicate && result.matches.length > 0) {
+            const warningDiv = document.getElementById('patternDuplicateWarning');
+            const listDiv = document.getElementById('patternDuplicateList');
+            
+            listDiv.innerHTML = '<p>Found matching pattern(s):</p><ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
+            result.matches.forEach(match => {
+                listDiv.innerHTML += `<li>${SecurityManager.escapeHtml(match.name)}${match.designer ? ' by ' + SecurityManager.escapeHtml(match.designer) : ''}</li>`;
+            });
+            listDiv.innerHTML += '</ul>';
+            
+            warningDiv.style.display = 'block';
+        } else {
+            document.getElementById('patternDuplicateWarning').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+    } finally {
+        duplicateCheckInProgress = false;
+    }
+}
+
+// Check for duplicate pattern (before editing)
+async function checkPatternDuplicateEdit() {
+    const name = document.getElementById('editPatternName')?.value.trim();
+    const patternId = document.getElementById('editPatternId')?.value;
+    if (!name || duplicateCheckInProgress) return;
+    
+    duplicateCheckInProgress = true;
+    try {
+        const response = await fetch('/api/patterns/check-duplicate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        
+        const result = await response.json();
+        
+        // Filter out the current pattern being edited
+        const matches = result.matches.filter(m => m._id !== patternId);
+        
+        if (matches.length > 0) {
+            const warningDiv = document.getElementById('editPatternDuplicateWarning');
+            const listDiv = document.getElementById('editPatternDuplicateList');
+            
+            listDiv.innerHTML = '<p>Found matching pattern(s):</p><ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
+            matches.forEach(match => {
+                listDiv.innerHTML += `<li>${SecurityManager.escapeHtml(match.name)}${match.designer ? ' by ' + SecurityManager.escapeHtml(match.designer) : ''}</li>`;
+            });
+            listDiv.innerHTML += '</ul>';
+            
+            warningDiv.style.display = 'block';
+        } else {
+            document.getElementById('editPatternDuplicateWarning').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+    } finally {
+        duplicateCheckInProgress = false;
+    }
+}
+
+// Proceed with adding pattern despite duplicate warning
+function proceedWithPattern() {
+    document.getElementById('patternDuplicateWarning').style.display = 'none';
+    document.getElementById('addPatternForm').dispatchEvent(new Event('submit'));
+}
+
+// Cancel pattern add
+function cancelPatternAdd() {
+    document.getElementById('addPatternModal').style.display = 'none';
+}
+
+// Proceed with editing pattern despite duplicate warning
+function proceedWithPatternEdit() {
+    document.getElementById('editPatternDuplicateWarning').style.display = 'none';
+    document.getElementById('editPatternForm').dispatchEvent(new Event('submit'));
+}
+
+// Cancel pattern edit
+function cancelPatternEdit() {
+    document.getElementById('editPatternModal').style.display = 'none';
+}
+
+// Save pattern (form submit)
+document.addEventListener('DOMContentLoaded', () => {
+    const addPatternForm = document.getElementById('addPatternForm');
+    if (addPatternForm) {
+        addPatternForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tagsInput = document.getElementById('patternTags')?.value || '';
+            const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+            
+            const patternData = {
+                name: document.getElementById('patternName').value.trim(),
+                imageUrl: document.getElementById('patternImageUrl').value.trim(),
+                designer: document.getElementById('patternDesigner')?.value.trim() || undefined,
+                source: document.getElementById('patternSource')?.value.trim() || undefined,
+                category: document.getElementById('patternCategory')?.value || undefined,
+                tags: tags.length > 0 ? tags : undefined,
+                patternFileUrl: document.getElementById('patternFileUrl')?.value.trim() || undefined,
+                notes: document.getElementById('patternNotes')?.value.trim() || undefined
+            };
+            
+            try {
+                const response = await fetch('/api/patterns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patternData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showNotification('Pattern added successfully', 'success');
+                    closeModal('addPatternModal');
+                    await loadPatterns();
+                } else if (response.status === 409) {
+                    const error = await response.json();
+                    if (error.isDuplicate) {
+                        const warningDiv = document.getElementById('patternDuplicateWarning');
+                        const listDiv = document.getElementById('patternDuplicateList');
+                        
+                        listDiv.innerHTML = '<p>Found matching pattern(s):</p><ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
+                        error.matches.forEach(match => {
+                            listDiv.innerHTML += `<li>${SecurityManager.escapeHtml(match.name)}${match.designer ? ' by ' + SecurityManager.escapeHtml(match.designer) : ''}</li>`;
+                        });
+                        listDiv.innerHTML += '</ul>';
+                        
+                        warningDiv.style.display = 'block';
+                        pendingPatternData = patternData;
+                        showNotification('Duplicate pattern detected. Review the warning above.', 'warning');
+                    }
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to add pattern', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding pattern:', error);
+                showNotification('Error adding pattern', 'error');
+            }
+        });
+    }
+    
+    const editPatternForm = document.getElementById('editPatternForm');
+    if (editPatternForm) {
+        editPatternForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const patternId = document.getElementById('editPatternId').value;
+            const tagsInput = document.getElementById('editPatternTags')?.value || '';
+            const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+            
+            const patternData = {
+                name: document.getElementById('editPatternName').value.trim(),
+                imageUrl: document.getElementById('editPatternImageUrl').value.trim(),
+                designer: document.getElementById('editPatternDesigner')?.value.trim() || undefined,
+                source: document.getElementById('editPatternSource')?.value.trim() || undefined,
+                category: document.getElementById('editPatternCategory')?.value || undefined,
+                tags: tags.length > 0 ? tags : undefined,
+                patternFileUrl: document.getElementById('editPatternFileUrl')?.value.trim() || undefined,
+                notes: document.getElementById('editPatternNotes')?.value.trim() || undefined
+            };
+            
+            try {
+                const response = await fetch(`/api/patterns/${patternId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patternData)
+                });
+                
+                if (response.ok) {
+                    showNotification('Pattern updated successfully', 'success');
+                    closeModal('editPatternModal');
+                    await loadPatterns();
+                } else if (response.status === 409) {
+                    const error = await response.json();
+                    if (error.isDuplicate) {
+                        const warningDiv = document.getElementById('editPatternDuplicateWarning');
+                        const listDiv = document.getElementById('editPatternDuplicateList');
+                        
+                        listDiv.innerHTML = '<p>Found matching pattern(s):</p><ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
+                        error.matches.forEach(match => {
+                            listDiv.innerHTML += `<li>${SecurityManager.escapeHtml(match.name)}${match.designer ? ' by ' + SecurityManager.escapeHtml(match.designer) : ''}</li>`;
+                        });
+                        listDiv.innerHTML += '</ul>';
+                        
+                        warningDiv.style.display = 'block';
+                        showNotification('Duplicate pattern detected. Review the warning above.', 'warning');
+                    }
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to update pattern', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating pattern:', error);
+                showNotification('Error updating pattern', 'error');
+            }
+        });
+    }
+});
+
+// Edit pattern
+async function editPattern(patternId) {
+    const pattern = patterns.find(p => p._id === patternId);
+    if (!pattern) {
+        showNotification('Pattern not found', 'error');
+        return;
+    }
+    
+    document.getElementById('editPatternId').value = patternId;
+    document.getElementById('editPatternName').value = pattern.name || '';
+    document.getElementById('editPatternImageUrl').value = pattern.imageUrl || '';
+    document.getElementById('editPatternDesigner').value = pattern.designer || '';
+    document.getElementById('editPatternSource').value = pattern.source || '';
+    document.getElementById('editPatternCategory').value = pattern.category || '';
+    document.getElementById('editPatternFileUrl').value = pattern.patternFileUrl || '';
+    document.getElementById('editPatternTags').value = pattern.tags && Array.isArray(pattern.tags) ? pattern.tags.join(', ') : '';
+    document.getElementById('editPatternNotes').value = pattern.notes || '';
+    document.getElementById('editPatternDuplicateWarning').style.display = 'none';
+    
+    document.getElementById('editPatternModal').style.display = 'block';
+}
+
+// Delete pattern
+async function deletePattern(patternId) {
+    if (!confirm('Are you sure you want to delete this pattern?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/patterns/${patternId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Pattern deleted successfully', 'success');
+            await loadPatterns();
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to delete pattern', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting pattern:', error);
+        showNotification('Error deleting pattern', 'error');
+    }
+}
+
+// View pattern details
+async function viewPattern(patternId) {
+    const pattern = patterns.find(p => p._id === patternId);
+    if (!pattern) {
+        showNotification('Pattern not found', 'error');
+        return;
+    }
+    
+    const modal = document.getElementById('patternViewModal');
+    const title = document.getElementById('patternViewTitle');
+    const content = document.getElementById('patternViewContent');
+    
+    title.textContent = pattern.name;
+    content.innerHTML = `
+        <div class="pattern-view-content">
+            ${pattern.imageUrl ? `
+                <div class="pattern-view-image">
+                    <img src="${pattern.imageUrl}" alt="${SecurityManager.escapeHtml(pattern.name)}" 
+                         style="max-width: 100%; height: auto; border-radius: 8px;">
+                </div>
+            ` : ''}
+            <div class="pattern-view-details">
+                ${pattern.designer ? `<p><strong>Designer:</strong> ${SecurityManager.escapeHtml(pattern.designer)}</p>` : ''}
+                ${pattern.source ? `<p><strong>Source:</strong> ${SecurityManager.escapeHtml(pattern.source)}</p>` : ''}
+                ${pattern.category ? `<p><strong>Category:</strong> ${SecurityManager.escapeHtml(pattern.category)}</p>` : ''}
+                ${pattern.tags && pattern.tags.length > 0 ? `
+                    <p><strong>Tags:</strong> ${pattern.tags.map(t => SecurityManager.escapeHtml(t)).join(', ')}</p>
+                ` : ''}
+                ${pattern.patternFileUrl ? `
+                    <p><strong>Pattern File:</strong> <a href="${pattern.patternFileUrl}" target="_blank">Download</a></p>
+                ` : ''}
+                ${pattern.notes ? `<p><strong>Notes:</strong> ${SecurityManager.escapeHtml(pattern.notes)}</p>` : ''}
+                <p><small><strong>Date Added:</strong> ${pattern.dateAdded ? new Date(pattern.dateAdded).toLocaleDateString() : 'N/A'}</small></p>
+            </div>
+            <div class="pattern-view-actions" style="margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="editPattern('${pattern._id}'); closeModal('patternViewModal');">
+                    <i class="fas fa-edit"></i> Edit Pattern
+                </button>
+                <button class="btn btn-danger" onclick="deletePattern('${pattern._id}'); closeModal('patternViewModal');">
+                    <i class="fas fa-trash"></i> Delete Pattern
+                </button>
+            </div>
+        </div>
+    `;
+    
+    modal.style.display = 'block';
+}
+
+// Load patterns when patterns tab is shown
+document.addEventListener('DOMContentLoaded', () => {
+    // Add event listener for patterns tab button
+    const patternsTabBtn = document.querySelector('[data-tab="patterns"]');
+    if (patternsTabBtn) {
+        patternsTabBtn.addEventListener('click', () => {
+            if (patterns.length === 0 || document.getElementById('patterns')?.classList.contains('active')) {
+                loadPatterns();
+            }
+        });
+    }
+    
+    // Also check if patterns tab is active on initial load
+    if (document.getElementById('patterns')?.classList.contains('active')) {
+        loadPatterns();
+    }
+    
+    // Monitor tab visibility changes
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const patternsTab = document.getElementById('patterns');
+                if (patternsTab && patternsTab.classList.contains('active')) {
+                    if (patterns.length === 0) {
+                        loadPatterns();
+                    }
+                }
+            }
+        });
+    });
+    
+    const patternsTab = document.getElementById('patterns');
+    if (patternsTab) {
+        observer.observe(patternsTab, { attributes: true, attributeFilter: ['class'] });
+    }
+});
+
+*/

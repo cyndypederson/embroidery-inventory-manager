@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const { launch, puppeteer } = require('./test-utils/puppeteer-config');
 const TestCleanup = require('./test-cleanup');
 
 class ComprehensiveTester {
@@ -12,21 +12,17 @@ class ComprehensiveTester {
 
     async setup() {
         console.log('🚀 Setting up comprehensive testing environment...');
-        this.browser = await puppeteer.launch({ 
-            headless: false, // Set to true for CI/CD
-            slowMo: 50,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        this.browser = await launch({ slowMo: 50 });
         this.page = await this.browser.newPage();
         
         // Set viewport for responsive testing
         await this.page.setViewport({ width: 1200, height: 800 });
         
-        // Navigate to the app
-        await this.page.goto(this.baseUrl, { waitUntil: 'networkidle0' });
+        // Navigate to the app with increased timeout
+        await this.page.goto(this.baseUrl, { waitUntil: 'networkidle0', timeout: 60000 });
         
-        // Wait for the app to load
-        await this.page.waitForSelector('#projectsTab', { timeout: 15000 });
+        // Wait for the app to load - use correct selector for current UI
+        await this.page.waitForSelector('button[data-tab="projects"]', { timeout: 60000 });
         console.log('✅ App loaded successfully');
     }
 
@@ -36,13 +32,13 @@ class ComprehensiveTester {
         try {
             // Check if main elements are present
             const mainElements = [
-                '#projectsTab',
-                '#inventoryTab', 
-                '#customersTab',
-                '#wipTab',
-                '#galleryTab',
-                '#salesTab',
-                '#ideasTab'
+                'button[data-tab="projects"]',
+                'button[data-tab="inventory"]', 
+                'button[data-tab="customers"]',
+                'button[data-tab="wip"]',
+                'button[data-tab="gallery"]',
+                'button[data-tab="sales"]',
+                'button[data-tab="ideas"]'
             ];
             
             for (const selector of mainElements) {
@@ -127,7 +123,7 @@ class ComprehensiveTester {
         
         // Test Add Project Modal
         try {
-            await this.page.click('#projectsTab');
+            await this.page.click('button.nav-btn[data-tab="projects"]');
             await this.page.waitForTimeout(500);
             
             const addProjectBtn = await this.page.$('button[onclick*="openAddProjectModal"]');
@@ -161,7 +157,7 @@ class ComprehensiveTester {
         
         // Test Add Inventory Modal
         try {
-            await this.page.click('#inventoryTab');
+            await this.page.click('button.nav-btn[data-tab="inventory"]');
             await this.page.waitForTimeout(500);
             
             const addInventoryBtn = await this.page.$('button[onclick*="openAddInventoryModal"]');
@@ -199,7 +195,7 @@ class ComprehensiveTester {
         
         // Test Project Edit Modal
         try {
-            await this.page.click('#projectsTab');
+            await this.page.click('button.nav-btn[data-tab="projects"]');
             await this.page.waitForTimeout(500);
             
             const editButtons = await this.page.$$('button[onclick*="editProject"]');
@@ -243,7 +239,7 @@ class ComprehensiveTester {
         
         // Test Inventory Edit Modal
         try {
-            await this.page.click('#inventoryTab');
+            await this.page.click('button.nav-btn[data-tab="inventory"]');
             await this.page.waitForTimeout(500);
             
             const editButtons = await this.page.$$('button[onclick*="editInventoryItem"]');
@@ -313,7 +309,7 @@ class ComprehensiveTester {
             }
             
             // Test mobile cards
-            await this.page.click('#projectsTab');
+            await this.page.click('button.nav-btn[data-tab="projects"]');
             await this.page.waitForTimeout(1000);
             
             const mobileCards = await this.page.$$('.mobile-card');
@@ -402,9 +398,9 @@ class ComprehensiveTester {
             
             // Test tab switching performance
             const startTime = Date.now();
-            await this.page.click('#inventoryTab');
+            await this.page.click('button.nav-btn[data-tab="inventory"]');
             await this.page.waitForTimeout(100);
-            await this.page.click('#projectsTab');
+            await this.page.click('button.nav-btn[data-tab="projects"]');
             await this.page.waitForTimeout(100);
             const endTime = Date.now();
             
@@ -437,9 +433,9 @@ class ComprehensiveTester {
             });
             
             // Perform some actions that might trigger errors
-            await this.page.click('#projectsTab');
+            await this.page.click('button.nav-btn[data-tab="projects"]');
             await this.page.waitForTimeout(500);
-            await this.page.click('#inventoryTab');
+            await this.page.click('button.nav-btn[data-tab="inventory"]');
             await this.page.waitForTimeout(500);
             
             this.testResults.push({
