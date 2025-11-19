@@ -33,12 +33,10 @@
     {
       "src": "public/logos/(.*)",
       "use": "@vercel/static"
-    }
-  ],
-  "rewrites": [
+    },
     {
-      "source": "/logos/:path*",
-      "destination": "/public/logos/:path*"
+      "src": "logos/(.*)",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
