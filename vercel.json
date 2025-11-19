@@ -33,23 +33,12 @@
     {
       "src": "public/logos/(.*)",
       "use": "@vercel/static"
-    },
-    {
-      "src": "logos/(.*)",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/server.js"
-    },
-    {
-      "src": "/logos/(.*)",
-      "dest": "/logos/$1",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
     },
     {
       "src": "/styles.css",
