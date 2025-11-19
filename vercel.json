@@ -45,6 +45,10 @@
       "dest": "/server.js"
     },
     {
+      "src": "/logos/(.*)",
+      "dest": "/logos/$1"
+    },
+    {
       "src": "/styles.css",
       "dest": "/styles.css"
     },
