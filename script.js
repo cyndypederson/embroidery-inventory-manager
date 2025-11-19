@@ -9755,71 +9755,18 @@ async function generatePriceTags(previewOnly = false) {
     // Show loading spinner while loading logos
     showLoadingSpinner('Loading logos...', 'price-tags');
     
-    // Load logos if they're empty
+    // Load logos if they're empty - use direct paths (browser will handle loading)
     if (!vendorLogo && vendorName) {
-        console.log('🔍 Vendor logo empty, attempting to load for:', vendorName);
-        vendorLogo = await findVendorLogo(vendorName);
-        if (vendorLogo) {
-            console.log('✅ Found vendor logo:', vendorLogo);
-        } else {
-            console.log('❌ Vendor logo not found via check, trying direct path...');
-            // Fallback: try direct path even if check failed
-            const normalizedName = normalizeVendorName(vendorName);
-            const directPath = `/logos/vendors/${normalizedName}.png`;
-            console.log('🔍 Trying direct path:', directPath);
-            // Just use the path - let the browser try to load it
-            vendorLogo = directPath;
-            showNotification(`Attempting to load vendor logo from: ${directPath}`, 'info');
-        }
+        console.log('🔍 Vendor logo empty, using direct path for:', vendorName);
+        const normalizedName = normalizeVendorName(vendorName);
+        vendorLogo = `/logos/vendors/${normalizedName}.png`;
+        console.log('📋 Using vendor logo path:', vendorLogo);
     }
     
     if (!myLogo) {
-        console.log('🔍 My logo empty, attempting to load...');
-        myLogo = await findMyLogo();
-        if (myLogo) {
-            console.log('✅ Found my logo:', myLogo);
-        } else {
-            console.log('❌ My logo not found via check, trying direct path...');
-            // Fallback: try direct path
-            const directPath = '/logos/my-logo.png';
-            console.log('🔍 Trying direct path:', directPath);
-            myLogo = directPath;
-            showNotification(`Attempting to load logo from: ${directPath}`, 'info');
-        }
-    }
-    
-    // Preload images to ensure they're available
-    const preloadImages = async (urls) => {
-        const promises = urls.map(url => {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    console.log(`✅ Preloaded: ${url}`);
-                    resolve(true);
-                };
-                img.onerror = () => {
-                    console.log(`❌ Failed to preload: ${url}`);
-                    resolve(false);
-                };
-                img.src = url;
-            });
-        });
-        return Promise.all(promises);
-    };
-    
-    const imageUrls = [];
-    if (vendorLogo) {
-        const vendorUrl = vendorLogo.startsWith('/') ? vendorLogo : '/' + vendorLogo;
-        imageUrls.push(vendorUrl);
-    }
-    if (myLogo) {
-        const myUrl = myLogo.startsWith('/') ? myLogo : '/' + myLogo;
-        imageUrls.push(myUrl);
-    }
-    
-    if (imageUrls.length > 0) {
-        console.log('🔄 Preloading images...', imageUrls);
-        await preloadImages(imageUrls);
+        console.log('🔍 My logo empty, using direct path');
+        myLogo = '/logos/my-logo.png';
+        console.log('📋 Using my logo path:', myLogo);
     }
     
     hideLoadingSpinner('price-tags');
