@@ -6277,6 +6277,9 @@ async function loadDataFromAPI() {
     isLoadingAPI = true;
     lastAPILoad = now;
     
+    // Show loading spinner
+    showLoadingSpinner('Loading data...', 'load');
+    
     try {
         console.log('📡 Loading data from API...');
         const [inventoryRes, customersRes, salesRes, galleryRes, ideasRes] = await Promise.all([
@@ -6298,7 +6301,8 @@ async function loadDataFromAPI() {
 
         for (const { name, response } of responses) {
             if (!response.ok) {
-                throw new Error(`Failed to load ${name}: ${response.status} ${response.statusText}`);
+                const errorText = await response.text().catch(() => response.statusText);
+                throw new Error(`Failed to load ${name}: ${response.status} ${errorText}`);
             }
         }
 
@@ -6323,10 +6327,27 @@ async function loadDataFromAPI() {
         console.log('  🖼️ Gallery items:', gallery.length);
         console.log('  💡 Ideas:', ideas.length);
 
+        hideLoadingSpinner('load');
         loadData();
         updateConnectionStatus('connected');
     } catch (error) {
         console.error('❌ API data loading failed:', error.message);
+        hideLoadingSpinner('load');
+        
+        // Provide specific error message
+        let errorMessage = 'Failed to load data';
+        if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+            errorMessage = 'Network error - check your internet connection';
+        } else if (error.message && error.message.includes('401') || error.message.includes('403')) {
+            errorMessage = 'Authentication required - please log in';
+        } else if (error.message && error.message.includes('500')) {
+            errorMessage = 'Server error - please try again in a moment';
+        }
+        
+        showError(errorMessage, error, () => {
+            loadDataFromAPI();
+        });
+        
         console.log('🔄 Falling back to localStorage...');
         loadDataFromLocalStorage();
         updateConnectionStatus('disconnected');
@@ -6663,7 +6684,8 @@ async function saveDataToAPI() {
             });
             
             if (!response.ok) {
-                throw new Error(`Failed to save ${name}: ${response.status} ${response.statusText}`);
+                const errorText = await response.text().catch(() => response.statusText);
+                throw new Error(`Failed to save ${name}: ${response.status} ${errorText}`);
             }
             
             return { name, success: true };
@@ -6674,8 +6696,16 @@ async function saveDataToAPI() {
         
     } catch (error) {
         console.error('❌ API save failed:', error.message);
-        console.log('🔄 Falling back to localStorage...');
-        await saveDataToLocalStorage();
+        // Re-throw with more context for better error messages
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            throw new Error('Network error - check your internet connection');
+        } else if (error.message.includes('401') || error.message.includes('403')) {
+            throw new Error('Authentication required - please log in again');
+        } else if (error.message.includes('500')) {
+            throw new Error('Server error - please try again in a moment');
+        } else {
+            throw error;
+        }
     }
 }
 
@@ -6793,10 +6823,14 @@ async function saveData() {
     window.isModifying = true;
     console.log('💾 Set isSaving = true, isModifying = true');
     
+    // Show loading spinner
+    showLoadingSpinner('Saving data...', 'save');
+    
     // Validate data before saving
     if (!validateDataIntegrity()) {
         console.error('Data validation failed, skipping save');
-        showNotification('Data validation failed. Please refresh and try again.', 'error');
+        hideLoadingSpinner('save');
+        showError('Data validation failed', new Error('Please refresh and try again'));
         window.isSaving = false;
         window.isModifying = false;
         return;
@@ -6806,9 +6840,20 @@ async function saveData() {
         // Try API first, fallback to localStorage
         await saveDataToAPI();
         console.log('✅ Data saved to API successfully');
+        hideLoadingSpinner('save');
+        showNotification('Data saved successfully!', 'success');
     } catch (error) {
         console.error('❌ API save failed, falling back to localStorage:', error);
-        await saveDataToLocalStorage();
+        try {
+            await saveDataToLocalStorage();
+            hideLoadingSpinner('save');
+            showNotification('Data saved locally (offline mode)', 'info');
+        } catch (localError) {
+            hideLoadingSpinner('save');
+            showError('Failed to save data', localError, () => {
+                saveData();
+            });
+        }
     }
     
     // Clear the flags after a delay to allow storage events to resume
@@ -10480,6 +10525,9 @@ async function deleteItem(itemIdOrIndex) {
 }
 
 async function proceedWithDeletion(itemIdOrIndex) {
+    // Show loading spinner
+    showLoadingSpinner('Deleting item...', 'delete');
+    
     // Store expanded customer groups before deleting
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
@@ -10504,12 +10552,17 @@ async function proceedWithDeletion(itemIdOrIndex) {
         // Try to save data, but don't let localStorage errors prevent deletion
         try {
             await saveData();
+            hideLoadingSpinner('delete');
+            showNotification('Item deleted successfully', 'success');
         } catch (error) {
             console.error('Save failed but item deleted:', error);
+            hideLoadingSpinner('delete');
+            showError('Item deleted but failed to save', error, () => {
+                saveData();
+            });
             // Still reload the tables even if save failed
             loadInventoryTable();
             loadInventoryItemsTable();
-            showNotification('Item deleted but save failed - may need to refresh', 'warning');
             return;
         }
         
@@ -10518,11 +10571,11 @@ async function proceedWithDeletion(itemIdOrIndex) {
         
         // Expanded customer groups will be restored automatically by loadInventoryTable()
         
-        showNotification('Item deleted successfully!', 'success');
         console.log('✅ Item deleted successfully');
     } else {
-        console.error('❌ Invalid index for deletion:', index);
-        showNotification('Error: Invalid item index', 'error');
+        hideLoadingSpinner('delete');
+        console.error('❌ Invalid index for deletion:', itemIdOrIndex);
+        showError('Invalid item', new Error('The item could not be found or has already been deleted'));
     }
 }
 
@@ -12624,6 +12677,145 @@ function confirmMobileAction() {
 }
 
 // Notification System
+// ==================== LOADING SPINNER SYSTEM ====================
+let activeLoaders = new Set();
+
+function showLoadingSpinner(message = 'Loading...', id = 'default') {
+    // Remove any existing loader with same ID
+    hideLoadingSpinner(id);
+    
+    const loader = document.createElement('div');
+    loader.className = 'loading-spinner-container';
+    loader.id = `loader-${id}`;
+    loader.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-message">${message}</div>
+        </div>
+    `;
+    
+    loader.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        backdrop-filter: blur(2px);
+    `;
+    
+    document.body.appendChild(loader);
+    activeLoaders.add(id);
+}
+
+function hideLoadingSpinner(id = 'default') {
+    const loader = document.getElementById(`loader-${id}`);
+    if (loader && loader.parentNode) {
+        loader.parentNode.removeChild(loader);
+    }
+    activeLoaders.delete(id);
+}
+
+function hideAllLoadingSpinners() {
+    activeLoaders.forEach(id => hideLoadingSpinner(id));
+    activeLoaders.clear();
+}
+
+// ==================== ENHANCED ERROR HANDLING ====================
+function showError(message, error = null, retryCallback = null) {
+    // Create error notification with retry option
+    const notification = document.createElement('div');
+    notification.className = 'notification notification-error';
+    
+    let errorDetails = '';
+    if (error) {
+        if (error.message) {
+            errorDetails = `<div style="font-size: 0.85em; margin-top: 0.5rem; opacity: 0.9;">${error.message}</div>`;
+        }
+        
+        // Provide specific guidance based on error type
+        if (error.message && error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            errorDetails += '<div style="font-size: 0.85em; margin-top: 0.5rem; font-weight: 600;">Check your internet connection</div>';
+        } else if (error.message && error.message.includes('401') || error.message.includes('403')) {
+            errorDetails += '<div style="font-size: 0.85em; margin-top: 0.5rem; font-weight: 600;">Please log in again</div>';
+        } else if (error.message && error.message.includes('500')) {
+            errorDetails += '<div style="font-size: 0.85em; margin-top: 0.5rem; font-weight: 600;">Server error - please try again in a moment</div>';
+        } else if (error.message && error.message.includes('QuotaExceededError')) {
+            errorDetails += '<div style="font-size: 0.85em; margin-top: 0.5rem; font-weight: 600;">Storage full - clearing old data...</div>';
+        }
+    }
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">${message}</div>
+                ${errorDetails}
+            </div>
+            ${retryCallback ? `
+                <button class="retry-btn" style="
+                    background: rgba(255,255,255,0.2);
+                    border: 1px solid rgba(255,255,255,0.3);
+                    color: white;
+                    padding: 0.4rem 0.8rem;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.85em;
+                    font-weight: 600;
+                    white-space: nowrap;
+                ">Retry</button>
+            ` : ''}
+        </div>
+    `;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 10001;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+        background-color: #dc3545;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add retry button click handler if callback provided
+    if (retryCallback) {
+        const retryBtn = notification.querySelector('.retry-btn');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', () => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+                retryCallback();
+            });
+        }
+    }
+    
+    // Remove after 8 seconds (longer for errors with retry)
+    const timeout = retryCallback ? 8000 : 5000;
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, timeout);
+}
+
 function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
@@ -12667,7 +12859,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Add CSS for notifications
+// Add CSS for notifications and loading spinners
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -12678,6 +12870,40 @@ style.textContent = `
     @keyframes slideOut {
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .loading-spinner {
+        background: white;
+        padding: 2rem 3rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        text-align: center;
+        min-width: 200px;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #2C5F7C;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    
+    .loading-message {
+        color: #333;
+        font-weight: 500;
+        font-size: 1rem;
+    }
+    
+    .retry-btn:hover {
+        background: rgba(255,255,255,0.3) !important;
     }
 `;
 document.head.appendChild(style);
