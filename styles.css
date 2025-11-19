@@ -6896,15 +6896,16 @@ body {
     }
     
     .customer-card-actions .btn {
-        flex: 1;
-        min-width: 80px;
-        padding: 0.5rem;
-        font-size: 0.8rem;
+        flex: 0 1 auto;
+        min-width: 90px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
         border-radius: 6px;
         text-align: center;
         display: flex;
         align-items: center;
         justify-content: center;
+        white-space: nowrap;
         gap: 0.25rem;
     }
     
@@ -7928,7 +7929,7 @@ body {
 
 .customers-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -8015,6 +8016,19 @@ body {
     justify-content: flex-end;
     padding-top: 1rem;
     border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+}
+
+.customer-card-actions .btn {
+    flex: 0 1 auto;
+    min-width: 90px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
 }
 
 /* Sales Cards Layout */
