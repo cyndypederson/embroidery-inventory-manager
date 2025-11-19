@@ -29,12 +29,20 @@
     {
       "src": "logo.svg",
       "use": "@vercel/static"
+    },
+    {
+      "src": "public/logos/(.*)",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/server.js"
+    },
+    {
+      "src": "/logos/(.*)",
+      "dest": "/public/logos/$1"
     },
     {
       "src": "/styles.css",

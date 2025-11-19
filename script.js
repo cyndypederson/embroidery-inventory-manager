@@ -623,6 +623,9 @@ function loadCustomersCards() {
                 ` : ''}
             </div>
             <div class="customer-card-actions">
+                <button class="btn btn-success btn-sm" onclick="dataManager.exportCustomerOrderHistoryPDF('${customer.name}')" title="Export Order History">
+                    <i class="fas fa-file-pdf"></i> Export
+                </button>
                 <button class="btn btn-outline btn-sm" onclick="editCustomer(${index})" title="Edit Customer">
                     <i class="fas fa-edit"></i> Edit
                 </button>
@@ -1722,7 +1725,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.103'
+                appVersion: '1.0.104'
             }
         };
         
@@ -1941,9 +1944,360 @@ class DataManager {
     }
     
     exportToPDF(data, filename) {
-        // Create a simple PDF-like report
-        const reportContent = this.generateReportContent(data);
-        this.downloadFile(reportContent, filename, 'text/html');
+        // Use jsPDF to create a proper PDF
+        if (typeof window.jspdf === 'undefined') {
+            showError('PDF library not loaded', new Error('Please refresh the page and try again'));
+            return;
+        }
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add header
+            doc.setFontSize(18);
+            doc.text('Embroidery Inventory Report', 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+            doc.text(`Total Items: ${data.length}`, 14, 36);
+            
+            // Add table
+            let yPos = 50;
+            const pageHeight = doc.internal.pageSize.height;
+            const margin = 14;
+            const rowHeight = 8;
+            
+            if (data.length > 0) {
+                const headers = Object.keys(data[0]);
+                const colWidth = (doc.internal.pageSize.width - (margin * 2)) / headers.length;
+                
+                // Table headers
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                headers.forEach((header, i) => {
+                    doc.text(header, margin + (i * colWidth), yPos);
+                });
+                yPos += rowHeight;
+                
+                // Table rows
+                doc.setFont(undefined, 'normal');
+                data.forEach((row, rowIndex) => {
+                    if (yPos > pageHeight - 20) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+                    
+                    headers.forEach((header, i) => {
+                        const value = String(row[header] || '').substring(0, 30); // Truncate long values
+                        doc.text(value, margin + (i * colWidth), yPos);
+                    });
+                    yPos += rowHeight;
+                });
+            }
+            
+            doc.save(filename || 'inventory_report.pdf');
+            showNotification('PDF exported successfully!', 'success');
+        } catch (error) {
+            console.error('PDF export error:', error);
+            showError('Failed to export PDF', error);
+        }
+    }
+    
+    // Export invoice as PDF
+    exportInvoicePDF(saleIndex) {
+        if (typeof window.jspdf === 'undefined') {
+            showError('PDF library not loaded', new Error('Please refresh the page and try again'));
+            return;
+        }
+        
+        if (saleIndex < 0 || saleIndex >= sales.length) {
+            showError('Invalid sale', new Error('Sale record not found'));
+            return;
+        }
+        
+        try {
+            const sale = sales[saleIndex];
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Invoice header
+            doc.setFontSize(24);
+            doc.text('INVOICE', 105, 20, { align: 'center' });
+            
+            doc.setFontSize(10);
+            const date = new Date().toLocaleDateString();
+            doc.text(`Date: ${date}`, 14, 35);
+            doc.text(`Invoice #: ${sale.id || saleIndex + 1}`, 14, 42);
+            
+            // Customer info
+            if (sale.customer) {
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text('Bill To:', 14, 55);
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(10);
+                doc.text(sale.customer, 14, 62);
+                if (sale.customerContact) {
+                    doc.text(sale.customerContact, 14, 69);
+                }
+            }
+            
+            // Item details
+            let yPos = 90;
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Item Description', 14, yPos);
+            doc.text('Quantity', 100, yPos);
+            doc.text('Price', 140, yPos);
+            doc.text('Total', 170, yPos);
+            
+            yPos += 8;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, yPos, 200, yPos);
+            yPos += 5;
+            
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            const description = sale.description || sale.itemDescription || 'Embroidery Item';
+            const quantity = sale.quantity || 1;
+            const price = parseFloat(sale.price) || parseFloat(sale.salePrice) || 0;
+            const total = quantity * price;
+            
+            doc.text(description.substring(0, 50), 14, yPos);
+            doc.text(String(quantity), 100, yPos);
+            doc.text(`$${price.toFixed(2)}`, 140, yPos);
+            doc.text(`$${total.toFixed(2)}`, 170, yPos);
+            
+            // Totals
+            yPos += 15;
+            doc.line(140, yPos, 200, yPos);
+            yPos += 8;
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Subtotal:', 140, yPos);
+            doc.text(`$${total.toFixed(2)}`, 170, yPos);
+            
+            const tax = parseFloat(sale.tax) || 0;
+            if (tax > 0) {
+                yPos += 8;
+                doc.setFont(undefined, 'normal');
+                doc.text('Tax:', 140, yPos);
+                doc.text(`$${tax.toFixed(2)}`, 170, yPos);
+            }
+            
+            const commission = parseFloat(sale.commission) || 0;
+            if (commission > 0) {
+                yPos += 8;
+                doc.text('Commission:', 140, yPos);
+                doc.text(`$${commission.toFixed(2)}`, 170, yPos);
+            }
+            
+            yPos += 8;
+            doc.line(140, yPos, 200, yPos);
+            yPos += 8;
+            
+            const grandTotal = total + tax;
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(12);
+            doc.text('Total:', 140, yPos);
+            doc.text(`$${grandTotal.toFixed(2)}`, 170, yPos);
+            
+            // Notes
+            if (sale.notes) {
+                yPos += 15;
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                doc.text('Notes:', 14, yPos);
+                yPos += 7;
+                const notes = sale.notes.split('\n');
+                notes.forEach(note => {
+                    doc.text(note.substring(0, 80), 14, yPos);
+                    yPos += 7;
+                });
+            }
+            
+            const filename = `invoice_${sale.id || saleIndex + 1}_${date.replace(/\//g, '-')}.pdf`;
+            doc.save(filename);
+            showNotification('Invoice exported successfully!', 'success');
+        } catch (error) {
+            console.error('Invoice PDF export error:', error);
+            showError('Failed to export invoice', error);
+        }
+    }
+    
+    // Export sales report as PDF
+    exportSalesReportPDF(startDate = null, endDate = null) {
+        if (typeof window.jspdf === 'undefined') {
+            showError('PDF library not loaded', new Error('Please refresh the page and try again'));
+            return;
+        }
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Filter sales by date if provided
+            let filteredSales = sales;
+            if (startDate || endDate) {
+                filteredSales = sales.filter(sale => {
+                    const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
+                    if (startDate && saleDate < new Date(startDate)) return false;
+                    if (endDate && saleDate > new Date(endDate)) return false;
+                    return true;
+                });
+            }
+            
+            // Header
+            doc.setFontSize(18);
+            doc.text('Sales Report', 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+            if (startDate || endDate) {
+                doc.text(`Period: ${startDate || 'Beginning'} to ${endDate || 'Today'}`, 14, 37);
+            }
+            doc.text(`Total Sales: ${filteredSales.length}`, 14, 44);
+            
+            // Calculate totals
+            const totalRevenue = filteredSales.reduce((sum, sale) => {
+                const price = parseFloat(sale.price) || parseFloat(sale.salePrice) || 0;
+                const qty = parseFloat(sale.quantity) || 1;
+                return sum + (price * qty);
+            }, 0);
+            
+            doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 14, 51);
+            
+            // Sales table
+            let yPos = 65;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text('Date', 14, yPos);
+            doc.text('Customer', 50, yPos);
+            doc.text('Item', 100, yPos);
+            doc.text('Amount', 160, yPos);
+            
+            yPos += 8;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, yPos, 200, yPos);
+            yPos += 5;
+            
+            doc.setFont(undefined, 'normal');
+            const pageHeight = doc.internal.pageSize.height;
+            
+            filteredSales.forEach(sale => {
+                if (yPos > pageHeight - 20) {
+                    doc.addPage();
+                    yPos = 14;
+                }
+                
+                const saleDate = sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : 'N/A';
+                const customer = (sale.customer || 'N/A').substring(0, 20);
+                const item = (sale.description || sale.itemDescription || 'N/A').substring(0, 25);
+                const amount = parseFloat(sale.price) || parseFloat(sale.salePrice) || 0;
+                const qty = parseFloat(sale.quantity) || 1;
+                const total = amount * qty;
+                
+                doc.text(saleDate, 14, yPos);
+                doc.text(customer, 50, yPos);
+                doc.text(item, 100, yPos);
+                doc.text(`$${total.toFixed(2)}`, 160, yPos);
+                yPos += 7;
+            });
+            
+            // Summary at end
+            yPos += 5;
+            doc.line(14, yPos, 200, yPos);
+            yPos += 8;
+            doc.setFont(undefined, 'bold');
+            doc.text('Total Revenue:', 140, yPos);
+            doc.text(`$${totalRevenue.toFixed(2)}`, 160, yPos);
+            
+            const filename = `sales_report_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+            showNotification('Sales report exported successfully!', 'success');
+        } catch (error) {
+            console.error('Sales report PDF export error:', error);
+            showError('Failed to export sales report', error);
+        }
+    }
+    
+    // Export customer order history as PDF
+    exportCustomerOrderHistoryPDF(customerName) {
+        if (typeof window.jspdf === 'undefined') {
+            showError('PDF library not loaded', new Error('Please refresh the page and try again'));
+            return;
+        }
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Get customer orders
+            const customerOrders = inventory.filter(item => item.customer === customerName);
+            const customerSales = sales.filter(sale => sale.customer === customerName);
+            
+            // Header
+            doc.setFontSize(18);
+            doc.text('Customer Order History', 105, 20, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(customerName, 105, 30, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 40);
+            doc.text(`Total Orders: ${customerOrders.length}`, 14, 47);
+            doc.text(`Total Sales: ${customerSales.length}`, 14, 54);
+            
+            // Calculate totals
+            const totalSpent = customerOrders.reduce((sum, item) => {
+                const price = parseFloat(item.price) || 0;
+                const qty = parseFloat(item.quantity) || 1;
+                return sum + (price * qty);
+            }, 0);
+            
+            doc.text(`Total Spent: $${totalSpent.toFixed(2)}`, 14, 61);
+            
+            // Orders table
+            let yPos = 75;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text('Date', 14, yPos);
+            doc.text('Description', 50, yPos);
+            doc.text('Status', 120, yPos);
+            doc.text('Amount', 150, yPos);
+            
+            yPos += 8;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, yPos, 200, yPos);
+            yPos += 5;
+            
+            doc.setFont(undefined, 'normal');
+            const pageHeight = doc.internal.pageSize.height;
+            
+            customerOrders.forEach(order => {
+                if (yPos > pageHeight - 20) {
+                    doc.addPage();
+                    yPos = 14;
+                }
+                
+                const orderDate = order.dueDate ? new Date(order.dueDate).toLocaleDateString() : 'N/A';
+                const description = (order.description || 'N/A').substring(0, 30);
+                const status = (order.status || 'pending').substring(0, 15);
+                const amount = parseFloat(order.price) || 0;
+                const qty = parseFloat(order.quantity) || 1;
+                const total = amount * qty;
+                
+                doc.text(orderDate, 14, yPos);
+                doc.text(description, 50, yPos);
+                doc.text(status, 120, yPos);
+                doc.text(`$${total.toFixed(2)}`, 150, yPos);
+                yPos += 7;
+            });
+            
+            const filename = `customer_history_${customerName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+            showNotification('Customer order history exported successfully!', 'success');
+        } catch (error) {
+            console.error('Customer order history PDF export error:', error);
+            showError('Failed to export customer order history', error);
+        }
     }
     
     generateReportContent(data) {
@@ -3264,7 +3618,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.103'; // Current app version
+                const currentVersion = '1.0.104'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5339,7 +5693,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.103';
+        const currentVersion = '1.0.104';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -9200,50 +9554,83 @@ async function findVendorLogo(vendorName) {
     
     const normalizedName = normalizeVendorName(vendorName);
     const extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
-    const basePath = '/logos/vendors/';
+    const basePaths = ['/logos/vendors/', '/public/logos/vendors/'];
     
-    // Try each extension
-    for (const ext of extensions) {
-        const logoPath = `${basePath}${normalizedName}.${ext}`;
-        // Check if file exists by trying to load it
-        const exists = await checkFileExists(logoPath);
-        if (exists) {
-            return logoPath;
+    // Try each base path
+    for (const basePath of basePaths) {
+        // Try each extension
+        for (const ext of extensions) {
+            const logoPath = `${basePath}${normalizedName}.${ext}`;
+            console.log(`🔍 Checking vendor logo: ${logoPath}`);
+            const exists = await checkFileExists(logoPath);
+            if (exists) {
+                console.log(`✅ Found vendor logo at: ${logoPath}`);
+                return logoPath;
+            }
+        }
+        
+        // Also try with original name (with spaces/special chars replaced)
+        const altName = vendorName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        for (const ext of extensions) {
+            const logoPath = `${basePath}${altName}.${ext}`;
+            console.log(`🔍 Checking vendor logo (alt): ${logoPath}`);
+            const exists = await checkFileExists(logoPath);
+            if (exists) {
+                console.log(`✅ Found vendor logo at: ${logoPath}`);
+                return logoPath;
+            }
         }
     }
     
-    // Also try with original name (with spaces/special chars replaced)
-    const altName = vendorName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    for (const ext of extensions) {
-        const logoPath = `${basePath}${altName}.${ext}`;
-        const exists = await checkFileExists(logoPath);
-        if (exists) {
-            return logoPath;
-        }
-    }
-    
+    console.log(`❌ Vendor logo not found for: ${vendorName}`);
     return null;
 }
 
 // Function to check if a file exists (with timeout to avoid too many requests)
 function checkFileExists(url) {
     return new Promise((resolve) => {
-        // Use fetch with timeout
+        // Use fetch with timeout - try GET first, fallback to HEAD
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
         
+        // Try GET first (more reliable for images)
         fetch(url + '?t=' + Date.now(), { 
-            method: 'HEAD',
-            signal: controller.signal
+            method: 'GET',
+            signal: controller.signal,
+            cache: 'no-cache'
         })
             .then(response => {
                 clearTimeout(timeoutId);
-                resolve(response.ok);
+                const exists = response.ok && response.status === 200;
+                if (exists) {
+                    console.log(`✅ File exists: ${url}`);
+                }
+                resolve(exists);
             })
-            .catch(() => {
+            .catch((error) => {
                 clearTimeout(timeoutId);
-                // Silently fail - don't log 404s for missing files
-                resolve(false);
+                // Try HEAD as fallback
+                const headController = new AbortController();
+                const headTimeout = setTimeout(() => headController.abort(), 1000);
+                
+                fetch(url + '?t=' + Date.now(), {
+                    method: 'HEAD',
+                    signal: headController.signal,
+                    cache: 'no-cache'
+                })
+                    .then(response => {
+                        clearTimeout(headTimeout);
+                        const exists = response.ok;
+                        if (exists) {
+                            console.log(`✅ File exists (HEAD): ${url}`);
+                        }
+                        resolve(exists);
+                    })
+                    .catch(() => {
+                        clearTimeout(headTimeout);
+                        console.log(`❌ File not found: ${url}`);
+                        resolve(false);
+                    });
             });
     });
 }
@@ -9253,27 +9640,35 @@ async function findMyLogo() {
     // Try most likely names first (my-logo.png is the standard)
     const names = ['my-logo', 'logo'];
     const extensions = ['png', 'jpg', 'jpeg', 'svg'];
-    const basePath = '/logos/';
+    const basePaths = ['/logos/', '/public/logos/'];
     
-    // Try my-logo.png first (most likely)
-    const primaryPath = `${basePath}my-logo.png`;
-    const primaryExists = await checkFileExists(primaryPath);
-    if (primaryExists) {
-        return primaryPath;
-    }
-    
-    // Then try other combinations
-    for (const name of names) {
-        for (const ext of extensions) {
-            if (name === 'my-logo' && ext === 'png') continue; // Already tried
-            const logoPath = `${basePath}${name}.${ext}`;
-            const exists = await checkFileExists(logoPath);
-            if (exists) {
-                return logoPath;
+    // Try each base path
+    for (const basePath of basePaths) {
+        // Try my-logo.png first (most likely)
+        const primaryPath = `${basePath}my-logo.png`;
+        console.log(`🔍 Checking my logo: ${primaryPath}`);
+        const primaryExists = await checkFileExists(primaryPath);
+        if (primaryExists) {
+            console.log(`✅ Found my logo at: ${primaryPath}`);
+            return primaryPath;
+        }
+        
+        // Then try other combinations
+        for (const name of names) {
+            for (const ext of extensions) {
+                if (name === 'my-logo' && ext === 'png') continue; // Already tried
+                const logoPath = `${basePath}${name}.${ext}`;
+                console.log(`🔍 Checking my logo: ${logoPath}`);
+                const exists = await checkFileExists(logoPath);
+                if (exists) {
+                    console.log(`✅ Found my logo at: ${logoPath}`);
+                    return logoPath;
+                }
             }
         }
     }
     
+    console.log('❌ My logo not found');
     return null;
 }
 
@@ -9333,7 +9728,7 @@ function previewPriceTags() {
     generatePriceTags(true);
 }
 
-function generatePriceTags(previewOnly = false) {
+async function generatePriceTags(previewOnly = false) {
     const form = document.getElementById('priceTagForm');
     if (!form) {
         showNotification('Price tag form not found', 'error');
@@ -9357,61 +9752,101 @@ function generatePriceTags(previewOnly = false) {
         return;
     }
     
-    // If logos are empty, try to load them now
+    // Show loading spinner while loading logos
+    showLoadingSpinner('Loading logos...', 'price-tags');
+    
+    // Load logos if they're empty
     if (!vendorLogo && vendorName) {
-        console.log('🔍 Vendor logo empty, attempting to load...');
-        findVendorLogo(vendorName).then(logo => {
-            if (logo) {
-                vendorLogo = logo;
-                console.log('✅ Found vendor logo:', vendorLogo);
-            }
-        });
+        console.log('🔍 Vendor logo empty, attempting to load for:', vendorName);
+        vendorLogo = await findVendorLogo(vendorName);
+        if (vendorLogo) {
+            console.log('✅ Found vendor logo:', vendorLogo);
+        } else {
+            console.log('❌ Vendor logo not found via check, trying direct path...');
+            // Fallback: try direct path even if check failed
+            const normalizedName = normalizeVendorName(vendorName);
+            const directPath = `/logos/vendors/${normalizedName}.png`;
+            console.log('🔍 Trying direct path:', directPath);
+            // Just use the path - let the browser try to load it
+            vendorLogo = directPath;
+            showNotification(`Attempting to load vendor logo from: ${directPath}`, 'info');
+        }
     }
     
     if (!myLogo) {
         console.log('🔍 My logo empty, attempting to load...');
-        findMyLogo().then(logo => {
-            if (logo) {
-                myLogo = logo;
-                console.log('✅ Found my logo:', myLogo);
-            }
-        });
+        myLogo = await findMyLogo();
+        if (myLogo) {
+            console.log('✅ Found my logo:', myLogo);
+        } else {
+            console.log('❌ My logo not found via check, trying direct path...');
+            // Fallback: try direct path
+            const directPath = '/logos/my-logo.png';
+            console.log('🔍 Trying direct path:', directPath);
+            myLogo = directPath;
+            showNotification(`Attempting to load logo from: ${directPath}`, 'info');
+        }
     }
     
-    // Wait a moment for logos to load if they were empty
-    const loadLogos = async () => {
-        if (!vendorLogo && vendorName) {
-            vendorLogo = await findVendorLogo(vendorName);
-            console.log('🔍 Loaded vendor logo:', vendorLogo);
-        }
-        if (!myLogo) {
-            myLogo = await findMyLogo();
-            console.log('🔍 Loaded my logo:', myLogo);
-        }
-        
-        // Close modal
-        closeModal('priceTagModal');
-        
-        // Generate price tags HTML
-        const priceTagsHTML = generatePriceTagsHTML(selectedItems, vendorName, vendorNumber, vendorLogo, myLogo);
-        
-        // Show preview
-        const preview = document.getElementById('priceTagPreview');
-        if (preview) {
-            preview.innerHTML = priceTagsHTML;
-            preview.style.display = 'block';
-            preview.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // If not preview only, print after a short delay
-        if (!previewOnly) {
-            setTimeout(() => {
-                window.print();
-            }, 500);
-        }
+    // Preload images to ensure they're available
+    const preloadImages = async (urls) => {
+        const promises = urls.map(url => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    console.log(`✅ Preloaded: ${url}`);
+                    resolve(true);
+                };
+                img.onerror = () => {
+                    console.log(`❌ Failed to preload: ${url}`);
+                    resolve(false);
+                };
+                img.src = url;
+            });
+        });
+        return Promise.all(promises);
     };
     
-    loadLogos();
+    const imageUrls = [];
+    if (vendorLogo) {
+        const vendorUrl = vendorLogo.startsWith('/') ? vendorLogo : '/' + vendorLogo;
+        imageUrls.push(vendorUrl);
+    }
+    if (myLogo) {
+        const myUrl = myLogo.startsWith('/') ? myLogo : '/' + myLogo;
+        imageUrls.push(myUrl);
+    }
+    
+    if (imageUrls.length > 0) {
+        console.log('🔄 Preloading images...', imageUrls);
+        await preloadImages(imageUrls);
+    }
+    
+    hideLoadingSpinner('price-tags');
+    
+    // Log final logo status
+    console.log('📋 Final logo status:', { vendorLogo, myLogo });
+    
+    // Close modal
+    closeModal('priceTagModal');
+    
+    // Generate price tags HTML with logos
+    const priceTagsHTML = generatePriceTagsHTML(selectedItems, vendorName, vendorNumber, vendorLogo, myLogo);
+    
+    // Show preview
+    const preview = document.getElementById('priceTagPreview');
+    if (preview) {
+        preview.innerHTML = priceTagsHTML;
+        preview.style.display = 'block';
+        preview.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // If not preview only, print after a short delay
+    if (!previewOnly) {
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    }
 }
 
 function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo) {
@@ -9428,12 +9863,22 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
             // Build logo HTML with error handling
             let vendorLogoHTML = '';
             if (vendorLogo) {
-                vendorLogoHTML = `<img src="${vendorLogo}" alt="${vendorName} Logo" class="price-tag-vendor-logo" onerror="console.error('Failed to load vendor logo:', this.src); this.style.display='none';">`;
+                // Ensure path starts with / if it's a relative path
+                const logoUrl = vendorLogo.startsWith('/') ? vendorLogo : '/' + vendorLogo;
+                console.log(`🖼️ Creating vendor logo img tag with src: ${logoUrl}`);
+                vendorLogoHTML = `<img src="${logoUrl}" alt="${vendorName} Logo" class="price-tag-vendor-logo" style="display: block; max-width: 100%; height: auto;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ Vendor logo loaded successfully:', this.src); this.style.border='none';">`;
+            } else {
+                console.log('⚠️ No vendor logo provided for:', vendorName);
             }
             
             let myLogoHTML = '';
             if (myLogo) {
-                myLogoHTML = `<img src="${myLogo}" alt="My Logo" class="price-tag-my-logo" onerror="console.error('Failed to load my logo:', this.src); this.style.display='none';">`;
+                // Ensure path starts with / if it's a relative path
+                const logoUrl = myLogo.startsWith('/') ? myLogo : '/' + myLogo;
+                console.log(`🖼️ Creating my logo img tag with src: ${logoUrl}`);
+                myLogoHTML = `<img src="${logoUrl}" alt="My Logo" class="price-tag-my-logo" style="display: block; max-width: 100%; height: auto;" onerror="console.error('❌ Failed to load my logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ My logo loaded successfully:', this.src); this.style.border='none';">`;
+            } else {
+                console.log('⚠️ No my logo provided');
             }
             
             tagsForItem += `
@@ -9593,6 +10038,9 @@ function loadSalesTable() {
             <td>${vendorDiscountDisplay}</td>
             <td>
                 <div class="action-buttons">
+                    <button class="btn btn-success btn-sm" onclick="dataManager.exportInvoicePDF(${index})" title="Export Invoice">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
                     <button class="btn btn-primary btn-sm" onclick="editSale(${index})" title="Edit Sale">
                         <i class="fas fa-edit"></i>
                     </button>
