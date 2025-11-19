@@ -46,7 +46,10 @@
     },
     {
       "src": "/logos/(.*)",
-      "dest": "/logos/$1"
+      "dest": "/logos/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/styles.css",
