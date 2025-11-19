@@ -9554,7 +9554,7 @@ async function findVendorLogo(vendorName) {
     
     const normalizedName = normalizeVendorName(vendorName);
     const extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
-    const basePaths = ['/logos/vendors/', '/public/logos/vendors/'];
+    const basePaths = ['/logos/vendors/'];
     
     // Try each base path
     for (const basePath of basePaths) {
@@ -9640,7 +9640,7 @@ async function findMyLogo() {
     // Try most likely names first (my-logo.png is the standard)
     const names = ['my-logo', 'logo'];
     const extensions = ['png', 'jpg', 'jpeg', 'svg'];
-    const basePaths = ['/logos/', '/public/logos/'];
+    const basePaths = ['/logos/'];
     
     // Try each base path
     for (const basePath of basePaths) {
@@ -9674,33 +9674,22 @@ async function findMyLogo() {
 
 // Function to load vendor logos automatically
 async function loadVendorLogos(vendorName) {
-    // Always try to load user's logo first
+    // Always try to load user's logo first - use direct path
     const myLogoInput = document.getElementById('priceTagMyLogo');
     if (myLogoInput && !myLogoInput.value) {
-        const myLogo = await findMyLogo();
-        if (myLogo) {
-            myLogoInput.value = myLogo;
-            console.log(`✅ Found your logo: ${myLogo}`);
-        } else {
-            console.log('⚠️ Your logo not found');
-        }
+        const myLogo = '/logos/my-logo.png';
+        myLogoInput.value = myLogo;
+        console.log(`✅ Using logo path: ${myLogo}`);
     }
     
-    // Find and set vendor logo if vendor name provided
+    // Set vendor logo if vendor name provided - use direct path
     if (vendorName) {
-        const vendorLogo = await findVendorLogo(vendorName);
+        const normalizedName = normalizeVendorName(vendorName);
+        const vendorLogo = `/logos/vendors/${normalizedName}.png`;
         const vendorLogoInput = document.getElementById('priceTagVendorLogo');
-        if (vendorLogoInput) {
-            if (vendorLogo) {
-                vendorLogoInput.value = vendorLogo;
-                console.log(`✅ Found vendor logo: ${vendorLogo}`);
-            } else {
-                // Clear if not found (user can still enter manually)
-                if (!vendorLogoInput.value) {
-                    vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
-                    console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
-                }
-            }
+        if (vendorLogoInput && !vendorLogoInput.value) {
+            vendorLogoInput.value = vendorLogo;
+            console.log(`✅ Using vendor logo path: ${vendorLogo}`);
         }
     }
 }
