@@ -15,8 +15,8 @@
             }
         }
     </script>
-    <meta name="version" content="1.0.99">
-    <title>CyndyP StitchCraft Inventory - v1.0.97 - IMMEDIATE MOBILE RELOAD - 2025-10-12</title>
+    <meta name="version" content="1.0.101">
+    <title>CyndyP StitchCraft Inventory - v1.0.103 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -44,7 +44,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.97&t=202510122240&cb=8&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.103&t=202511190034&cb=8&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -313,7 +313,7 @@
                         </button>
                     </div>
                     <div class="version-display" id="versionDisplay">
-                        <i class="fas fa-tag"></i> v1.0.99
+                        <i class="fas fa-tag"></i> v1.0.101
                     </div>
                     <div class="connection-status" id="connectionStatusContainer">
                         <span id="connectionStatus" class="status-indicator">
@@ -343,6 +343,9 @@
                 </button>
                 <button class="nav-btn" data-tab="gallery">
                     <i class="fas fa-images"></i> Gallery
+                </button>
+                <button class="nav-btn" data-tab="patterns">
+                    <i class="fas fa-palette"></i> Patterns
                 </button>
                 <button class="nav-btn" data-tab="sales">
                     <i class="fas fa-chart-line"></i> Sales
@@ -623,6 +626,43 @@
                 </div>
             </div>
 
+            <!-- Patterns Tab -->
+            <div id="patterns" class="tab-content">
+                <div class="section-header">
+                    <h2>Pattern Library</h2>
+                    <button class="btn btn-primary" onclick="openAddPatternModal()">
+                        <i class="fas fa-plus"></i> Add Pattern
+                    </button>
+                </div>
+
+                <div class="filters">
+                    <input type="text" id="patternsSearch" placeholder="Search patterns by name, designer, category..." onkeyup="filterPatterns()">
+                    <select id="patternsCategoryFilter" onchange="filterPatterns()" aria-label="Filter patterns by category">
+                        <option value="">All Categories</option>
+                        <option value="Floral">Floral</option>
+                        <option value="Animal">Animal</option>
+                        <option value="Text">Text</option>
+                        <option value="Quotes">Quotes</option>
+                        <option value="Holiday">Holiday</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <select id="patternsDesignerFilter" onchange="filterPatterns()" aria-label="Filter patterns by designer">
+                        <option value="">All Designers</option>
+                    </select>
+                </div>
+
+                <!-- Patterns Grid -->
+                <div class="patterns-cards-container">
+                    <div class="patterns-cards-grid" id="patternsCards">
+                        <!-- Pattern cards will be populated here -->
+                    </div>
+                </div>
+                
+                <div id="patternsEmptyMessage" class="no-data" style="display: none;">
+                    No patterns found. <a href="#" onclick="openAddPatternModal()">Add your first pattern</a>
+                </div>
+            </div>
+
             <!-- Sales Tab -->
             <div id="sales" class="tab-content">
                 <div class="section-header">
@@ -669,6 +709,9 @@
                         </button>
                         <button class="btn btn-info" onclick="printFilteredCompletedItems()">
                             <i class="fas fa-print"></i> Print Filtered Items
+                        </button>
+                        <button class="btn btn-primary" onclick="openPriceTagModal()">
+                            <i class="fas fa-tags"></i> Generate Price Tags
                         </button>
                         <button class="btn btn-secondary" onclick="selectAllCompleted()">
                             <i class="fas fa-check-square"></i> Select All
@@ -1442,6 +1485,8 @@
                     </label>
                 </div>
                 
+                <input type="hidden" id="saleSourceIndex">
+                
                 <!-- Inventory Item Selection -->
                 <div id="inventorySaleFields">
                     <div class="form-group half-width">
@@ -1470,6 +1515,11 @@
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
+                    <label for="saleVendorDiscount">Vendor Discount %</label>
+                    <input type="number" id="saleVendorDiscount" step="0.01" min="0" placeholder="0.00" oninput="calculateSalePriceFromCommission(); calculateDiscount();">
+                    <small class="form-help">Extra discount you give to a vendor (e.g., 10 for 10%).</small>
+                </div>
+                <div class="form-group half-width">
                     <label for="salePrice">Net Price (What You Receive)</label>
                     <input type="number" id="salePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateDiscount()">
                     <small class="form-help">The amount you receive after commission (auto-calculated from list price and commission)</small>
@@ -1478,6 +1528,10 @@
                     <div id="discountInfo" class="discount-info" style="display: none;">
                         <span id="discountAmount"></span> | 
                         <span id="discountPercentage"></span>
+                    </div>
+                    <div id="vendorDiscountInfo" class="discount-info" style="display: none;">
+                        <span id="vendorDiscountAmount"></span> | 
+                        <span id="vendorDiscountPercentage"></span>
                     </div>
                     <div id="autoCalculateInfo" class="auto-calculate-info" style="display: none;">
                         <i class="fas fa-calculator"></i> Net price auto-calculated from list price and commission
@@ -1561,6 +1615,11 @@
                     <small class="form-help">The original/regular price</small>
                 </div>
                 <div class="form-group half-width">
+                    <label for="editSaleVendorDiscount">Vendor Discount %</label>
+                    <input type="number" id="editSaleVendorDiscount" step="0.01" min="0" placeholder="0.00" oninput="calculateEditSalePriceFromCommission(); calculateEditDiscount();">
+                    <small class="form-help">Extra discount you give to a vendor.</small>
+                </div>
+                <div class="form-group half-width">
                     <label for="editSalePrice">Net Price (What You Receive)</label>
                     <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateEditDiscount()">
                     <small class="form-help">The amount you receive after commission</small>
@@ -1569,6 +1628,10 @@
                     <div id="editDiscountInfo" class="discount-info" style="display: none;">
                         <span id="editDiscountAmount"></span> | 
                         <span id="editDiscountPercentage"></span>
+                    </div>
+                    <div id="editVendorDiscountInfo" class="discount-info" style="display: none;">
+                        <span id="editVendorDiscountAmount"></span> | 
+                        <span id="editVendorDiscountPercentage"></span>
                     </div>
                     <div id="editAutoCalculateInfo" class="auto-calculate-info" style="display: none;">
                         <i class="fas fa-calculator"></i> Net price auto-calculated from list price and commission
@@ -2078,6 +2141,144 @@
         </div>
     </div>
 
+    <!-- Add Pattern Modal -->
+    <div id="addPatternModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addPatternModal')">&times;</span>
+            <h3>Add Pattern</h3>
+            <div id="patternDuplicateWarning" class="warning-message" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Duplicate Pattern Detected!</strong>
+                <div id="patternDuplicateList" style="margin-top: 0.5rem;"></div>
+                <div style="margin-top: 0.5rem;">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="proceedWithPattern()">Add Anyway</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelPatternAdd()">Cancel</button>
+                </div>
+            </div>
+            <form id="addPatternForm" class="modal-form" novalidate>
+                <div class="form-group full-width">
+                    <label for="patternName">Pattern Name *</label>
+                    <input type="text" id="patternName" required placeholder="Enter pattern name" maxlength="200" onblur="checkPatternDuplicate()">
+                    <small class="form-help">This will be checked for duplicates</small>
+                </div>
+                <div class="form-group full-width">
+                    <label for="patternImageUrl">Image URL *</label>
+                    <input type="url" id="patternImageUrl" required placeholder="https://..." maxlength="500">
+                    <small class="form-help">Link to the pattern image</small>
+                </div>
+                <div class="form-group half-width">
+                    <label for="patternDesigner">Designer</label>
+                    <input type="text" id="patternDesigner" placeholder="Designer name" maxlength="100">
+                </div>
+                <div class="form-group half-width">
+                    <label for="patternSource">Source</label>
+                    <input type="text" id="patternSource" placeholder="Etsy shop, website, etc." maxlength="200">
+                </div>
+                <div class="form-group half-width">
+                    <label for="patternCategory">Category</label>
+                    <select id="patternCategory">
+                        <option value="">Select Category</option>
+                        <option value="Floral">Floral</option>
+                        <option value="Animal">Animal</option>
+                        <option value="Text">Text</option>
+                        <option value="Quotes">Quotes</option>
+                        <option value="Holiday">Holiday</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="patternFileUrl">Pattern File URL</label>
+                    <input type="url" id="patternFileUrl" placeholder="Link to downloadable pattern file" maxlength="500">
+                </div>
+                <div class="form-group full-width">
+                    <label for="patternTags">Tags (comma-separated)</label>
+                    <input type="text" id="patternTags" placeholder="e.g., wedding, baby, floral" maxlength="200">
+                </div>
+                <div class="form-group full-width">
+                    <label for="patternNotes">Notes</label>
+                    <textarea id="patternNotes" placeholder="Additional notes about the pattern" maxlength="500" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPatternModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Pattern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Pattern Modal -->
+    <div id="editPatternModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editPatternModal')">&times;</span>
+            <h3>Edit Pattern</h3>
+            <div id="editPatternDuplicateWarning" class="warning-message" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Duplicate Pattern Detected!</strong>
+                <div id="editPatternDuplicateList" style="margin-top: 0.5rem;"></div>
+                <div style="margin-top: 0.5rem;">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="proceedWithPatternEdit()">Update Anyway</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelPatternEdit()">Cancel</button>
+                </div>
+            </div>
+            <form id="editPatternForm" class="modal-form" novalidate>
+                <input type="hidden" id="editPatternId">
+                <div class="form-group full-width">
+                    <label for="editPatternName">Pattern Name *</label>
+                    <input type="text" id="editPatternName" required placeholder="Enter pattern name" maxlength="200" onblur="checkPatternDuplicateEdit()">
+                </div>
+                <div class="form-group full-width">
+                    <label for="editPatternImageUrl">Image URL *</label>
+                    <input type="url" id="editPatternImageUrl" required placeholder="https://..." maxlength="500">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editPatternDesigner">Designer</label>
+                    <input type="text" id="editPatternDesigner" placeholder="Designer name" maxlength="100">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editPatternSource">Source</label>
+                    <input type="text" id="editPatternSource" placeholder="Etsy shop, website, etc." maxlength="200">
+                </div>
+                <div class="form-group half-width">
+                    <label for="editPatternCategory">Category</label>
+                    <select id="editPatternCategory">
+                        <option value="">Select Category</option>
+                        <option value="Floral">Floral</option>
+                        <option value="Animal">Animal</option>
+                        <option value="Text">Text</option>
+                        <option value="Quotes">Quotes</option>
+                        <option value="Holiday">Holiday</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group half-width">
+                    <label for="editPatternFileUrl">Pattern File URL</label>
+                    <input type="url" id="editPatternFileUrl" placeholder="Link to downloadable pattern file" maxlength="500">
+                </div>
+                <div class="form-group full-width">
+                    <label for="editPatternTags">Tags (comma-separated)</label>
+                    <input type="text" id="editPatternTags" placeholder="e.g., wedding, baby, floral" maxlength="200">
+                </div>
+                <div class="form-group full-width">
+                    <label for="editPatternNotes">Notes</label>
+                    <textarea id="editPatternNotes" placeholder="Additional notes about the pattern" maxlength="500" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editPatternModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Pattern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pattern View Modal -->
+    <div id="patternViewModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('patternViewModal')">&times;</span>
+            <h3 id="patternViewTitle"></h3>
+            <div id="patternViewContent">
+                <!-- Pattern details will be populated here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Camera Modal -->
     <div id="cameraModal" class="modal">
         <div class="modal-content camera-modal">
@@ -2296,6 +2497,65 @@
         </div>
     </div>
 
+    <!-- Price Tag Generation Modal -->
+    <div id="priceTagModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('priceTagModal')">&times;</span>
+            <h2><i class="fas fa-tags"></i> Generate Price Tags</h2>
+            <form id="priceTagForm" class="modal-form">
+                <div class="form-group">
+                    <label for="priceTagVendorName">Shop/Vendor Name *</label>
+                    <input type="text" id="priceTagVendorName" name="vendorName" required 
+                           placeholder="e.g., Flippin' Happy" value="Flippin' Happy">
+                </div>
+                
+                <div class="form-group">
+                    <label for="priceTagVendorLogo">Shop/Vendor Logo URL (optional)</label>
+                    <input type="url" id="priceTagVendorLogo" name="vendorLogo" 
+                           placeholder="Auto-loaded from /public/logos/vendors/">
+                    <small>Auto-loads from <code>public/logos/vendors/[vendor-name].png</code> or enter URL manually</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="priceTagMyLogo">Your Logo URL (optional)</label>
+                    <input type="url" id="priceTagMyLogo" name="myLogo" 
+                           placeholder="Auto-loaded from /public/logos/">
+                    <small>Auto-loads from <code>public/logos/my-logo.png</code> or enter URL manually</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="priceTagVendorNumber">Vendor Number (optional)</label>
+                    <input type="text" id="priceTagVendorNumber" name="vendorNumber" 
+                           placeholder="Enter your vendor number">
+                </div>
+                
+                <div class="form-group">
+                    <label>Selected Items</label>
+                    <div id="priceTagSelectedItems" class="price-tag-items-list">
+                        <p class="text-muted">No items selected. Please select completed items first.</p>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('priceTagModal')">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="previewPriceTags()">
+                        <i class="fas fa-eye"></i> Preview
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-print"></i> Generate & Print
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Price Tag Preview Container -->
+    <div id="priceTagPreview" class="price-tag-preview" style="display: none;">
+        <!-- Price tags will be generated here -->
+    </div>
+
     <script>
         // NUCLEAR CACHE BUSTING - Force reload of CSS and JS on every page load
         (function() {
@@ -2303,7 +2563,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.99 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.101 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2343,7 +2603,7 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.99') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.101') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
@@ -2360,9 +2620,9 @@
                 }, 2000);
             }
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.99 - IMMEDIATE MOBILE RELOAD');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.101 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.99&t=202510122240&cb=8&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.103&t=202511190034&cb=8&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>

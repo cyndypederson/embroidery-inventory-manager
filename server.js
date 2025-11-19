@@ -80,6 +80,23 @@ async function initializeCollections() {
             if (ideasCount === 0) {
                 console.log('💡 Ideas collection initialized');
             }
+            
+            // Initialize patterns collection (empty by default)
+            const patternsCount = await db.collection('patterns').countDocuments();
+            if (patternsCount === 0) {
+                console.log('🎨 Patterns collection initialized');
+            }
+            
+            // Load patterns from backup file if exists
+            const patternsPath = path.join(__dirname, 'data', 'patterns.json');
+            if (fs.existsSync(patternsPath)) {
+                const patternsData = JSON.parse(fs.readFileSync(patternsPath, 'utf8'));
+                if (patternsData && patternsData.length > 0) {
+                    await db.collection('patterns').deleteMany({});
+                    await db.collection('patterns').insertMany(patternsData);
+                    console.log('🎨 Loaded patterns backup data');
+                }
+            }
         }
     } catch (error) {
         console.error('Error initializing collections:', error);
@@ -139,6 +156,10 @@ app.get('/script.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'script.js'));
 });
 
+// Specific routes first (before general static)
+app.use('/logos', express.static(path.join(__dirname, 'public', 'logos')));
+app.use('/patterns', express.static(path.join(__dirname, 'public', 'patterns')));
+// General static route last
 app.use(express.static(path.join(__dirname)));
 
 // Version check endpoint for debugging
@@ -431,6 +452,262 @@ app.post('/api/ideas', async (req, res) => {
         res.status(500).json({ error: 'Failed to save ideas data' });
     }
 });
+
+// Helper function to normalize pattern names for duplicate detection
+function normalizePatternName(name) {
+    if (!name || typeof name !== 'string') return '';
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+// Patterns API endpoints
+app.get('/api/patterns', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const patterns = await database.collection('patterns').find({}).sort({ dateAdded: -1 }).toArray();
+        res.json(patterns);
+    } catch (error) {
+        console.error('Error fetching patterns:', error);
+        res.status(500).json({ error: 'Failed to fetch patterns data' });
+    }
+});
+
+app.get('/api/patterns/:id', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const pattern = await database.collection('patterns').findOne({ _id: new ObjectId(req.params.id) });
+        if (!pattern) {
+            return res.status(404).json({ error: 'Pattern not found' });
+        }
+        res.json(pattern);
+    } catch (error) {
+        console.error('Error fetching pattern:', error);
+        res.status(500).json({ error: 'Failed to fetch pattern' });
+    }
+});
+
+app.post('/api/patterns/check-duplicate', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const { name } = req.body;
+        if (!name) {
+            return res.json({ isDuplicate: false, matches: [] });
+        }
+        
+        const normalizedName = normalizePatternName(name);
+        const existingPatterns = await database.collection('patterns').find({}).toArray();
+        
+        const matches = existingPatterns.filter(pattern => {
+            const existingName = normalizePatternName(pattern.name);
+            return existingName === normalizedName;
+        });
+        
+        res.json({
+            isDuplicate: matches.length > 0,
+            matches: matches.map(p => ({
+                _id: p._id,
+                name: p.name,
+                designer: p.designer,
+                imageUrl: p.imageUrl
+            }))
+        });
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+        res.status(500).json({ error: 'Failed to check for duplicates' });
+    }
+});
+
+app.post('/api/patterns', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const patternData = req.body;
+        
+        // Validate required fields
+        if (!patternData.name || !patternData.imageUrl) {
+            return res.status(400).json({ error: 'Name and imageUrl are required' });
+        }
+        
+        // Check for duplicates
+        const normalizedName = normalizePatternName(patternData.name);
+        const existingPatterns = await database.collection('patterns').find({}).toArray();
+        const duplicates = existingPatterns.filter(pattern => {
+            const existingName = normalizePatternName(pattern.name);
+            return existingName === normalizedName;
+        });
+        
+        if (duplicates.length > 0) {
+            return res.status(409).json({
+                error: 'Duplicate pattern found',
+                isDuplicate: true,
+                matches: duplicates.map(p => ({
+                    _id: p._id,
+                    name: p.name,
+                    designer: p.designer,
+                    imageUrl: p.imageUrl
+                }))
+            });
+        }
+        
+        // Add dates
+        const now = new Date();
+        patternData.dateAdded = patternData.dateAdded || now;
+        patternData.lastModified = now;
+        
+        const result = await database.collection('patterns').insertOne(patternData);
+        
+        // Backup to JSON file
+        const fs = require('fs');
+        const patternsPath = path.join(__dirname, 'data', 'patterns.json');
+        const allPatterns = await database.collection('patterns').find({}).toArray();
+        fs.writeFileSync(patternsPath, JSON.stringify(allPatterns, null, 2));
+        
+        res.json({ success: true, _id: result.insertedId });
+    } catch (error) {
+        console.error('Error saving pattern:', error);
+        if (error.status === 409) {
+            return res.status(409).json(error);
+        }
+        res.status(500).json({ error: 'Failed to save pattern' });
+    }
+});
+
+app.put('/api/patterns/:id', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const { id } = req.params;
+        const updateData = req.body;
+        
+        // Don't allow changing the _id
+        delete updateData._id;
+        
+        // Update lastModified
+        updateData.lastModified = new Date();
+        
+        // If name is being updated, check for duplicates
+        if (updateData.name) {
+            const normalizedName = normalizePatternName(updateData.name);
+            const existingPatterns = await database.collection('patterns').find({ _id: { $ne: new ObjectId(id) } }).toArray();
+            const duplicates = existingPatterns.filter(pattern => {
+                const existingName = normalizePatternName(pattern.name);
+                return existingName === normalizedName;
+            });
+            
+            if (duplicates.length > 0) {
+                return res.status(409).json({
+                    error: 'Duplicate pattern found',
+                    isDuplicate: true,
+                    matches: duplicates.map(p => ({
+                        _id: p._id,
+                        name: p.name,
+                        designer: p.designer,
+                        imageUrl: p.imageUrl
+                    }))
+                });
+            }
+        }
+        
+        const result = await database.collection('patterns').updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateData }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'Pattern not found' });
+        }
+        
+        // Backup to JSON file
+        const fs = require('fs');
+        const patternsPath = path.join(__dirname, 'data', 'patterns.json');
+        const allPatterns = await database.collection('patterns').find({}).toArray();
+        fs.writeFileSync(patternsPath, JSON.stringify(allPatterns, null, 2));
+        
+        res.json({ success: true, modifiedCount: result.modifiedCount });
+    } catch (error) {
+        console.error('Error updating pattern:', error);
+        if (error.status === 409) {
+            return res.status(409).json(error);
+        }
+        res.status(500).json({ error: 'Failed to update pattern' });
+    }
+});
+
+app.delete('/api/patterns/:id', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const { id } = req.params;
+        const result = await database.collection('patterns').deleteOne({ _id: new ObjectId(id) });
+        
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ error: 'Pattern not found' });
+        }
+        
+        // Backup to JSON file
+        const fs = require('fs');
+        const patternsPath = path.join(__dirname, 'data', 'patterns.json');
+        const allPatterns = await database.collection('patterns').find({}).toArray();
+        fs.writeFileSync(patternsPath, JSON.stringify(allPatterns, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting pattern:', error);
+        res.status(500).json({ error: 'Failed to delete pattern' });
+    }
+});
+
+app.get('/api/patterns/search', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        
+        const { q } = req.query;
+        if (!q || q.trim() === '') {
+            const patterns = await database.collection('patterns').find({}).sort({ dateAdded: -1 }).toArray();
+            return res.json(patterns);
+        }
+        
+        const searchTerm = q.toLowerCase().trim();
+        const patterns = await database.collection('patterns').find({}).toArray();
+        
+        const filtered = patterns.filter(pattern => {
+            const nameMatch = pattern.name && pattern.name.toLowerCase().includes(searchTerm);
+            const designerMatch = pattern.designer && pattern.designer.toLowerCase().includes(searchTerm);
+            const categoryMatch = pattern.category && pattern.category.toLowerCase().includes(searchTerm);
+            const tagsMatch = pattern.tags && Array.isArray(pattern.tags) && 
+                             pattern.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+            
+            return nameMatch || designerMatch || categoryMatch || tagsMatch;
+        });
+        
+        res.json(filtered);
+    } catch (error) {
+        console.error('Error searching patterns:', error);
+        res.status(500).json({ error: 'Failed to search patterns' });
+    }
+});
+
 
 // Connect to database and start server
 connectToDatabase().then(() => {
