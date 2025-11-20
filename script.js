@@ -9766,18 +9766,32 @@ async function generatePriceTags(previewOnly = false) {
     // Show loading spinner while loading logos
     showLoadingSpinner('Loading logos...', 'price-tags');
     
-    // Load logos if they're empty - use direct paths (browser will handle loading)
+    // Load logos if they're empty - check if they exist first
     if (!vendorLogo && vendorName) {
-        console.log('🔍 Vendor logo empty, using direct path for:', vendorName);
+        console.log('🔍 Vendor logo empty, checking if logo exists for:', vendorName);
         const normalizedName = normalizeVendorName(vendorName);
-        vendorLogo = `/logos/vendors/${normalizedName}.png`;
-        console.log('📋 Using vendor logo path:', vendorLogo);
+        const vendorLogoPath = `/logos/vendors/${normalizedName}.png`;
+        const logoExists = await checkFileExists(vendorLogoPath);
+        if (logoExists) {
+            vendorLogo = vendorLogoPath;
+            console.log('✅ Using vendor logo path:', vendorLogo);
+        } else {
+            console.log('⚠️ Vendor logo not found, leaving empty');
+            vendorLogo = null; // Explicitly set to null so it won't be used
+        }
     }
     
     if (!myLogo) {
-        console.log('🔍 My logo empty, using direct path');
-        myLogo = '/logos/my-logo.png';
-        console.log('📋 Using my logo path:', myLogo);
+        console.log('🔍 My logo empty, checking if logo exists');
+        const myLogoPath = '/logos/my-logo.png';
+        const logoExists = await checkFileExists(myLogoPath);
+        if (logoExists) {
+            myLogo = myLogoPath;
+            console.log('✅ Using my logo path:', myLogo);
+        } else {
+            console.log('⚠️ My logo not found, leaving empty');
+            myLogo = null; // Explicitly set to null so it won't be used
+        }
     }
     
     hideLoadingSpinner('price-tags');
