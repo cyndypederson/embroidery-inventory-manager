@@ -315,7 +315,7 @@
                         </button>
                     </div>
                     <div class="version-display" id="versionDisplay">
-                        <i class="fas fa-tag"></i> v1.0.101
+                        <i class="fas fa-tag"></i> v1.0.104
                     </div>
                     <div class="connection-status" id="connectionStatusContainer">
                         <span id="connectionStatus" class="status-indicator">
@@ -2568,7 +2568,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.101 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.104 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2608,7 +2608,7 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.101') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.104') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
@@ -2625,7 +2625,7 @@
                 }, 2000);
             }
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.101 - IMMEDIATE MOBILE RELOAD');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.104 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
     <script src="script.js?v=1.0.104&t=202511190200&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
