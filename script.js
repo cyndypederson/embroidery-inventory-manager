@@ -9526,9 +9526,8 @@ function openPriceTagModal() {
     if (vendorNameInput && !vendorNameInput.dataset.listenerAdded) {
         vendorNameInput.addEventListener('input', function() {
             const name = this.value.trim();
-            if (name) {
+            // Always call loadVendorLogos, even if name is empty (to clear logo)
                 loadVendorLogos(name);
-            }
         });
         vendorNameInput.dataset.listenerAdded = 'true';
     }
@@ -9682,14 +9681,29 @@ async function loadVendorLogos(vendorName) {
         console.log(`✅ Using logo path: ${myLogo}`);
     }
     
-    // Set vendor logo if vendor name provided - use direct path
-    if (vendorName) {
-        const normalizedName = normalizeVendorName(vendorName);
-        const vendorLogo = `/logos/vendors/${normalizedName}.png`;
+    // Handle vendor logo - always update when vendor name changes
         const vendorLogoInput = document.getElementById('priceTagVendorLogo');
-        if (vendorLogoInput && !vendorLogoInput.value) {
+        if (vendorLogoInput) {
+        if (vendorName && vendorName.trim()) {
+            const normalizedName = normalizeVendorName(vendorName);
+            const vendorLogo = `/logos/vendors/${normalizedName}.png`;
+            
+            // Check if logo file exists before setting it
+            const logoExists = await checkFileExists(vendorLogo);
+            if (logoExists) {
                 vendorLogoInput.value = vendorLogo;
-            console.log(`✅ Using vendor logo path: ${vendorLogo}`);
+                console.log(`✅ Using vendor logo path: ${vendorLogo}`);
+            } else {
+                // Clear the input if logo doesn't exist
+                vendorLogoInput.value = '';
+                    vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
+                    console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
+                }
+        } else {
+            // Clear vendor logo if vendor name is empty
+            vendorLogoInput.value = '';
+            vendorLogoInput.placeholder = 'Auto-loaded from /public/logos/vendors/';
+            console.log('ℹ️ Vendor name empty, cleared vendor logo');
         }
     }
 }
