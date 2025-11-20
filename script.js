@@ -9671,41 +9671,49 @@ async function findMyLogo() {
     return null;
 }
 
+// Function to check and load vendor logo if it exists
+async function checkAndLoadVendorLogo(vendorName) {
+    if (!vendorName || !vendorName.trim()) {
+        // Clear vendor logo if vendor name is empty
+        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+        if (vendorLogoInput) {
+            vendorLogoInput.value = '';
+            vendorLogoInput.placeholder = 'Auto-loaded from /public/logos/vendors/';
+        }
+        return;
+    }
+    
+    const normalizedName = normalizeVendorName(vendorName);
+    const vendorLogo = `/logos/vendors/${normalizedName}.png`;
+    const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+    
+    if (!vendorLogoInput) return;
+    
+    // Check if logo file exists before setting it
+    const logoExists = await checkFileExists(vendorLogo);
+    if (logoExists) {
+        vendorLogoInput.value = vendorLogo;
+        console.log(`✅ Using vendor logo path: ${vendorLogo}`);
+    } else {
+        // Clear the input if logo doesn't exist
+        vendorLogoInput.value = '';
+        vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
+        console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
+    }
+}
+
 // Function to load vendor logos automatically
 async function loadVendorLogos(vendorName) {
     // Always try to load user's logo first - use direct path
     const myLogoInput = document.getElementById('priceTagMyLogo');
     if (myLogoInput && !myLogoInput.value) {
         const myLogo = '/logos/my-logo.png';
-            myLogoInput.value = myLogo;
+        myLogoInput.value = myLogo;
         console.log(`✅ Using logo path: ${myLogo}`);
     }
     
     // Handle vendor logo - always update when vendor name changes
-        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
-        if (vendorLogoInput) {
-        if (vendorName && vendorName.trim()) {
-            const normalizedName = normalizeVendorName(vendorName);
-            const vendorLogo = `/logos/vendors/${normalizedName}.png`;
-            
-            // Check if logo file exists before setting it
-            const logoExists = await checkFileExists(vendorLogo);
-            if (logoExists) {
-                vendorLogoInput.value = vendorLogo;
-                console.log(`✅ Using vendor logo path: ${vendorLogo}`);
-            } else {
-                // Clear the input if logo doesn't exist
-                vendorLogoInput.value = '';
-                    vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
-                    console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
-                }
-        } else {
-            // Clear vendor logo if vendor name is empty
-            vendorLogoInput.value = '';
-            vendorLogoInput.placeholder = 'Auto-loaded from /public/logos/vendors/';
-            console.log('ℹ️ Vendor name empty, cleared vendor logo');
-        }
-    }
+    await checkAndLoadVendorLogo(vendorName);
 }
 
 function getSelectedCompletedItems() {
@@ -15294,8 +15302,8 @@ function updateVendorFromSelectedItems() {
         // All items have the same customer - use it as vendor name
         const vendorName = customers[0];
         vendorNameInput.value = vendorName;
-        // Load the logo for this vendor
-        loadVendorLogos(vendorName);
+        // Check if logo exists before loading
+        checkAndLoadVendorLogo(vendorName);
     } else if (customers.length > 1) {
         // Multiple different customers - clear vendor name
         vendorNameInput.value = '';
