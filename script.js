@@ -15364,6 +15364,9 @@ function updateInvoiceSelection() {
             summaryDiv.style.display = 'none';
         }
     }
+    
+    // Update vendor name in price tag modal if it's open
+    updateVendorFromSelectedItems();
 }
 
 // Select all completed items
