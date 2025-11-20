@@ -15269,6 +15269,53 @@ function toggleSelectAll(checkbox) {
     updateInvoiceSelection();
 }
 
+// Update vendor name in price tag modal based on selected items
+function updateVendorFromSelectedItems() {
+    const vendorNameInput = document.getElementById('priceTagVendorName');
+    if (!vendorNameInput) return; // Price tag modal not open
+    
+    const selectedItems = getSelectedCompletedItems();
+    
+    if (selectedItems.length === 0) {
+        // No items selected - clear vendor name and logo
+        vendorNameInput.value = '';
+        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+        if (vendorLogoInput) {
+            vendorLogoInput.value = '';
+            vendorLogoInput.placeholder = 'Auto-loaded from /public/logos/vendors/';
+        }
+        return;
+    }
+    
+    // Get unique customer names from selected items
+    const customers = [...new Set(selectedItems.map(item => item.customer).filter(c => c && c !== 'No Customer'))];
+    
+    if (customers.length === 1) {
+        // All items have the same customer - use it as vendor name
+        const vendorName = customers[0];
+        vendorNameInput.value = vendorName;
+        // Load the logo for this vendor
+        loadVendorLogos(vendorName);
+    } else if (customers.length > 1) {
+        // Multiple different customers - clear vendor name
+        vendorNameInput.value = '';
+        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+        if (vendorLogoInput) {
+            vendorLogoInput.value = '';
+            vendorLogoInput.placeholder = 'Multiple customers selected - enter vendor manually';
+        }
+        console.log('⚠️ Multiple customers in selection, cleared vendor name');
+    } else {
+        // No valid customers - clear vendor name
+        vendorNameInput.value = '';
+        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+        if (vendorLogoInput) {
+            vendorLogoInput.value = '';
+            vendorLogoInput.placeholder = 'Auto-loaded from /public/logos/vendors/';
+        }
+    }
+}
+
 // Update invoice selection summary
 function updateInvoiceSelection() {
     selectedCompletedItems.clear();
