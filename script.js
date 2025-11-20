@@ -7199,7 +7199,7 @@ async function saveData() {
     } catch (error) {
         console.error('❌ API save failed, falling back to localStorage:', error);
         try {
-            await saveDataToLocalStorage();
+        await saveDataToLocalStorage();
             hideLoadingSpinner('save');
             showNotification('Data saved locally (offline mode)', 'info');
         } catch (localError) {
@@ -9558,26 +9558,26 @@ async function findVendorLogo(vendorName) {
     
     // Try each base path
     for (const basePath of basePaths) {
-        // Try each extension
-        for (const ext of extensions) {
-            const logoPath = `${basePath}${normalizedName}.${ext}`;
+    // Try each extension
+    for (const ext of extensions) {
+        const logoPath = `${basePath}${normalizedName}.${ext}`;
             console.log(`🔍 Checking vendor logo: ${logoPath}`);
-            const exists = await checkFileExists(logoPath);
-            if (exists) {
+        const exists = await checkFileExists(logoPath);
+        if (exists) {
                 console.log(`✅ Found vendor logo at: ${logoPath}`);
-                return logoPath;
-            }
+            return logoPath;
         }
-        
-        // Also try with original name (with spaces/special chars replaced)
-        const altName = vendorName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        for (const ext of extensions) {
-            const logoPath = `${basePath}${altName}.${ext}`;
+    }
+    
+    // Also try with original name (with spaces/special chars replaced)
+    const altName = vendorName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    for (const ext of extensions) {
+        const logoPath = `${basePath}${altName}.${ext}`;
             console.log(`🔍 Checking vendor logo (alt): ${logoPath}`);
-            const exists = await checkFileExists(logoPath);
-            if (exists) {
+        const exists = await checkFileExists(logoPath);
+        if (exists) {
                 console.log(`✅ Found vendor logo at: ${logoPath}`);
-                return logoPath;
+            return logoPath;
             }
         }
     }
@@ -9629,7 +9629,7 @@ function checkFileExists(url) {
                     .catch(() => {
                         clearTimeout(headTimeout);
                         console.log(`❌ File not found: ${url}`);
-                        resolve(false);
+                resolve(false);
                     });
             });
     });
@@ -9644,25 +9644,25 @@ async function findMyLogo() {
     
     // Try each base path
     for (const basePath of basePaths) {
-        // Try my-logo.png first (most likely)
-        const primaryPath = `${basePath}my-logo.png`;
+    // Try my-logo.png first (most likely)
+    const primaryPath = `${basePath}my-logo.png`;
         console.log(`🔍 Checking my logo: ${primaryPath}`);
-        const primaryExists = await checkFileExists(primaryPath);
-        if (primaryExists) {
+    const primaryExists = await checkFileExists(primaryPath);
+    if (primaryExists) {
             console.log(`✅ Found my logo at: ${primaryPath}`);
-            return primaryPath;
-        }
-        
-        // Then try other combinations
-        for (const name of names) {
-            for (const ext of extensions) {
-                if (name === 'my-logo' && ext === 'png') continue; // Already tried
-                const logoPath = `${basePath}${name}.${ext}`;
+        return primaryPath;
+    }
+    
+    // Then try other combinations
+    for (const name of names) {
+        for (const ext of extensions) {
+            if (name === 'my-logo' && ext === 'png') continue; // Already tried
+            const logoPath = `${basePath}${name}.${ext}`;
                 console.log(`🔍 Checking my logo: ${logoPath}`);
-                const exists = await checkFileExists(logoPath);
-                if (exists) {
+            const exists = await checkFileExists(logoPath);
+            if (exists) {
                     console.log(`✅ Found my logo at: ${logoPath}`);
-                    return logoPath;
+                return logoPath;
                 }
             }
         }
@@ -9678,7 +9678,7 @@ async function loadVendorLogos(vendorName) {
     const myLogoInput = document.getElementById('priceTagMyLogo');
     if (myLogoInput && !myLogoInput.value) {
         const myLogo = '/logos/my-logo.png';
-        myLogoInput.value = myLogo;
+            myLogoInput.value = myLogo;
         console.log(`✅ Using logo path: ${myLogo}`);
     }
     
@@ -9688,7 +9688,7 @@ async function loadVendorLogos(vendorName) {
         const vendorLogo = `/logos/vendors/${normalizedName}.png`;
         const vendorLogoInput = document.getElementById('priceTagVendorLogo');
         if (vendorLogoInput && !vendorLogoInput.value) {
-            vendorLogoInput.value = vendorLogo;
+                vendorLogoInput.value = vendorLogo;
             console.log(`✅ Using vendor logo path: ${vendorLogo}`);
         }
     }
@@ -9762,27 +9762,27 @@ async function generatePriceTags(previewOnly = false) {
     
     // Log final logo status
     console.log('📋 Final logo status:', { vendorLogo, myLogo });
-    
-    // Close modal
-    closeModal('priceTagModal');
-    
+        
+        // Close modal
+        closeModal('priceTagModal');
+        
     // Generate price tags HTML with logos
-    const priceTagsHTML = generatePriceTagsHTML(selectedItems, vendorName, vendorNumber, vendorLogo, myLogo);
-    
-    // Show preview
-    const preview = document.getElementById('priceTagPreview');
-    if (preview) {
-        preview.innerHTML = priceTagsHTML;
-        preview.style.display = 'block';
-        preview.scrollIntoView({ behavior: 'smooth' });
-    }
-    
-    // If not preview only, print after a short delay
-    if (!previewOnly) {
-        setTimeout(() => {
-            window.print();
-        }, 500);
-    }
+        const priceTagsHTML = generatePriceTagsHTML(selectedItems, vendorName, vendorNumber, vendorLogo, myLogo);
+        
+        // Show preview
+        const preview = document.getElementById('priceTagPreview');
+        if (preview) {
+            preview.innerHTML = priceTagsHTML;
+            preview.style.display = 'block';
+            preview.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // If not preview only, print after a short delay
+        if (!previewOnly) {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
 }
 
 function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo) {
@@ -9801,8 +9801,10 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
             if (vendorLogo) {
                 // Ensure path starts with / if it's a relative path
                 const logoUrl = vendorLogo.startsWith('/') ? vendorLogo : '/' + vendorLogo;
-                console.log(`🖼️ Creating vendor logo img tag with src: ${logoUrl}`);
-                vendorLogoHTML = `<img src="${logoUrl}" alt="${vendorName} Logo" class="price-tag-vendor-logo" style="display: block; max-width: 100%; height: auto;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ Vendor logo loaded successfully:', this.src); this.style.border='none';">`;
+                // Add cache-busting query parameter to force fresh load
+                const logoUrlWithCache = logoUrl + '?t=' + Date.now();
+                console.log(`🖼️ Creating vendor logo img tag with src: ${logoUrlWithCache}`);
+                vendorLogoHTML = `<img src="${logoUrlWithCache}" alt="${vendorName} Logo" class="price-tag-vendor-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ Vendor logo loaded successfully:', this.src); this.style.border='none';">`;
             } else {
                 console.log('⚠️ No vendor logo provided for:', vendorName);
             }
@@ -9811,8 +9813,10 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
             if (myLogo) {
                 // Ensure path starts with / if it's a relative path
                 const logoUrl = myLogo.startsWith('/') ? myLogo : '/' + myLogo;
-                console.log(`🖼️ Creating my logo img tag with src: ${logoUrl}`);
-                myLogoHTML = `<img src="${logoUrl}" alt="My Logo" class="price-tag-my-logo" style="display: block; max-width: 100%; height: auto;" onerror="console.error('❌ Failed to load my logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ My logo loaded successfully:', this.src); this.style.border='none';">`;
+                // Add cache-busting query parameter to force fresh load
+                const logoUrlWithCache = logoUrl + '?t=' + Date.now();
+                console.log(`🖼️ Creating my logo img tag with src: ${logoUrlWithCache}`);
+                myLogoHTML = `<img src="${logoUrlWithCache}" alt="My Logo" class="price-tag-my-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load my logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ My logo loaded successfully:', this.src); this.style.border='none';">`;
             } else {
                 console.log('⚠️ No my logo provided');
             }
@@ -11518,13 +11522,13 @@ async function handleEditSale(e) {
     const hasMobileSales = document.getElementById('mobileSalesCards');
     
     if (typeof loadSalesTable === 'function' && hasSalesTable) {
-        loadSalesTable();
+    loadSalesTable();
     }
     if (typeof loadSalesCards === 'function' && hasSalesCards) {
-        loadSalesCards();
+    loadSalesCards();
     }
     if (typeof loadMobileSalesCards === 'function' && hasMobileSales) {
-        loadMobileSalesCards();
+    loadMobileSalesCards();
     }
     closeModal('editSaleModal');
     
