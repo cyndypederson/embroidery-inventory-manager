@@ -35,16 +35,14 @@
       "use": "@vercel/static"
     }
   ],
-  "rewrites": [
-    {
-      "source": "/logos/:path*",
-      "destination": "/public/logos/:path*"
-    }
-  ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/server.js"
+    },
+    {
+      "src": "/logos/(.*)",
+      "dest": "/logos/$1"
     },
     {
       "src": "/styles.css",
