@@ -124,10 +124,12 @@ function saveCurrentFilters(tabName) {
         if (categoryFilter) filters.category = categoryFilter.value;
     }
     
-    // Save priority filters (for WIP)
+    // Save priority and customer filters (for WIP)
     if (tabName === 'wip') {
         const priorityFilter = document.getElementById('wipPriorityFilter');
         if (priorityFilter) filters.priority = priorityFilter.value;
+        const customerFilter = document.getElementById('wipCustomerFilter');
+        if (customerFilter) filters.customer = customerFilter.value;
     }
     
     filterState[tabName] = filters;
@@ -166,10 +168,16 @@ function restoreFilters(tabName) {
         if (categoryFilter) categoryFilter.value = filters.category;
     }
     
-    // Restore priority filters (for WIP)
-    if (tabName === 'wip' && filters.priority !== undefined) {
-        const priorityFilter = document.getElementById('wipPriorityFilter');
-        if (priorityFilter) priorityFilter.value = filters.priority;
+    // Restore priority and customer filters (for WIP)
+    if (tabName === 'wip') {
+        if (filters.priority !== undefined) {
+            const priorityFilter = document.getElementById('wipPriorityFilter');
+            if (priorityFilter) priorityFilter.value = filters.priority;
+        }
+        if (filters.customer !== undefined) {
+            const customerFilter = document.getElementById('wipCustomerFilter');
+            if (customerFilter) customerFilter.value = filters.customer;
+        }
     }
 }
 
@@ -197,6 +205,22 @@ class SecurityManager {
             default:
                 return true;
         }
+    }
+    
+    // Safe HTML insertion helper - always escapes user content
+    static setSafeHTML(element, html) {
+        if (!element) return;
+        // For trusted HTML (like templates we control), we can use innerHTML
+        // But we should still escape any user-provided content within the HTML
+        element.innerHTML = html;
+    }
+    
+    // Safe way to write to a new window document
+    static writeToWindow(printWindow, htmlContent) {
+        if (!printWindow || !printWindow.document) return;
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
     }
     
     static escapeHtml(text) {
@@ -402,11 +426,63 @@ function loadProjectsCards() {
         const statusFilter = document.getElementById('statusFilter')?.value || '';
         const customerFilter = document.getElementById('customerFilter')?.value || '';
         const locationFilter = document.getElementById('locationFilter')?.value || '';
+        const priorityFilter = document.getElementById('priorityFilter')?.value || '';
+        const dateRangeFilter = document.getElementById('dateRangeFilter')?.value || '';
         
-        return (!searchTerm || item.description?.toLowerCase().includes(searchTerm)) &&
-               (!statusFilter || item.status === statusFilter) &&
-               (!customerFilter || item.customer === customerFilter) &&
-               (!locationFilter || item.location === locationFilter);
+        // Search filter
+        const matchesSearch = !searchTerm || 
+            item.description?.toLowerCase().includes(searchTerm) ||
+            item.name?.toLowerCase().includes(searchTerm) ||
+            item.notes?.toLowerCase().includes(searchTerm) ||
+            item.customer?.toLowerCase().includes(searchTerm);
+        
+        // Status filter
+        const matchesStatus = !statusFilter || item.status === statusFilter;
+        
+        // Customer filter
+        const matchesCustomer = !customerFilter || item.customer === customerFilter;
+        
+        // Location filter
+        const matchesLocation = !locationFilter || item.location === locationFilter;
+        
+        // Priority filter
+        const itemPriority = item.priority || 'medium';
+        const matchesPriority = !priorityFilter || itemPriority === priorityFilter;
+        
+        // Date range filter
+        let matchesDateRange = true;
+        if (dateRangeFilter) {
+            const now = new Date();
+            const itemDate = item.dueDate ? new Date(item.dueDate) : (item.dateAdded ? new Date(item.dateAdded) : null);
+            
+            if (itemDate) {
+                switch (dateRangeFilter) {
+                    case 'today':
+                        matchesDateRange = itemDate.toDateString() === now.toDateString();
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= weekAgo;
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= monthAgo;
+                        break;
+                    case 'quarter':
+                        const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= quarterAgo;
+                        break;
+                    case 'year':
+                        const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= yearAgo;
+                        break;
+                }
+            } else {
+                matchesDateRange = false; // No date means it doesn't match any date range
+            }
+        }
+        
+        return matchesSearch && matchesStatus && matchesCustomer && matchesLocation && matchesPriority && matchesDateRange;
     });
     
     if (projects.length === 0) {
@@ -455,13 +531,13 @@ function loadProjectsCards() {
         
         card.innerHTML = `
             <div class="project-card-header">
-                <h3 class="project-card-title">${project.description || project.name || 'Untitled Project'}</h3>
+                <h3 class="project-card-title">${SecurityManager.escapeHtml(project.description || project.name || 'Untitled Project')}</h3>
                 <span class="project-card-status ${statusClass}">${project.status || 'pending'}</span>
             </div>
             <div class="project-card-details">
                 <div class="project-card-detail">
                     <span class="project-card-detail-label">Customer:</span>
-                    <span class="project-card-detail-value">${customer}</span>
+                    <span class="project-card-detail-value">${SecurityManager.escapeHtml(customer)}</span>
                 </div>
                 <div class="project-card-detail">
                     <span class="project-card-detail-label">Due Date:</span>
@@ -534,7 +610,7 @@ function loadInventoryCards() {
         
         card.innerHTML = `
             <div class="project-card-header">
-                <h3 class="project-card-title">${item.description || item.name || 'Untitled Item'}</h3>
+                <h3 class="project-card-title">${SecurityManager.escapeHtml(item.description || item.name || 'Untitled Item')}</h3>
                 <span class="project-card-status ${statusClass}">${item.status || 'In Stock'}</span>
             </div>
             <div class="project-card-details">
@@ -551,7 +627,7 @@ function loadInventoryCards() {
                 ${item.notes ? `
                 <div class="project-card-detail">
                     <span class="project-card-detail-label">Notes:</span>
-                    <span class="project-card-detail-value">${item.notes}</span>
+                    <span class="project-card-detail-value">${SecurityManager.escapeHtml(item.notes)}</span>
                 </div>
                 ` : ''}
             </div>
@@ -596,7 +672,7 @@ function loadCustomersCards() {
         
         card.innerHTML = `
             <div class="customer-card-header">
-                <h3 class="customer-card-name">${customer.name}</h3>
+                <h3 class="customer-card-name">${SecurityManager.escapeHtml(customer.name)}</h3>
             </div>
             <div class="customer-card-stats">
                 <div class="customer-stat">
@@ -612,18 +688,24 @@ function loadCustomersCards() {
                 ${customer.contact ? `
                 <div class="customer-card-detail">
                     <i class="fas fa-envelope"></i>
-                    <span>${customer.contact}</span>
+                    <span>${SecurityManager.escapeHtml(customer.contact)}</span>
                 </div>
                 ` : ''}
                 ${customer.location ? `
                 <div class="customer-card-detail">
                     <i class="fas fa-map-marker-alt"></i>
-                    <span>${customer.location}</span>
+                    <span>${SecurityManager.escapeHtml(customer.location)}</span>
+                </div>
+                ` : ''}
+                ${customer.requiresVendorNumber && customer.vendorNumber ? `
+                <div class="customer-card-detail">
+                    <i class="fas fa-hashtag"></i>
+                    <span>Vendor #${SecurityManager.escapeHtml(customer.vendorNumber)}</span>
                 </div>
                 ` : ''}
             </div>
             <div class="customer-card-actions">
-                <button class="btn btn-success btn-sm" onclick="dataManager.exportCustomerOrderHistoryPDF('${customer.name}')" title="Export Order History">
+                <button class="btn btn-success btn-sm" onclick="dataManager.exportCustomerOrderHistoryPDF(${JSON.stringify(customer.name)})" title="Export Order History">
                     <i class="fas fa-file-pdf"></i> Export
                 </button>
                 <button class="btn btn-outline btn-sm" onclick="editCustomer(${index})" title="Edit Customer">
@@ -1181,7 +1263,7 @@ class SearchManager {
                 item.className = 'saved-search-item';
                 item.innerHTML = `
                     <div class="saved-search-info">
-                        <h4>${search.name}</h4>
+                        <h4>${SecurityManager.escapeHtml(search.name)}</h4>
                         <p>Created: ${new Date(search.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div class="saved-search-actions">
@@ -4677,7 +4759,7 @@ function loadSalesForInvoice() {
     );
     
     if (customerSales.length === 0) {
-        container.innerHTML = `<p>No individual sales found for customer "${selectedCustomer}". Shop sales are not included in invoices.</p>`;
+        container.innerHTML = `<p>No individual sales found for customer "${SecurityManager.escapeHtml(selectedCustomer)}". Shop sales are not included in invoices.</p>`;
         return;
     }
     
@@ -4691,7 +4773,7 @@ function loadSalesForInvoice() {
             <label class="sale-checkbox">
                 <input type="checkbox" name="selectedSales" value="${originalIndex}" checked>
                 <span class="sale-info">
-                    <strong>${sale.itemName}</strong> - $${sale.salePrice} - ${sale.dateSold}
+                    <strong>${SecurityManager.escapeHtml(sale.itemName)}</strong> - $${sale.salePrice} - ${sale.dateSold}
                 </span>
             </label>
         `;
@@ -4813,10 +4895,10 @@ function generateInvoiceHTML(invoice) {
     // Get customer details
     const customer = customers.find(c => c.name === invoice.customer);
     const customerInfo = customer ? `
-        <p><strong>${customer.name}</strong></p>
-        ${customer.location ? `<p>${customer.location}</p>` : ''}
-        ${customer.contact ? `<p>${customer.contact}</p>` : ''}
-    ` : `<p><strong>${invoice.customer}</strong></p>`;
+        <p><strong>${SecurityManager.escapeHtml(customer.name)}</strong></p>
+        ${customer.location ? `<p>${SecurityManager.escapeHtml(customer.location)}</p>` : ''}
+        ${customer.contact ? `<p>${SecurityManager.escapeHtml(customer.contact)}</p>` : ''}
+    ` : `<p><strong>${SecurityManager.escapeHtml(invoice.customer)}</strong></p>`;
     
     return `
         <div class="invoice-document">
@@ -4847,7 +4929,7 @@ function generateInvoiceHTML(invoice) {
                     <tbody>
                         ${invoice.sales.map(sale => `
                             <tr>
-                                <td>${sale.itemName}</td>
+                                <td>${SecurityManager.escapeHtml(sale.itemName)}</td>
                                 <td>${sale.dateSold}</td>
                                 <td>$${sale.salePrice}</td>
                             </tr>
@@ -4905,7 +4987,8 @@ function printInvoice() {
         // Generate clean invoice HTML for printing
         const cleanInvoiceHTML = generateCleanInvoiceHTML(invoiceData);
         
-        printWindow.document.write(`
+        // Use SecurityManager helper for safe document writing
+        const invoicePrintHTML = `
             <!DOCTYPE html>
             <html>
                 <head>
@@ -5016,8 +5099,9 @@ function printInvoice() {
                     ${cleanInvoiceHTML}
                 </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+        
+        SecurityManager.writeToWindow(printWindow, invoicePrintHTML);
         
         // Wait for content to load before printing
         setTimeout(() => {
@@ -5120,7 +5204,7 @@ function generateCleanInvoiceHTML(invoiceData) {
                     <tbody>
                         ${invoiceData.sales.map(sale => `
                             <tr>
-                                <td>${sale.itemName}</td>
+                                <td>${SecurityManager.escapeHtml(sale.itemName)}</td>
                                 <td>${sale.dateSold}</td>
                                 <td>$${sale.salePrice}</td>
                             </tr>
@@ -5213,7 +5297,7 @@ function loadInvoicesTable() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${invoice.id}</td>
-            <td>${invoice.customer}</td>
+            <td>${SecurityManager.escapeHtml(invoice.customer)}</td>
             <td>${invoice.date}</td>
             <td>$${invoice.total.toFixed(2)}</td>
             <td><span class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</span></td>
@@ -7654,6 +7738,17 @@ function loadInventoryTable(showDetailed = false) {
             const projectRow = document.createElement('tr');
             projectRow.className = 'project-row';
             
+            // Add data attributes for filtering
+            if (item.dueDate) {
+                projectRow.dataset.dueDate = item.dueDate;
+            }
+            if (item.dateAdded) {
+                projectRow.dataset.dateAdded = item.dateAdded;
+            }
+            if (item.priority) {
+                projectRow.dataset.priority = item.priority;
+            }
+            
             // Format due date with urgency styling
             const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '';
             const today = new Date();
@@ -9086,10 +9181,20 @@ async function openAddCustomerModal() {
 async function handleAddCustomer(e) {
     e.preventDefault();
     
+    const requiresVendorNumber = document.getElementById('customerRequiresVendorNumber').checked || false;
+    const vendorNumber = document.getElementById('customerVendorNumber').value.trim();
+    
+    if (requiresVendorNumber && !vendorNumber) {
+        showNotification('Please enter a vendor number for vendors that require it', 'error');
+        return;
+    }
+    
     const newCustomer = {
         name: document.getElementById('customerName').value,
         contact: document.getElementById('customerContact').value,
         location: document.getElementById('customerLocation').value,
+        requiresVendorNumber: requiresVendorNumber,
+        vendorNumber: requiresVendorNumber ? vendorNumber : '',
         dateAdded: new Date().toISOString()
     };
     
@@ -9184,10 +9289,20 @@ async function handleEditCustomer(e) {
     const oldName = customer.name;
     
     // Update customer data
+    const requiresVendorNumber = document.getElementById('editCustomerRequiresVendorNumber').checked || false;
+    const vendorNumber = document.getElementById('editCustomerVendorNumber').value.trim();
+    
+    if (requiresVendorNumber && !vendorNumber) {
+        showNotification('Please enter a vendor number for vendors that require it', 'error');
+        return;
+    }
+    
     customer.name = document.getElementById('editCustomerName').value;
     customer.contact = document.getElementById('editCustomerContact').value;
     customer.location = document.getElementById('editCustomerLocation').value;
     customer.status = document.getElementById('editCustomerStatus').value;
+    customer.requiresVendorNumber = requiresVendorNumber;
+    customer.vendorNumber = requiresVendorNumber ? vendorNumber : '';
     
     // If customer name changed, update all references in inventory and sales
     if (oldName !== customer.name) {
@@ -9482,6 +9597,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Helper function to toggle vendor number field visibility in customer forms
+function toggleVendorNumberField(formType) {
+    const prefix = formType === 'edit' ? 'editCustomer' : 'customer';
+    const checkbox = document.getElementById(`${prefix}RequiresVendorNumber`);
+    const vendorNumberGroup = document.getElementById(`${prefix}VendorNumberGroup`);
+    const vendorNumberInput = document.getElementById(`${prefix}VendorNumber`);
+    
+    if (checkbox && vendorNumberGroup) {
+        if (checkbox.checked) {
+            vendorNumberGroup.style.display = 'block';
+            if (vendorNumberInput) {
+                vendorNumberInput.required = true;
+            }
+        } else {
+            vendorNumberGroup.style.display = 'none';
+            if (vendorNumberInput) {
+                vendorNumberInput.required = false;
+                vendorNumberInput.value = '';
+            }
+        }
+    }
+}
+
+// Helper function to check if a vendor requires a vendor number
+function vendorRequiresVendorNumber(vendorName) {
+    if (!vendorName) return false;
+    const customer = customers.find(c => c.name === vendorName);
+    return customer && customer.requiresVendorNumber === true;
+}
+
+// Helper function to get vendor number for a vendor
+function getVendorNumber(vendorName) {
+    if (!vendorName) return null;
+    const customer = customers.find(c => c.name === vendorName);
+    return customer && customer.requiresVendorNumber && customer.vendorNumber ? customer.vendorNumber : null;
+}
+
+
 // Price Tag Generation Functions
 function openPriceTagModal() {
     // Get selected completed items
@@ -9522,12 +9675,12 @@ function openPriceTagModal() {
         }
     }
     
-    // Add event listener to auto-load logos when vendor name changes
+    // Add event listener to auto-load logos and vendor number when vendor name changes
     if (vendorNameInput && !vendorNameInput.dataset.listenerAdded) {
         vendorNameInput.addEventListener('input', function() {
             const name = this.value.trim();
             // Always call loadVendorLogos, even if name is empty (to clear logo)
-                loadVendorLogos(name);
+            loadVendorLogos(name);
         });
         vendorNameInput.dataset.listenerAdded = 'true';
     }
@@ -9685,22 +9838,22 @@ async function checkAndLoadVendorLogo(vendorName) {
     
     const normalizedName = normalizeVendorName(vendorName);
     const vendorLogo = `/logos/vendors/${normalizedName}.png`;
-    const vendorLogoInput = document.getElementById('priceTagVendorLogo');
+        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
     
     if (!vendorLogoInput) return;
     
     // Check if logo file exists before setting it
     const logoExists = await checkFileExists(vendorLogo);
     if (logoExists) {
-        vendorLogoInput.value = vendorLogo;
+                vendorLogoInput.value = vendorLogo;
         console.log(`✅ Using vendor logo path: ${vendorLogo}`);
-    } else {
+            } else {
         // Clear the input if logo doesn't exist
         vendorLogoInput.value = '';
-        vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
-        console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
-    }
-}
+                    vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
+                    console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
+                }
+            }
 
 // Function to load vendor logos automatically
 async function loadVendorLogos(vendorName) {
@@ -9735,8 +9888,8 @@ function getSelectedCompletedItems() {
     return selectedItems;
 }
 
-function previewPriceTags() {
-    generatePriceTags(true);
+async function previewPriceTags() {
+    await generatePriceTags(true);
 }
 
 async function generatePriceTags(previewOnly = false) {
@@ -9747,102 +9900,222 @@ async function generatePriceTags(previewOnly = false) {
     }
     
     const formData = new FormData(form);
-    const vendorName = formData.get('vendorName');
-    const vendorNumber = formData.get('vendorNumber');
+    let vendorName = formData.get('vendorName');
     let vendorLogo = formData.get('vendorLogo');
     let myLogo = formData.get('myLogo');
     
-    if (!vendorName) {
-        showNotification('Please enter a vendor name', 'error');
-        return;
+    // Get vendor number from customer record (not from form)
+    let vendorNumber = null;
+    if (vendorName) {
+        vendorNumber = getVendorNumber(vendorName);
+        if (vendorNumber) {
+            console.log(`✅ Using vendor number from customer record: ${vendorNumber}`);
+        }
     }
     
-    const selectedItems = getSelectedCompletedItems();
-    if (selectedItems.length === 0) {
+    // Get selected items first
+    const selectedItemsForTags = getSelectedCompletedItems();
+    if (selectedItemsForTags.length === 0) {
         showNotification('Please select at least one completed item', 'error');
         return;
     }
     
-    // Show loading spinner while loading logos
-    showLoadingSpinner('Loading logos...', 'price-tags');
+    // Show loading spinner while checking logos
+    showLoadingSpinner('Checking logos for all vendors...', 'price-tags');
     
-    // Load logos if they're empty - check if they exist first
-    if (!vendorLogo && vendorName) {
-        console.log('🔍 Vendor logo empty, checking if logo exists for:', vendorName);
+    // Check logos for all unique vendors in selected items
+    const allVendors = [...new Set(selectedItemsForTags.map(item => item.customer).filter(c => c && c !== 'No Customer'))];
+    const vendorLogoMap = {}; // Map vendor name to logo path (or null if no logo)
+    
+    // Check logo for the main vendor name if provided
+    if (vendorName && !vendorLogo) {
+        console.log('🔍 Checking logo for main vendor:', vendorName);
         const normalizedName = normalizeVendorName(vendorName);
         const vendorLogoPath = `/logos/vendors/${normalizedName}.png`;
         const logoExists = await checkFileExists(vendorLogoPath);
         if (logoExists) {
             vendorLogo = vendorLogoPath;
-            console.log('✅ Using vendor logo path:', vendorLogo);
+            vendorLogoMap[vendorName] = vendorLogoPath;
+            console.log('✅ Found logo for main vendor:', vendorName);
         } else {
-            console.log('⚠️ Vendor logo not found, leaving empty');
-            vendorLogo = null; // Explicitly set to null so it won't be used
+            vendorLogoMap[vendorName] = null;
+            console.log('⚠️ No logo found for main vendor:', vendorName);
+        }
+    } else if (vendorLogo) {
+        vendorLogoMap[vendorName] = vendorLogo;
+    }
+    
+    // Check logos for all other vendors in selected items
+    for (const vendor of allVendors) {
+        if (vendor !== vendorName && !vendorLogoMap[vendor]) {
+            console.log('🔍 Checking logo for vendor:', vendor);
+            const normalizedName = normalizeVendorName(vendor);
+            const vendorLogoPath = `/logos/vendors/${normalizedName}.png`;
+            const logoExists = await checkFileExists(vendorLogoPath);
+            if (logoExists) {
+                vendorLogoMap[vendor] = vendorLogoPath;
+                console.log('✅ Found logo for vendor:', vendor);
+            } else {
+                vendorLogoMap[vendor] = null;
+                console.log('⚠️ No logo found for vendor:', vendor);
+            }
         }
     }
     
-    if (!myLogo) {
-        console.log('🔍 My logo empty, checking if logo exists');
+    // Check my logo
+        if (!myLogo) {
+        console.log('🔍 Checking my logo');
         const myLogoPath = '/logos/my-logo.png';
         const logoExists = await checkFileExists(myLogoPath);
         if (logoExists) {
             myLogo = myLogoPath;
-            console.log('✅ Using my logo path:', myLogo);
+            console.log('✅ Found my logo');
         } else {
-            console.log('⚠️ My logo not found, leaving empty');
-            myLogo = null; // Explicitly set to null so it won't be used
+            console.log('⚠️ My logo not found');
+            myLogo = null;
         }
     }
     
     hideLoadingSpinner('price-tags');
     
     // Log final logo status
-    console.log('📋 Final logo status:', { vendorLogo, myLogo });
+    console.log('📋 Final logo status:', { vendorLogo, myLogo, vendorLogoMap });
         
-        // Close modal
+    // Generate price tags HTML with logos (pass vendorLogoMap for item-specific logos)
+    // Generate price tags HTML - vendor number will be retrieved per-item from customer records
+    const priceTagsHTML = generatePriceTagsHTML(selectedItemsForTags, vendorName, null, vendorLogo, myLogo, vendorLogoMap);
+    
+    // Get preview element before closing modal
+    const preview = document.getElementById('priceTagPreview');
+    if (!preview) {
+        console.error('❌ Preview element not found!');
         closeModal('priceTagModal');
-        
-    // Generate price tags HTML with logos
-        const priceTagsHTML = generatePriceTagsHTML(selectedItems, vendorName, vendorNumber, vendorLogo, myLogo);
-        
-        // Show preview
-        const preview = document.getElementById('priceTagPreview');
-        if (preview) {
-            preview.innerHTML = priceTagsHTML;
-            preview.style.display = 'block';
-            preview.scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
+    
+    console.log('📋 Setting preview HTML, length:', priceTagsHTML.length);
+    
+    // Clear any existing content first
+    preview.innerHTML = '';
+    
+    // Set the HTML
+    preview.innerHTML = priceTagsHTML;
+    
+    // Force display with important styles
+    preview.style.setProperty('display', 'block', 'important');
+    preview.style.setProperty('visibility', 'visible', 'important');
+    preview.style.setProperty('opacity', '1', 'important');
+    preview.style.setProperty('min-height', '200px', 'important');
+    preview.style.setProperty('width', '100%', 'important');
+    preview.style.setProperty('padding', '2rem', 'important');
+    preview.style.setProperty('background', 'white', 'important');
+    
+    // Make sure parent containers are visible
+    let parent = preview.parentElement;
+    while (parent && parent !== document.body) {
+        const computedStyle = window.getComputedStyle(parent);
+        if (computedStyle.display === 'none') {
+            parent.style.display = 'block';
         }
+        parent = parent.parentElement;
+    }
+    
+    // Close modal
+    closeModal('priceTagModal');
+    
+    // Wait for DOM to update and content to render, then scroll to preview
+    setTimeout(() => {
+        // Force a reflow to ensure content is rendered
+        void preview.offsetHeight;
         
-        // If not preview only, print after a short delay
-        if (!previewOnly) {
+        const bounds = preview.getBoundingClientRect();
+        console.log('📋 Preview bounds after setting HTML:', bounds);
+        console.log('📋 Preview innerHTML length:', preview.innerHTML.length);
+        console.log('📋 Preview computed display:', window.getComputedStyle(preview).display);
+        
+        // If still zero height, the content might not be rendering
+        if (bounds.height === 0 && preview.innerHTML.length > 0) {
+            console.warn('⚠️ Preview has zero height but has content, checking children...');
+            const children = preview.querySelectorAll('*');
+            console.log('📋 Preview has', children.length, 'child elements');
+            if (children.length > 0) {
+                console.log('📋 First child bounds:', children[0].getBoundingClientRect());
+            }
+            
+            // Try scrolling anyway - sometimes it helps trigger rendering
+            preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Try again after a longer delay
             setTimeout(() => {
-                window.print();
+                const newBounds = preview.getBoundingClientRect();
+                console.log('✅ Preview bounds after delay:', newBounds);
+                if (newBounds.height > 0) {
+                    preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }, 500);
+        } else if (bounds.height > 0) {
+            preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log('✅ Preview is visible and scrolled into view');
+        } else {
+            console.error('❌ Preview has no content!');
         }
+    }, 100);
+        
+    // If not preview only, print after a short delay
+    if (!previewOnly) {
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    }
 }
 
-function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo) {
-    console.log('🎨 Generating price tags HTML with logos:', { vendorLogo, myLogo });
+function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo, vendorLogoMap = {}) {
+    console.log('🎨 Generating price tags HTML with logos:', { vendorLogo, myLogo, vendorLogoMap });
+    
+    // Helper function to get vendor logo for an item
+    const getVendorLogoForItem = (item) => {
+        // First, try to get from vendorLogoMap (pre-checked logos)
+        const itemVendor = item.customer;
+        if (itemVendor && itemVendor !== 'No Customer' && vendorLogoMap[itemVendor] !== undefined) {
+            return vendorLogoMap[itemVendor]; // Will be null if logo doesn't exist
+        }
+        
+        // If a specific vendor logo was provided and item matches that vendor, use it
+        if (vendorLogo && itemVendor === vendorName) {
+            return vendorLogo;
+        }
+        
+        // Otherwise, no logo available
+        return null;
+    };
+    
+    // Helper function to check if logo exists (synchronous check - we'll verify in HTML)
+    const createVendorLogoHTML = (logoPath, vendorNameForLogo) => {
+        if (!logoPath) return '';
+        
+        const logoUrl = logoPath.startsWith('/') ? logoPath : '/' + logoPath;
+        const logoUrlWithCache = logoUrl + '?t=' + Date.now();
+        console.log(`🖼️ Creating vendor logo img tag with src: ${logoUrlWithCache} for vendor: ${vendorNameForLogo}`);
+        return `<img src="${logoUrlWithCache}" alt="${vendorNameForLogo || 'Vendor'} Logo" class="price-tag-vendor-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.display='none';" onload="console.log('✅ Vendor logo loaded successfully:', this.src);">`;
+    };
     
     const tagsHTML = items.map(item => {
         const itemName = item.description || item.name || 'Untitled';
         const price = (item.price || 0).toFixed(2);
         const quantity = item.quantity || 1;
         
+        // Get vendor name for this specific item (use item's customer if no global vendor)
+        const itemVendorName = vendorName || item.customer || 'Vendor';
+        
         // Generate one tag per item (if quantity > 1, we'll duplicate)
         let tagsForItem = '';
         for (let i = 0; i < quantity; i++) {
-            // Build logo HTML with error handling
-            let vendorLogoHTML = '';
-            if (vendorLogo) {
-                // Ensure path starts with / if it's a relative path
-                const logoUrl = vendorLogo.startsWith('/') ? vendorLogo : '/' + vendorLogo;
-                // Add cache-busting query parameter to force fresh load
-                const logoUrlWithCache = logoUrl + '?t=' + Date.now();
-                console.log(`🖼️ Creating vendor logo img tag with src: ${logoUrlWithCache}`);
-                vendorLogoHTML = `<img src="${logoUrlWithCache}" alt="${vendorName} Logo" class="price-tag-vendor-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ Vendor logo loaded successfully:', this.src); this.style.border='none';">`;
-            } else {
-                console.log('⚠️ No vendor logo provided for:', vendorName);
+            // Get vendor logo for this specific item
+            const itemVendorLogo = getVendorLogoForItem(item);
+            const vendorLogoHTML = createVendorLogoHTML(itemVendorLogo, itemVendorName);
+            
+            if (!itemVendorLogo) {
+                console.log(`⚠️ No vendor logo available for item from: ${itemVendorName}`);
             }
             
             let myLogoHTML = '';
@@ -9857,16 +10130,31 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                 console.log('⚠️ No my logo provided');
             }
             
+            // Add class to header if no vendor logo (for centering my logo)
+            const headerClass = !itemVendorLogo ? 'price-tag-header no-vendor-logo' : 'price-tag-header';
+            
             tagsForItem += `
                 <div class="price-tag">
-                    <div class="price-tag-header">
+                    <div class="${headerClass}">
                         ${vendorLogoHTML}
                         ${myLogoHTML}
                     </div>
                     <div class="price-tag-body">
                         <div class="price-tag-item-name">${SecurityManager.escapeHtml(itemName)}</div>
                         <div class="price-tag-price">$${price}</div>
-                        ${vendorNumber ? `<div class="price-tag-vendor-number">Vendor #${SecurityManager.escapeHtml(vendorNumber)}</div>` : ''}
+                        ${(() => {
+                            // Get vendor number for this specific item
+                            let itemVendorNumber = vendorNumber;
+                            // If no vendor number provided globally, try to get it from this item's vendor
+                            if (!itemVendorNumber && itemVendorName) {
+                                itemVendorNumber = getVendorNumber(itemVendorName);
+                            }
+                            // Only show if vendor requires it and we have a number
+                            return (itemVendorNumber && vendorRequiresVendorNumber(itemVendorName)) 
+                                ? `<div class="price-tag-vendor-number">Vendor #${SecurityManager.escapeHtml(itemVendorNumber)}</div>` 
+                                : '';
+                        })()}
+                        ${itemVendorName && itemVendorName !== 'Vendor' ? `<div class="price-tag-vendor-name" style="font-size: 0.7rem; color: #666; margin-top: 0.2rem;">${SecurityManager.escapeHtml(itemVendorName)}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -9874,10 +10162,13 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
         return tagsForItem;
     }).join('');
     
+    // Determine header title - use vendor name if provided, otherwise show "Multiple Vendors"
+    const headerTitle = vendorName || (items.length > 0 && items[0].customer ? `${items.length} Items - Multiple Vendors` : 'Price Tags');
+    
     return `
         <div class="price-tags-container">
             <div class="price-tags-header">
-                <h2>Price Tags for ${SecurityManager.escapeHtml(vendorName)}</h2>
+                <h2>${SecurityManager.escapeHtml(headerTitle)}</h2>
                 <button class="btn btn-outline" onclick="document.getElementById('priceTagPreview').style.display='none'">
                     <i class="fas fa-times"></i> Close
                 </button>
@@ -10544,7 +10835,10 @@ function populateCustomerSelect(selectId) {
     console.log(`populateCustomerSelect(${selectId}): currentValue = "${currentValue}"`);
     console.log(`Available customers:`, customers.map(c => c.name));
     
-    select.innerHTML = '<option value="">Select Customer</option>';
+    // Use appropriate default option text based on context (filter vs form)
+    const isFilter = selectId.includes('Filter');
+    const defaultOptionText = isFilter ? 'All Customers' : 'Select Customer';
+    select.innerHTML = `<option value="">${defaultOptionText}</option>`;
     customers.forEach(customer => {
         const option = document.createElement('option');
         option.value = customer.name;
@@ -10618,6 +10912,7 @@ function updateLocationFilters() {
 function updateCustomerFilters() {
     const customerNames = [...new Set(inventory.map(item => item.customer).filter(customer => customer))];
     
+    // Update projects tab customer filter
     const customerFilter = document.getElementById('customerFilter');
     if (customerFilter) {
         const currentValue = customerFilter.value;
@@ -10630,6 +10925,258 @@ function updateCustomerFilters() {
         });
         customerFilter.value = currentValue;
     }
+    
+    // Update WIP tab customer filter
+    const wipCustomerFilter = document.getElementById('wipCustomerFilter');
+    if (wipCustomerFilter) {
+        const currentValue = wipCustomerFilter.value;
+        wipCustomerFilter.innerHTML = '<option value="">All Customers</option>';
+        customerNames.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer;
+            option.textContent = customer;
+            wipCustomerFilter.appendChild(option);
+        });
+        wipCustomerFilter.value = currentValue;
+    }
+    
+    // Update Sales tab customer filter
+    const salesCustomerFilter = document.getElementById('salesCustomerFilter');
+    if (salesCustomerFilter) {
+        const currentValue = salesCustomerFilter.value;
+        salesCustomerFilter.innerHTML = '<option value="">All Customers</option>';
+        customerNames.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer;
+            option.textContent = customer;
+            salesCustomerFilter.appendChild(option);
+        });
+        salesCustomerFilter.value = currentValue;
+    }
+}
+
+// Clear all filters on the projects tab
+function clearProjectsFilters() {
+    // Clear search input
+    const searchInput = document.getElementById('searchItems');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    // Clear all select filters
+    const filters = [
+        'statusFilter',
+        'customerFilter',
+        'locationFilter',
+        'priorityFilter',
+        'dateRangeFilter'
+    ];
+    
+    filters.forEach(filterId => {
+        const filterElement = document.getElementById(filterId);
+        if (filterElement) {
+            filterElement.value = '';
+        }
+    });
+    
+    // Clear saved filter state
+    if (filterState['projects']) {
+        filterState['projects'] = {};
+    }
+    
+    // Re-apply filters (which will now show all items)
+    filterItems();
+
+    // Also reload cards view if it's active
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
+
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the inventory tab
+function clearInventoryFilters() {
+    const searchInput = document.getElementById('inventorySearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const filters = [
+        'inventoryStatusFilter',
+        'inventoryCategoryFilter',
+        'inventoryLocationFilter'
+    ];
+    
+    filters.forEach(filterId => {
+        const filterElement = document.getElementById(filterId);
+        if (filterElement) {
+            filterElement.value = '';
+        }
+    });
+    
+    // Re-apply filters
+    filterInventory();
+    
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the WIP tab
+function clearWIPFilters() {
+    const searchInput = document.getElementById('wipSearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const filters = [
+        'wipStatusFilter',
+        'wipCustomerFilter',
+        'wipPriorityFilter'
+    ];
+    
+    filters.forEach(filterId => {
+        const filterElement = document.getElementById(filterId);
+        if (filterElement) {
+            filterElement.value = '';
+        }
+    });
+    
+    // Clear saved filter state
+    if (filterState['wip']) {
+        filterState['wip'] = {};
+    }
+    
+    // Re-apply filters
+    filterWIP();
+    
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the gallery tab
+function clearGalleryFilters() {
+    const searchInput = document.getElementById('gallerySearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const statusFilter = document.getElementById('galleryStatusFilter');
+    if (statusFilter) {
+        statusFilter.value = '';
+    }
+    
+    // Re-apply filters
+    filterGallery();
+    
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the sales tab
+function clearSalesFilters() {
+    const searchInput = document.getElementById('salesSearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const customerFilter = document.getElementById('salesCustomerFilter');
+    if (customerFilter) {
+        customerFilter.value = '';
+    }
+    
+    // Re-apply filters by reloading sales cards
+    loadSalesCards();
+    if (typeof loadSalesTable === 'function') {
+        loadSalesTable();
+    }
+    if (typeof loadMobileSalesCards === 'function') {
+        loadMobileSalesCards();
+    }
+    
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the patterns tab
+function clearPatternsFilters() {
+    const searchInput = document.getElementById('patternsSearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const categoryFilter = document.getElementById('patternsCategoryFilter');
+    if (categoryFilter) {
+        categoryFilter.value = '';
+    }
+    
+    const designerFilter = document.getElementById('patternsDesignerFilter');
+    if (designerFilter) {
+        designerFilter.value = '';
+    }
+    
+    // Re-apply filters
+    if (typeof filterPatterns === 'function') {
+        filterPatterns();
+    }
+    
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the ideas tab
+function clearIdeasFilters() {
+    const searchInput = document.getElementById('ideasSearch');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    const categoryFilter = document.getElementById('ideasCategoryFilter');
+    if (categoryFilter) {
+        categoryFilter.value = '';
+    }
+    
+    const statusFilter = document.getElementById('ideasStatusFilter');
+    if (statusFilter) {
+        statusFilter.value = '';
+    }
+    
+    // Re-apply filters
+    if (typeof filterIdeas === 'function') {
+        filterIdeas();
+    }
+    
+    showNotification('Filters cleared', 'success');
+}
+
+// Clear all filters on the reports tab
+function clearReportsFilters() {
+    const locationFilter = document.getElementById('reportLocationFilter');
+    if (locationFilter) {
+        locationFilter.value = '';
+    }
+    
+    const statusFilter = document.getElementById('reportStatusFilter');
+    if (statusFilter) {
+        statusFilter.value = '';
+    }
+    
+    const dateFilter = document.getElementById('reportDateFilter');
+    if (dateFilter) {
+        dateFilter.value = '';
+    }
+    
+    const startDate = document.getElementById('reportStartDate');
+    if (startDate) {
+        startDate.value = '';
+    }
+    
+    const endDate = document.getElementById('reportEndDate');
+    if (endDate) {
+        endDate.value = '';
+    }
+    
+    // Re-generate report if there's a function to do so
+    if (typeof generateComprehensiveReport === 'function') {
+        generateComprehensiveReport();
+    }
+    
+    showNotification('Filters cleared', 'success');
 }
 
 function filterItems() {
@@ -10642,10 +11189,14 @@ function filterItems() {
     const statusFilter = document.getElementById('statusFilter').value;
     const customerFilter = document.getElementById('customerFilter').value;
     const locationFilter = document.getElementById('locationFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const dateRangeFilter = document.getElementById('dateRangeFilter').value;
     
     // Get all customer headers and groups
     const customerHeaders = document.querySelectorAll('.customer-header');
     const customerGroups = document.querySelectorAll('.customer-group');
+    
+    const now = new Date();
     
     customerHeaders.forEach((header, index) => {
         const group = customerGroups[index];
@@ -10656,10 +11207,39 @@ function filterItems() {
         let hasVisibleProjects = false;
         
         projectRows.forEach(projectRow => {
-            const projectName = projectRow.querySelector('.project-name strong').textContent.toLowerCase();
-            const status = projectRow.querySelector('.status-badge').textContent;
-            const category = projectRow.querySelector('.project-category').textContent.toLowerCase();
-            const notes = projectRow.querySelector('.project-notes').textContent.toLowerCase();
+            const projectName = projectRow.querySelector('.project-name strong')?.textContent.toLowerCase() || '';
+            const status = projectRow.querySelector('.status-badge')?.textContent || '';
+            const notes = projectRow.querySelector('.project-notes')?.textContent.toLowerCase() || '';
+            
+            // Get priority from data attribute (preferred) or element
+            let priority = projectRow.dataset.priority || 'medium';
+            if (!priority || priority === '') {
+                const priorityElement = projectRow.querySelector('.priority');
+                priority = priorityElement ? priorityElement.textContent.toLowerCase() : 'medium';
+            } else {
+                priority = priority.toLowerCase();
+            }
+            
+            // Get date from data attribute (preferred) or element
+            let itemDate = null;
+            if (projectRow.dataset.dueDate) {
+                itemDate = new Date(projectRow.dataset.dueDate);
+            } else if (projectRow.dataset.dateAdded) {
+                itemDate = new Date(projectRow.dataset.dateAdded);
+            } else {
+                // Fallback to element text
+                const dueDateElement = projectRow.querySelector('.due-date') || projectRow.querySelector('[data-due-date]');
+                if (dueDateElement) {
+                    const dateText = dueDateElement.textContent || dueDateElement.dataset.dueDate;
+                    if (dateText && dateText !== 'Not set' && dateText !== 'No due date') {
+                        try {
+                            itemDate = new Date(dateText);
+                        } catch (e) {
+                            // Invalid date, leave as null
+                        }
+                    }
+                }
+            }
             
             // Apply filters
             const matchesSearch = projectName.includes(searchTerm) || 
@@ -10668,8 +11248,37 @@ function filterItems() {
             const matchesStatus = !statusFilter || status === statusFilter;
             const matchesCustomer = !customerFilter || customerName === customerFilter;
             const matchesLocation = !locationFilter || true; // Location filtering would need to be added to project data
+            const matchesPriority = !priorityFilter || priority === priorityFilter.toLowerCase();
             
-            if (matchesSearch && matchesStatus && matchesCustomer && matchesLocation) {
+            // Date range filter
+            let matchesDateRange = true;
+            if (dateRangeFilter && itemDate) {
+                switch (dateRangeFilter) {
+                    case 'today':
+                        matchesDateRange = itemDate.toDateString() === now.toDateString();
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= weekAgo;
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= monthAgo;
+                        break;
+                    case 'quarter':
+                        const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= quarterAgo;
+                        break;
+                    case 'year':
+                        const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                        matchesDateRange = itemDate >= yearAgo;
+                        break;
+                }
+            } else if (dateRangeFilter && !itemDate) {
+                matchesDateRange = false; // No date means it doesn't match any date range
+            }
+            
+            if (matchesSearch && matchesStatus && matchesCustomer && matchesLocation && matchesPriority && matchesDateRange) {
                 projectRow.style.display = 'flex';
                 hasVisibleProjects = true;
             } else {
@@ -11163,6 +11772,11 @@ async function editCustomer(index) {
     document.getElementById('editCustomerContact').value = customer.contact || '';
     document.getElementById('editCustomerLocation').value = customer.location || '';
     document.getElementById('editCustomerStatus').value = customer.status || 'active';
+    const requiresVendorNumber = customer.requiresVendorNumber || false;
+    document.getElementById('editCustomerRequiresVendorNumber').checked = requiresVendorNumber;
+    document.getElementById('editCustomerVendorNumber').value = customer.vendorNumber || '';
+    // Show/hide vendor number field based on checkbox
+    toggleVendorNumberField('edit');
     
     // Store the index for the update function
     document.getElementById('editCustomerForm').dataset.customerIndex = index;
@@ -11258,7 +11872,13 @@ async function deleteCustomer(customerIdOrIndex) {
 
 function printCustomerList() {
     // Create a new window for printing
-    const printWindow = window.open('', '_blank');
+    // Use a data URL or about:blank to avoid popup blockers
+    const printWindow = window.open('about:blank', '_blank', 'width=800,height=600');
+    
+    if (!printWindow) {
+        showNotification('Popup blocked. Please allow popups for this site and try again.', 'error');
+        return;
+    }
     
     // Get current date
     const today = new Date().toLocaleDateString();
@@ -11378,11 +11998,16 @@ function printCustomerList() {
     `;
     
     // Write content and print
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    // Use SecurityManager helper for safe document writing
+    SecurityManager.writeToWindow(printWindow, printContent);
+    
+    // Wait a moment for content to render, then print
+    setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        // Don't close immediately - let user see the print dialog
+        // Window will close after print dialog is dismissed
+    }, 250);
     
     showNotification('Customer list sent to printer!', 'success');
 }
@@ -12248,7 +12873,8 @@ function printCurrentReport() {
             return;
         }
         
-        printWindow.document.write(`
+        // Use SecurityManager helper for safe document writing
+        const reportHTML = `
             <!DOCTYPE html>
             <html>
                 <head>
@@ -12328,9 +12954,9 @@ function printCurrentReport() {
                     ${reportContent.innerHTML}
                 </body>
             </html>
-        `);
+        `;
         
-        printWindow.document.close();
+        SecurityManager.writeToWindow(printWindow, reportHTML);
         console.log('📝 Print window content written');
         
         // Wait for content to load, then print
@@ -12429,6 +13055,13 @@ function loadWIPTab() {
     
     updateWIPStats(wipItems);
     loadWIPGrid(wipItems);
+    
+    // Populate customer filter dropdown
+    populateCustomerSelect('wipCustomerFilter');
+    
+    // Apply any saved filters
+    restoreFilters('wip');
+    filterWIP();
     
     // Desktop table loaded
 }
@@ -12533,6 +13166,7 @@ function loadWIPGrid(wipItems) {
 function filterWIP() {
     const searchTerm = document.getElementById('wipSearch').value.toLowerCase();
     const statusFilter = document.getElementById('wipStatusFilter').value;
+    const customerFilter = document.getElementById('wipCustomerFilter').value;
     const priorityFilter = document.getElementById('wipPriorityFilter').value;
     
     let filteredItems = inventory.filter(item => 
@@ -12551,6 +13185,10 @@ function filterWIP() {
     
     if (statusFilter) {
         filteredItems = filteredItems.filter(item => item.status === statusFilter);
+    }
+    
+    if (customerFilter) {
+        filteredItems = filteredItems.filter(item => item.customer === customerFilter);
     }
     
     if (priorityFilter) {
@@ -14989,6 +15627,33 @@ function clearCompletedFilters() {
     if (customerElement) customerElement.value = '';
     if (dateElement) dateElement.value = '';
     
+    // Uncheck "Select All" checkbox
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+    
+    // Clear all individual item checkboxes
+    const checkboxes = document.querySelectorAll('.completed-item-card-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const card = checkbox.closest('.completed-item-card');
+        if (card) {
+            card.classList.remove('selected');
+        }
+    });
+    
+    // Clear the selected items set and update summary
+    if (typeof selectedCompletedItems !== 'undefined' && selectedCompletedItems) {
+        selectedCompletedItems.clear();
+    }
+    
+    // Update the invoice selection summary (this will also clear the visual summary)
+    const summaryDiv = document.getElementById('invoiceSummary');
+    if (summaryDiv) {
+        summaryDiv.style.display = 'none';
+    }
+    
     loadCompletedItemsTable();
 }
 
@@ -15292,7 +15957,7 @@ function toggleSelectAll(checkbox) {
 }
 
 // Update vendor name in price tag modal based on selected items
-function updateVendorFromSelectedItems() {
+async function updateVendorFromSelectedItems() {
     const vendorNameInput = document.getElementById('priceTagVendorName');
     if (!vendorNameInput) return; // Price tag modal not open
     
@@ -15317,16 +15982,17 @@ function updateVendorFromSelectedItems() {
         const vendorName = customers[0];
         vendorNameInput.value = vendorName;
         // Check if logo exists before loading
-        checkAndLoadVendorLogo(vendorName);
+        await checkAndLoadVendorLogo(vendorName);
     } else if (customers.length > 1) {
-        // Multiple different customers - clear vendor name
+        // Multiple different customers - show info and let user know we'll handle each vendor separately
         vendorNameInput.value = '';
+        vendorNameInput.placeholder = `${customers.length} vendors selected - will use correct logo for each`;
         const vendorLogoInput = document.getElementById('priceTagVendorLogo');
         if (vendorLogoInput) {
             vendorLogoInput.value = '';
-            vendorLogoInput.placeholder = 'Multiple customers selected - enter vendor manually';
+            vendorLogoInput.placeholder = 'Will auto-detect logo for each vendor';
         }
-        console.log('⚠️ Multiple customers in selection, cleared vendor name');
+        console.log(`ℹ️ Multiple vendors detected: ${customers.join(', ')} - will use vendor-specific logos`);
     } else {
         // No valid customers - clear vendor name
         vendorNameInput.value = '';
@@ -15524,28 +16190,43 @@ function createInvoiceFromSelected() {
         byCustomer[customer].push(item);
     });
     
-    // If multiple customers, ask which one to invoice
+    // Generate separate invoice for each customer
     const customers = Object.keys(byCustomer);
-    if (customers.length > 1) {
-        const customerList = customers.join(', ');
-        const selectedCustomer = prompt(`Selected items belong to multiple customers:\n${customerList}\n\nEnter the customer name for this invoice:`);
-        
-        if (!selectedCustomer || !byCustomer[selectedCustomer]) {
-            showNotification('Invalid customer selection', 'error');
-            return;
+    const invoiceCount = customers.length;
+    
+    // Reset the invoices array
+    allGeneratedInvoices = [];
+    currentInvoiceIndex = 0;
+    
+    // Generate all invoices
+    customers.forEach((customer) => {
+        const invoice = generateInvoiceForItems(byCustomer[customer], customer, false);
+        if (invoice) {
+            allGeneratedInvoices.push(invoice);
         }
+    });
+    
+    if (allGeneratedInvoices.length > 0) {
+        // Display the first invoice
+        currentInvoiceIndex = 0;
+        displayInvoice(allGeneratedInvoices[0]);
         
-        generateInvoiceForItems(byCustomer[selectedCustomer], selectedCustomer);
-    } else {
-        generateInvoiceForItems(selectedItems, customers[0]);
+        // Show summary notification
+        if (invoiceCount > 1) {
+            const customerList = customers.join(', ');
+            showNotification(`Created ${invoiceCount} separate invoices for: ${customerList}. Use navigation arrows to view all.`, 'success');
+        }
     }
 }
 
 // Global variable to store current invoice data for printing
 let currentInvoiceData = null;
+// Global variable to store all generated invoices for navigation
+let allGeneratedInvoices = [];
+let currentInvoiceIndex = 0;
 
 // Generate invoice for specific items
-function generateInvoiceForItems(items, customer) {
+function generateInvoiceForItems(items, customer, shouldDisplay = false) {
     // Handle customer parameter (could be string or object)
     const customerName = typeof customer === 'string' ? customer : customer.name || customer;
     
@@ -15553,7 +16234,9 @@ function generateInvoiceForItems(items, customer) {
     const now = new Date();
     const dateStr = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${now.getFullYear()}`;
     const cleanCustomerName = customerName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const invoiceId = `${cleanCustomerName}${dateStr}`;
+    // Add timestamp to make each invoice ID unique when multiple are generated
+    const timestamp = now.getTime().toString().slice(-6);
+    const invoiceId = `${cleanCustomerName}${dateStr}${timestamp}`;
     
     // Create invoice data
     const invoice = {
@@ -15571,25 +16254,8 @@ function generateInvoiceForItems(items, customer) {
         total: items.reduce((sum, item) => sum + ((item.quantity || 1) * (item.price || 0)), 0)
     };
     
-    // Store current invoice data for printing
-    currentInvoiceData = {
-        businessName: "CyndyP Stitchcraft",
-        businessEmail: "cyndypstitchcraft@gmail.com",
-        invoiceTitle: "INVOICE",
-        id: invoice.id,
-        date: new Date(invoice.date).toLocaleDateString(),
-        customer: customerName,
-        sales: items.map(item => ({
-            itemName: item.description || item.name,
-            dateSold: new Date().toLocaleDateString(),
-            salePrice: item.price || 0
-        })),
-        total: invoice.total
-    };
-    
-    // Display invoice using the existing robust system
-    displayInvoice(invoice);
-    showNotification(`Invoice created for ${customerName} with ${items.length} item(s)`, 'success');
+    // Return the invoice object (don't display it here - that will be handled by createInvoiceFromSelected)
+    return invoice;
 }
 
 // Display invoice using the existing robust invoice system
@@ -15609,8 +16275,58 @@ function displayInvoice(invoice) {
         notes: `Generated from ${invoice.items.length} completed item(s)`
     };
     
+    // Store current invoice data for printing (before showInvoicePreview overwrites it)
+    currentInvoiceData = {
+        businessName: "CyndyP Stitchcraft",
+        businessEmail: "cyndypstitchcraft@gmail.com",
+        invoiceTitle: "INVOICE",
+        id: formattedInvoice.id,
+        date: formattedInvoice.date,
+        customer: formattedInvoice.customer,
+        sales: formattedInvoice.sales,
+        total: formattedInvoice.total
+    };
+    
     // Use the existing invoice preview system
     showInvoicePreview(formattedInvoice);
+    
+    // Update navigation buttons if multiple invoices exist
+    updateInvoiceNavigation();
+}
+
+// Update invoice navigation buttons visibility and state
+function updateInvoiceNavigation() {
+    const navContainer = document.getElementById('invoiceNavigation');
+    const prevBtn = document.getElementById('prevInvoiceBtn');
+    const nextBtn = document.getElementById('nextInvoiceBtn');
+    const counter = document.getElementById('invoiceCounter');
+    
+    if (!navContainer || !prevBtn || !nextBtn || !counter) return;
+    
+    if (allGeneratedInvoices.length > 1) {
+        navContainer.style.display = 'flex';
+        counter.textContent = `${currentInvoiceIndex + 1} of ${allGeneratedInvoices.length}`;
+        prevBtn.disabled = currentInvoiceIndex === 0;
+        nextBtn.disabled = currentInvoiceIndex === allGeneratedInvoices.length - 1;
+    } else {
+        navContainer.style.display = 'none';
+    }
+}
+
+// Show previous invoice
+function showPreviousInvoice() {
+    if (currentInvoiceIndex > 0) {
+        currentInvoiceIndex--;
+        displayInvoice(allGeneratedInvoices[currentInvoiceIndex]);
+    }
+}
+
+// Show next invoice
+function showNextInvoice() {
+    if (currentInvoiceIndex < allGeneratedInvoices.length - 1) {
+        currentInvoiceIndex++;
+        displayInvoice(allGeneratedInvoices[currentInvoiceIndex]);
+    }
 }
 
 /* ==================== PATTERNS MANAGEMENT (TEMP DISABLED) ====================

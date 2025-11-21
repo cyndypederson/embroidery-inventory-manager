@@ -10,9 +10,16 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://cyndypstitchcraft_db_user:4G2vcEQSjAvJoUxY@embroider-inventory.2x57teq.mongodb.net/?retryWrites=true&w=majority&appName=embroider-inventory';
-const DB_NAME = 'embroidery_inventory';
+// SECURITY: Credentials must be in environment variables only
+const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = process.env.DB_NAME || 'embroidery_inventory';
 let db;
+
+if (!MONGODB_URI) {
+    console.error('❌ CRITICAL: MONGODB_URI environment variable is not set!');
+    console.error('Please set MONGODB_URI in your .env file or environment variables.');
+    process.exit(1);
+}
 
 // Connect to MongoDB (lazy connection)
 async function connectToDatabase() {
