@@ -7337,6 +7337,10 @@ body {
     border-bottom: 1px solid #ddd;
 }
 
+.price-tag-header.no-vendor-logo {
+    justify-content: center;
+}
+
 .price-tag-vendor-logo,
 .price-tag-my-logo {
     max-width: 100px;
@@ -7548,6 +7552,10 @@ body {
         flex-shrink: 0;
         display: flex;
         justify-content: space-between;
+    }
+    
+    .price-tag-header.no-vendor-logo {
+        justify-content: center;
         align-items: center;
         height: 1in;
         border-bottom: 1px solid #e0e0e0;

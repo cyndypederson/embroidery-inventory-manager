@@ -5,7 +5,7 @@
  * Tests WCAG compliance, keyboard navigation, ARIA labels, and screen reader support
  */
 
-const puppeteer = require('puppeteer');
+const { launch, puppeteer } = require('./test-utils/puppeteer-config');
 const { AxePuppeteer } = require('@axe-core/puppeteer');
 
 // Color codes for output
@@ -59,7 +59,7 @@ async function runAccessibilityTests() {
     log(`📅 Started: ${new Date().toISOString()}`, 'cyan');
     log(`🌐 Base URL: ${BASE_URL}`, 'cyan');
     
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await launch();
     const page = await browser.newPage();
     
     try {

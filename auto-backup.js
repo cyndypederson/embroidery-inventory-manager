@@ -20,6 +20,7 @@ async function createBackup() {
         const sales = await database.collection('sales').find({}).toArray();
         const gallery = await database.collection('gallery').find({}).toArray();
         const ideas = await database.collection('ideas').find({}).toArray();
+        const patterns = await database.collection('patterns').find({}).toArray();
         
         // Create backup directory with timestamp
         const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
@@ -35,6 +36,7 @@ async function createBackup() {
         fs.writeFileSync(path.join(backupDir, 'sales.json'), JSON.stringify(sales, null, 2));
         fs.writeFileSync(path.join(backupDir, 'gallery.json'), JSON.stringify(gallery, null, 2));
         fs.writeFileSync(path.join(backupDir, 'ideas.json'), JSON.stringify(ideas, null, 2));
+        fs.writeFileSync(path.join(backupDir, 'patterns.json'), JSON.stringify(patterns, null, 2));
         
         // Create backup info file
         const backupInfo = {
@@ -44,7 +46,8 @@ async function createBackup() {
                 customers: customers.length,
                 sales: sales.length,
                 gallery: gallery.length,
-                ideas: ideas.length
+                ideas: ideas.length,
+                patterns: patterns.length
             },
             backup_type: 'automatic'
         };
@@ -58,6 +61,7 @@ async function createBackup() {
         console.log(`   - ${sales.length} sales`);
         console.log(`   - ${gallery.length} gallery items`);
         console.log(`   - ${ideas.length} ideas`);
+        console.log(`   - ${patterns.length} patterns`);
         
         // Keep only last 30 backups
         cleanupOldBackups();

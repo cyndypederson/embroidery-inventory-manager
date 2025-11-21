@@ -346,9 +346,6 @@
                 <button class="nav-btn" data-tab="gallery">
                     <i class="fas fa-images"></i> Gallery
                 </button>
-                <button class="nav-btn" data-tab="patterns">
-                    <i class="fas fa-palette"></i> Patterns
-                </button>
                 <button class="nav-btn" data-tab="sales">
                     <i class="fas fa-chart-line"></i> Sales
                 </button>
@@ -397,6 +394,9 @@
                         <option value="quarter">This Quarter</option>
                         <option value="year">This Year</option>
                     </select>
+                    <button class="btn btn-outline" onclick="clearProjectsFilters()" title="Clear all filters">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
                     <button class="btn btn-primary" onclick="openAddProjectModal()">
                         <i class="fas fa-plus"></i> Add New Project
                     </button>
@@ -469,6 +469,9 @@
                     <select id="inventoryLocationFilter" onchange="filterInventory()" aria-label="Filter inventory by location">
                         <option value="">All Locations</option>
                     </select>
+                    <button class="btn btn-outline" onclick="clearInventoryFilters()" title="Clear all filters">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
                     <button class="btn btn-primary" onclick="openAddInventoryModal()">
                         <i class="fas fa-plus"></i> Add New Inventory
                     </button>
@@ -581,12 +584,18 @@
                         <option value="in-progress">In Progress</option>
                         <option value="work-in-progress">Work in Progress</option>
                     </select>
+                    <select id="wipCustomerFilter" onchange="filterWIP()" aria-label="Filter work in progress by customer">
+                        <option value="">All Customers</option>
+                    </select>
                     <select id="wipPriorityFilter" onchange="filterWIP()" aria-label="Filter work in progress by priority">
                         <option value="">All Priority</option>
                         <option value="high">High Priority</option>
                         <option value="medium">Medium Priority</option>
                         <option value="low">Low Priority</option>
                     </select>
+                    <button class="btn btn-outline" onclick="clearWIPFilters()" title="Clear all filters">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
                 </div>
 
                 <div id="wipGrid" class="wip-grid">
@@ -616,6 +625,9 @@
                         <option value="work-in-progress">Work in Progress</option>
                     </select>
                     <input type="text" id="gallerySearch" placeholder="Search gallery..." onkeyup="filterGallery()">
+                    <button class="btn btn-outline" onclick="clearGalleryFilters()" title="Clear all filters">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
                 </div>
 
                 <div id="galleryGrid" class="gallery-grid">
@@ -625,43 +637,6 @@
                 <!-- Mobile Cards Container for Gallery -->
                 <div class="mobile-cards-container">
                     <div class="mobile-cards-grid" id="mobileGalleryCards"></div>
-                </div>
-            </div>
-
-            <!-- Patterns Tab -->
-            <div id="patterns" class="tab-content">
-                <div class="section-header">
-                    <h2>Pattern Library</h2>
-                    <button class="btn btn-primary" onclick="openAddPatternModal()">
-                        <i class="fas fa-plus"></i> Add Pattern
-                    </button>
-                </div>
-
-                <div class="filters">
-                    <input type="text" id="patternsSearch" placeholder="Search patterns by name, designer, category..." onkeyup="filterPatterns()">
-                    <select id="patternsCategoryFilter" onchange="filterPatterns()" aria-label="Filter patterns by category">
-                        <option value="">All Categories</option>
-                        <option value="Floral">Floral</option>
-                        <option value="Animal">Animal</option>
-                        <option value="Text">Text</option>
-                        <option value="Quotes">Quotes</option>
-                        <option value="Holiday">Holiday</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <select id="patternsDesignerFilter" onchange="filterPatterns()" aria-label="Filter patterns by designer">
-                        <option value="">All Designers</option>
-                    </select>
-                </div>
-
-                <!-- Patterns Grid -->
-                <div class="patterns-cards-container">
-                    <div class="patterns-cards-grid" id="patternsCards">
-                        <!-- Pattern cards will be populated here -->
-                    </div>
-                </div>
-                
-                <div id="patternsEmptyMessage" class="no-data" style="display: none;">
-                    No patterns found. <a href="#" onclick="openAddPatternModal()">Add your first pattern</a>
                 </div>
             </div>
 
@@ -685,6 +660,17 @@
                     </div>
                 </div>
 
+                <!-- Sales Filters -->
+                <div class="filters" style="margin-bottom: 1rem;">
+                    <input type="text" id="salesSearch" placeholder="Search sales..." onkeyup="loadSalesCards()">
+                    <select id="salesCustomerFilter" onchange="loadSalesCards()" aria-label="Filter sales by customer">
+                        <option value="">All Customers</option>
+                    </select>
+                    <button class="btn btn-outline" onclick="clearSalesFilters()" title="Clear all filters">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
+                </div>
+
                 <!-- Sales Cards Grid -->
                 <div class="sales-cards-container">
                     <div class="sales-cards-grid" id="salesCards">
@@ -698,9 +684,14 @@
                 </div>
             </div>
 
-        <!-- Completed Items Tab -->
-        <div id="completed" class="tab-content">
-            <div class="section-header">
+            <!-- Price Tag Preview Container -->
+            <div id="priceTagPreview" class="price-tag-preview" style="display: none;">
+                <!-- Price tags will be generated here -->
+            </div>
+
+            <!-- Completed Items Tab -->
+            <div id="completed" class="tab-content">
+                <div class="section-header">
                 <h2>Completed Items</h2>
                     <div class="section-actions">
                         <button class="btn btn-success" onclick="addCompletedItem()">
@@ -715,15 +706,6 @@
                         <button class="btn btn-primary" onclick="openPriceTagModal()">
                             <i class="fas fa-tags"></i> Generate Price Tags
                         </button>
-                        <button class="btn btn-secondary" onclick="selectAllCompleted()">
-                            <i class="fas fa-check-square"></i> Select All
-                        </button>
-                <button class="btn btn-outline" onclick="clearCompletedSelection()">
-                    <i class="fas fa-square"></i> Clear Selection
-                </button>
-                <button class="btn btn-warning" onclick="clearAllExpandedCustomerGroups()" title="Debug: Clear all expanded customer groups">
-                    <i class="fas fa-compress"></i> Collapse All
-                </button>
                     </div>
                 </div>
 
@@ -820,6 +802,9 @@
                         <option value="completed">Completed</option>
                         <option value="archived">Archived</option>
                     </select>
+                    <button class="btn btn-outline" onclick="clearIdeasFilters()" title="Clear all filters">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
                 </div>
 
                 <div id="ideasGrid" class="ideas-grid">
@@ -925,6 +910,9 @@
                             </select>
                             <input type="date" id="reportStartDate" placeholder="Start Date">
                             <input type="date" id="reportEndDate" placeholder="End Date">
+                            <button class="btn btn-outline" onclick="clearReportsFilters()" title="Clear all filters">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1427,6 +1415,18 @@
                     <label for="customerContact">Contact Info</label>
                     <input type="text" id="customerContact" placeholder="Phone, email, etc." maxlength="200">
                 </div>
+                <div class="form-group full-width">
+                    <label>
+                        <input type="checkbox" id="customerRequiresVendorNumber" onchange="toggleVendorNumberField('customer')">
+                        Requires Vendor Number (for price tags)
+                    </label>
+                    <small style="display: block; color: #666; margin-top: 0.25rem;">Check this if this vendor needs a vendor number displayed on price tags</small>
+                </div>
+                <div class="form-group full-width" id="customerVendorNumberGroup" style="display: none;">
+                    <label for="customerVendorNumber">Vendor Number *</label>
+                    <input type="text" id="customerVendorNumber" placeholder="Enter vendor number" maxlength="50">
+                    <small style="display: block; color: #666; margin-top: 0.25rem;">This number will be displayed on price tags for this vendor</small>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addCustomerModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Customer</button>
@@ -1459,6 +1459,18 @@
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </select>
+                </div>
+                <div class="form-group full-width">
+                    <label>
+                        <input type="checkbox" id="editCustomerRequiresVendorNumber" onchange="toggleVendorNumberField('edit')">
+                        Requires Vendor Number (for price tags)
+                    </label>
+                    <small style="display: block; color: #666; margin-top: 0.25rem;">Check this if this vendor needs a vendor number displayed on price tags</small>
+                </div>
+                <div class="form-group full-width" id="editCustomerVendorNumberGroup" style="display: none;">
+                    <label for="editCustomerVendorNumber">Vendor Number *</label>
+                    <input type="text" id="editCustomerVendorNumber" placeholder="Enter vendor number" maxlength="50">
+                    <small style="display: block; color: #666; margin-top: 0.25rem;">This number will be displayed on price tags for this vendor</small>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editCustomerModal')">Cancel</button>
@@ -2109,12 +2121,23 @@
     <div id="invoicePreviewModal" class="modal">
         <div class="modal-content invoice-preview">
             <div class="invoice-header">
-                <button class="btn" onclick="printInvoice()" style="background: #000; color: white; border: 1px solid #000;">
-                    <i class="fas fa-print"></i> Print Invoice
-                </button>
-                <button class="btn" onclick="closeModal('invoicePreviewModal')" style="background: #666; color: white; border: 1px solid #666;">
-                    <i class="fas fa-times"></i> Close
-                </button>
+                <div id="invoiceNavigation" style="display: none; gap: 0.5rem; align-items: center;">
+                    <button class="btn" onclick="showPreviousInvoice()" id="prevInvoiceBtn" style="background: #2C5F7C; color: white; border: 1px solid #2C5F7C;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="invoiceCounter" style="padding: 0 1rem; font-weight: bold;">1 of 1</span>
+                    <button class="btn" onclick="showNextInvoice()" id="nextInvoiceBtn" style="background: #2C5F7C; color: white; border: 1px solid #2C5F7C;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+                    <button class="btn" onclick="printInvoice()" style="background: #000; color: white; border: 1px solid #000;">
+                        <i class="fas fa-print"></i> Print Invoice
+                    </button>
+                    <button class="btn" onclick="closeModal('invoicePreviewModal')" style="background: #666; color: white; border: 1px solid #666;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
             </div>
             <div id="invoiceContent" class="invoice-content">
                 <!-- Invoice content will be generated here -->
@@ -2142,144 +2165,6 @@
                     <tbody id="invoicesTableBody">
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Pattern Modal -->
-    <div id="addPatternModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('addPatternModal')">&times;</span>
-            <h3>Add Pattern</h3>
-            <div id="patternDuplicateWarning" class="warning-message" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                <i class="fas fa-exclamation-triangle"></i> <strong>Duplicate Pattern Detected!</strong>
-                <div id="patternDuplicateList" style="margin-top: 0.5rem;"></div>
-                <div style="margin-top: 0.5rem;">
-                    <button type="button" class="btn btn-warning btn-sm" onclick="proceedWithPattern()">Add Anyway</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelPatternAdd()">Cancel</button>
-                </div>
-            </div>
-            <form id="addPatternForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="patternName">Pattern Name *</label>
-                    <input type="text" id="patternName" required placeholder="Enter pattern name" maxlength="200" onblur="checkPatternDuplicate()">
-                    <small class="form-help">This will be checked for duplicates</small>
-                </div>
-                <div class="form-group full-width">
-                    <label for="patternImageUrl">Image URL *</label>
-                    <input type="url" id="patternImageUrl" required placeholder="https://..." maxlength="500">
-                    <small class="form-help">Link to the pattern image</small>
-                </div>
-                <div class="form-group half-width">
-                    <label for="patternDesigner">Designer</label>
-                    <input type="text" id="patternDesigner" placeholder="Designer name" maxlength="100">
-                </div>
-                <div class="form-group half-width">
-                    <label for="patternSource">Source</label>
-                    <input type="text" id="patternSource" placeholder="Etsy shop, website, etc." maxlength="200">
-                </div>
-                <div class="form-group half-width">
-                    <label for="patternCategory">Category</label>
-                    <select id="patternCategory">
-                        <option value="">Select Category</option>
-                        <option value="Floral">Floral</option>
-                        <option value="Animal">Animal</option>
-                        <option value="Text">Text</option>
-                        <option value="Quotes">Quotes</option>
-                        <option value="Holiday">Holiday</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="patternFileUrl">Pattern File URL</label>
-                    <input type="url" id="patternFileUrl" placeholder="Link to downloadable pattern file" maxlength="500">
-                </div>
-                <div class="form-group full-width">
-                    <label for="patternTags">Tags (comma-separated)</label>
-                    <input type="text" id="patternTags" placeholder="e.g., wedding, baby, floral" maxlength="200">
-                </div>
-                <div class="form-group full-width">
-                    <label for="patternNotes">Notes</label>
-                    <textarea id="patternNotes" placeholder="Additional notes about the pattern" maxlength="500" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPatternModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Pattern</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Edit Pattern Modal -->
-    <div id="editPatternModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('editPatternModal')">&times;</span>
-            <h3>Edit Pattern</h3>
-            <div id="editPatternDuplicateWarning" class="warning-message" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                <i class="fas fa-exclamation-triangle"></i> <strong>Duplicate Pattern Detected!</strong>
-                <div id="editPatternDuplicateList" style="margin-top: 0.5rem;"></div>
-                <div style="margin-top: 0.5rem;">
-                    <button type="button" class="btn btn-warning btn-sm" onclick="proceedWithPatternEdit()">Update Anyway</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelPatternEdit()">Cancel</button>
-                </div>
-            </div>
-            <form id="editPatternForm" class="modal-form" novalidate>
-                <input type="hidden" id="editPatternId">
-                <div class="form-group full-width">
-                    <label for="editPatternName">Pattern Name *</label>
-                    <input type="text" id="editPatternName" required placeholder="Enter pattern name" maxlength="200" onblur="checkPatternDuplicateEdit()">
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPatternImageUrl">Image URL *</label>
-                    <input type="url" id="editPatternImageUrl" required placeholder="https://..." maxlength="500">
-                </div>
-                <div class="form-group half-width">
-                    <label for="editPatternDesigner">Designer</label>
-                    <input type="text" id="editPatternDesigner" placeholder="Designer name" maxlength="100">
-                </div>
-                <div class="form-group half-width">
-                    <label for="editPatternSource">Source</label>
-                    <input type="text" id="editPatternSource" placeholder="Etsy shop, website, etc." maxlength="200">
-                </div>
-                <div class="form-group half-width">
-                    <label for="editPatternCategory">Category</label>
-                    <select id="editPatternCategory">
-                        <option value="">Select Category</option>
-                        <option value="Floral">Floral</option>
-                        <option value="Animal">Animal</option>
-                        <option value="Text">Text</option>
-                        <option value="Quotes">Quotes</option>
-                        <option value="Holiday">Holiday</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group half-width">
-                    <label for="editPatternFileUrl">Pattern File URL</label>
-                    <input type="url" id="editPatternFileUrl" placeholder="Link to downloadable pattern file" maxlength="500">
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPatternTags">Tags (comma-separated)</label>
-                    <input type="text" id="editPatternTags" placeholder="e.g., wedding, baby, floral" maxlength="200">
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPatternNotes">Notes</label>
-                    <textarea id="editPatternNotes" placeholder="Additional notes about the pattern" maxlength="500" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('editPatternModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Pattern</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Pattern View Modal -->
-    <div id="patternViewModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('patternViewModal')">&times;</span>
-            <h3 id="patternViewTitle"></h3>
-            <div id="patternViewContent">
-                <!-- Pattern details will be populated here -->
             </div>
         </div>
     </div>
@@ -2529,11 +2414,6 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="priceTagVendorNumber">Vendor Number (optional)</label>
-                    <input type="text" id="priceTagVendorNumber" name="vendorNumber" 
-                           placeholder="Enter your vendor number">
-                </div>
-                
                 <div class="form-group">
                     <label>Selected Items</label>
                     <div id="priceTagSelectedItems" class="price-tag-items-list">
@@ -2557,7 +2437,7 @@
     </div>
 
     <!-- Price Tag Preview Container -->
-    <div id="priceTagPreview" class="price-tag-preview" style="display: none;">
+    <div id="priceTagPreview" class="price-tag-preview" style="display: none; position: relative; z-index: 1000;">
         <!-- Price tags will be generated here -->
     </div>
 

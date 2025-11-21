@@ -5,7 +5,7 @@
  * Tests mobile-specific interactions, touch targets, and responsive design
  */
 
-const puppeteer = require('puppeteer');
+const { launch, puppeteer } = require('./test-utils/puppeteer-config');
 
 // Color codes for output
 const colors = {
@@ -95,7 +95,7 @@ async function runMobileTests() {
     log(`📅 Started: ${new Date().toISOString()}`, 'cyan');
     log(`🌐 Base URL: ${BASE_URL}`, 'cyan');
     
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await launch();
     
     try {
         // Test on iPhone 12 (most common mobile device)

@@ -5,7 +5,7 @@
  * Tests card rendering performance and page load times
  */
 
-const puppeteer = require('puppeteer');
+const { launch } = require('./test-utils/puppeteer-config');
 
 // Color codes for output
 const colors = {
@@ -54,7 +54,7 @@ async function runPerformanceTests() {
     log(`📅 Started: ${new Date().toISOString()}`, 'cyan');
     log(`🌐 Base URL: ${BASE_URL}`, 'cyan');
     
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await launch();
     const page = await browser.newPage();
     
     try {

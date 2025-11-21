@@ -5,7 +5,7 @@
  * Tests EVERY button, field, upload, edit, delete, and edge case
  */
 
-const puppeteer = require('puppeteer');
+const { launch, puppeteer } = require('./test-utils/puppeteer-config');
 const fs = require('fs');
 const path = require('path');
 
@@ -67,19 +67,9 @@ class ComprehensiveTestSuite {
         console.log('🚀 Starting COMPREHENSIVE Test Suite...');
         console.log('📋 Testing EVERY button, field, upload, edit, delete, and edge case\n');
         
-        this.browser = await puppeteer.launch({
-            headless: true, // Run headless for faster testing
+        this.browser = await launch({
             devtools: false,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
-                '--window-size=1920,1080'
-            ]
+            args: ['--disable-accelerated-2d-canvas', '--window-size=1920,1080']
         });
 
         this.page = await this.browser.newPage();

@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const { launch } = require('./test-utils/puppeteer-config');
 
 /**
  * Test Cleanup Utility
@@ -14,10 +14,7 @@ class TestCleanup {
 
     async setup() {
         console.log('🧹 Setting up test cleanup...');
-        this.browser = await puppeteer.launch({ 
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        this.browser = await launch();
         this.page = await this.browser.newPage();
         await this.page.goto(this.baseUrl, { waitUntil: 'networkidle0' });
         await this.page.waitForSelector('button[data-tab="projects"]', { timeout: 10000 });
