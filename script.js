@@ -169,8 +169,8 @@ function restoreFilters(tabName) {
     // Restore priority and customer filters (for WIP)
     if (tabName === 'wip') {
         if (filters.priority !== undefined) {
-            const priorityFilter = document.getElementById('wipPriorityFilter');
-            if (priorityFilter) priorityFilter.value = filters.priority;
+        const priorityFilter = document.getElementById('wipPriorityFilter');
+        if (priorityFilter) priorityFilter.value = filters.priority;
         }
         if (filters.customer !== undefined) {
             const customerFilter = document.getElementById('wipCustomerFilter');
@@ -491,7 +491,6 @@ function loadProjectsCards() {
     // Sort projects by status priority: in-progress > pending > completed
     const statusPriority = {
         'in-progress': 1,
-        'work-in-progress': 1,
         'pending': 2,
         'completed': 3,
         'sold': 4
@@ -2030,6 +2029,8 @@ class DataManager {
             return;
         }
         
+        showLoadingSpinner('Generating PDF...', 'export-pdf');
+        
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -2076,9 +2077,11 @@ class DataManager {
             }
             
             doc.save(filename || 'inventory_report.pdf');
+            hideLoadingSpinner('export-pdf');
             showNotification('PDF exported successfully!', 'success');
         } catch (error) {
             console.error('PDF export error:', error);
+            hideLoadingSpinner('export-pdf');
             showError('Failed to export PDF', error);
         }
     }
@@ -2094,6 +2097,8 @@ class DataManager {
             showError('Invalid sale', new Error('Sale record not found'));
             return;
         }
+        
+        showLoadingSpinner('Generating invoice PDF...', 'export-invoice-pdf');
         
         try {
             const sale = sales[saleIndex];
@@ -2198,9 +2203,11 @@ class DataManager {
             
             const filename = `invoice_${sale.id || saleIndex + 1}_${date.replace(/\//g, '-')}.pdf`;
             doc.save(filename);
+            hideLoadingSpinner('export-invoice-pdf');
             showNotification('Invoice exported successfully!', 'success');
         } catch (error) {
             console.error('Invoice PDF export error:', error);
+            hideLoadingSpinner('export-invoice-pdf');
             showError('Failed to export invoice', error);
         }
     }
@@ -2211,6 +2218,8 @@ class DataManager {
             showError('PDF library not loaded', new Error('Please refresh the page and try again'));
             return;
         }
+        
+        showLoadingSpinner('Generating sales report PDF...', 'export-sales-pdf');
         
         try {
             const { jsPDF } = window.jspdf;
@@ -2293,9 +2302,11 @@ class DataManager {
             
             const filename = `sales_report_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(filename);
+            hideLoadingSpinner('export-sales-pdf');
             showNotification('Sales report exported successfully!', 'success');
         } catch (error) {
             console.error('Sales report PDF export error:', error);
+            hideLoadingSpinner('export-sales-pdf');
             showError('Failed to export sales report', error);
         }
     }
@@ -2306,6 +2317,8 @@ class DataManager {
             showError('PDF library not loaded', new Error('Please refresh the page and try again'));
             return;
         }
+        
+        showLoadingSpinner('Generating customer order history PDF...', 'export-customer-pdf');
         
         try {
             const { jsPDF } = window.jspdf;
@@ -2373,9 +2386,11 @@ class DataManager {
             
             const filename = `customer_history_${customerName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(filename);
+            hideLoadingSpinner('export-customer-pdf');
             showNotification('Customer order history exported successfully!', 'success');
         } catch (error) {
             console.error('Customer order history PDF export error:', error);
+            hideLoadingSpinner('export-customer-pdf');
             showError('Failed to export customer order history', error);
         }
     }
@@ -6315,6 +6330,8 @@ async function handleEditProject(e) {
     
     console.log('🎯 handleEditProject called!');
     
+    showLoadingSpinner('Updating project...', 'edit-project');
+    
     const getElementValue = (id) => {
         const element = document.getElementById(id);
         return element ? element.value : '';
@@ -6324,6 +6341,7 @@ async function handleEditProject(e) {
     const description = getElementValue('editProjectDescription').trim();
     
     if (!description) {
+        hideLoadingSpinner('edit-project');
         alert('Please enter a description for the project.');
         return;
     }
@@ -6376,6 +6394,8 @@ async function handleEditProject(e) {
     if (shouldCreateSale) {
         refreshSalesViews();
     }
+    
+    hideLoadingSpinner('edit-project');
     
     // Close modal
     closeModal('editProjectModal');
@@ -6756,6 +6776,9 @@ async function loadDataFromAPI() {
         window.gallery = gallery;
         window.ideas = ideas;
         
+        // Migrate old status values
+        migrateWorkInProgressStatus();
+        
         console.log('✅ Data loaded from API successfully:');
         console.log('  📦 Inventory items:', inventory.length);
         console.log('  👥 Customers:', customers.length);
@@ -6792,6 +6815,22 @@ async function loadDataFromAPI() {
     }
 }
 
+// Migrate old "work-in-progress" status to "in-progress"
+function migrateWorkInProgressStatus() {
+    let migrated = 0;
+    inventory.forEach(item => {
+        if (item.status === 'work-in-progress') {
+            item.status = 'in-progress';
+            migrated++;
+        }
+    });
+    if (migrated > 0) {
+        console.log(`🔄 Migrated ${migrated} item(s) from "work-in-progress" to "in-progress"`);
+        // Save the migrated data
+        saveData();
+    }
+}
+
 function loadDataFromLocalStorage() {
     // Skip loading if we're in the middle of any data modification
     if (window.isSaving || window.isModifying) {
@@ -6812,6 +6851,9 @@ function loadDataFromLocalStorage() {
     window.sales = sales;
     window.gallery = gallery;
     window.ideas = ideas;
+    
+    // Migrate old status values
+    migrateWorkInProgressStatus();
     
     loadData();
 }
@@ -7553,7 +7595,6 @@ function updateEditStatusOptions() {
         statusSelect.innerHTML = `
             <option value="pending">Pending</option>
             <option value="in-progress">In Progress</option>
-            <option value="work-in-progress">Work in Progress</option>
             <option value="completed">Completed</option>
             <option value="sold">Sold</option>
         `;
@@ -7706,7 +7747,7 @@ function loadInventoryTable(showDetailed = false) {
         const totalProjects = customerItems.length;
         const inventoryCount = customerItems.filter(({ item }) => item.status === 'inventory').length;
         const pendingCount = customerItems.filter(({ item }) => item.status === 'pending').length;
-        const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress' || item.status === 'work-in-progress').length;
+        const inProgressCount = customerItems.filter(({ item }) => item.status === 'in-progress').length;
         const completedCount = customerItems.filter(({ item }) => item.status === 'completed').length;
         const soldCount = customerItems.filter(({ item }) => item.status === 'sold').length;
         
@@ -7777,7 +7818,7 @@ function loadInventoryTable(showDetailed = false) {
                         <i class="fas fa-play"></i>
                     </button>
                 `;
-            } else if (item.status === 'in-progress' || item.status === 'work-in-progress') {
+            } else if (item.status === 'in-progress') {
                 quickActions = `
                     <button class="btn btn-sm btn-success" onclick="quickStatusChange(${index}, 'completed')" title="Mark Complete">
                         <i class="fas fa-check"></i>
@@ -8667,6 +8708,8 @@ async function handleAddInventory(e) {
     e.preventDefault();
     console.log('🔘 Add Inventory button clicked!');
     
+    showLoadingSpinner('Adding inventory item...', 'add-inventory');
+    
     const description = document.getElementById('inventoryDescription').value.trim();
     const quantity = parseInt(document.getElementById('inventoryQuantity').value) || 1;
     const pricePerItem = parseFloat(document.getElementById('inventoryPrice').value) || 0;
@@ -8731,6 +8774,8 @@ async function handleAddInventory(e) {
         refreshSalesViews();
     }
     
+    hideLoadingSpinner('add-inventory');
+    
     // Close modal
     closeModal('addInventoryModal');
     
@@ -8770,6 +8815,8 @@ function copyFromLastInventory() {
 async function handleAddProject(e) {
     e.preventDefault();
     console.log('🔘 Add Project button clicked!');
+    
+    showLoadingSpinner('Adding project...', 'add-project');
     
     const description = document.getElementById('projectDescription').value.trim();
     const quantity = parseInt(document.getElementById('projectQuantity').value) || 1;
@@ -8856,6 +8903,8 @@ async function handleAddProject(e) {
     if (shouldCreateSale) {
         refreshSalesViews();
     }
+    
+    hideLoadingSpinner('add-project');
     
     // Close modal
     closeModal('addProjectModal');
@@ -9179,6 +9228,8 @@ async function openAddCustomerModal() {
 async function handleAddCustomer(e) {
     e.preventDefault();
     
+    showLoadingSpinner('Adding customer...', 'add-customer');
+    
     const requiresVendorNumber = document.getElementById('customerRequiresVendorNumber').checked || false;
     const vendorNumber = document.getElementById('customerVendorNumber').value.trim();
     
@@ -9197,7 +9248,7 @@ async function handleAddCustomer(e) {
     };
     
     customers.push(newCustomer);
-    saveData();
+    await saveData();
     loadCustomersTable();
     updateLocationFilters();
     updateCustomerFilters();
@@ -9267,6 +9318,8 @@ async function handleAddCustomer(e) {
         }
     }, 100); // Small delay to ensure DOM is updated
     
+    hideLoadingSpinner('add-customer');
+    
     closeModal('addCustomerModal');
     
     showNotification('Customer added successfully!', 'success');
@@ -9275,10 +9328,13 @@ async function handleAddCustomer(e) {
 async function handleEditCustomer(e) {
     e.preventDefault();
     
+    showLoadingSpinner('Updating customer...', 'edit-customer');
+    
     const form = e.target;
     const customerIndex = parseInt(form.dataset.customerIndex);
     
     if (isNaN(customerIndex) || customerIndex < 0 || customerIndex >= customers.length) {
+        hideLoadingSpinner('edit-customer');
         showNotification('Error: Invalid customer selected', 'error');
         return;
     }
@@ -9291,6 +9347,7 @@ async function handleEditCustomer(e) {
     const vendorNumber = document.getElementById('editCustomerVendorNumber').value.trim();
     
     if (requiresVendorNumber && !vendorNumber) {
+        hideLoadingSpinner('edit-customer');
         showNotification('Please enter a vendor number for vendors that require it', 'error');
         return;
     }
@@ -9678,7 +9735,7 @@ function openPriceTagModal() {
         vendorNameInput.addEventListener('input', function() {
             const name = this.value.trim();
             // Always call loadVendorLogos, even if name is empty (to clear logo)
-            loadVendorLogos(name);
+                loadVendorLogos(name);
         });
         vendorNameInput.dataset.listenerAdded = 'true';
     }
@@ -9961,7 +10018,7 @@ async function generatePriceTags(previewOnly = false) {
     }
     
     // Check my logo
-        if (!myLogo) {
+    if (!myLogo) {
         console.log('🔍 Checking my logo');
         const myLogoPath = '/logos/my-logo.png';
         const logoExists = await checkFileExists(myLogoPath);
@@ -10016,11 +10073,11 @@ async function generatePriceTags(previewOnly = false) {
             parent.style.display = 'block';
         }
         parent = parent.parentElement;
-    }
-    
-    // Close modal
-    closeModal('priceTagModal');
-    
+        }
+        
+        // Close modal
+        closeModal('priceTagModal');
+        
     // Wait for DOM to update and content to render, then scroll to preview
     setTimeout(() => {
         // Force a reflow to ensure content is rendered
@@ -10059,12 +10116,12 @@ async function generatePriceTags(previewOnly = false) {
         }
     }, 100);
         
-    // If not preview only, print after a short delay
-    if (!previewOnly) {
-        setTimeout(() => {
-            window.print();
-        }, 500);
-    }
+        // If not preview only, print after a short delay
+        if (!previewOnly) {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
 }
 
 function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo, vendorLogoMap = {}) {
@@ -10814,6 +10871,9 @@ async function handleAddSale(e) {
     loadMobileSalesCards();
     loadSalesTable();
     loadInventoryTable();
+    
+    hideLoadingSpinner('add-sale');
+    
     closeModal('addSaleModal');
     if (saleSourceIndexField) saleSourceIndexField.value = '';
     
@@ -11373,7 +11433,6 @@ async function quickStatusChange(index, newStatus) {
     const statusNames = {
         'pending': 'Pending',
         'in-progress': 'In Progress',
-        'work-in-progress': 'Work in Progress',
         'completed': 'Completed',
         'sold': 'Sold'
     };
@@ -11809,6 +11868,7 @@ async function deleteCustomer(customerIdOrIndex) {
         'Delete Customer',
         'Are you sure you want to delete this customer? This will also delete all associated items.',
         () => {
+        showLoadingSpinner('Deleting customer...', 'delete-customer');
         let customerName;
         let customerRemoved = false;
         
@@ -11838,6 +11898,7 @@ async function deleteCustomer(customerIdOrIndex) {
             loadCustomersTable();
             loadInventoryTable();
             loadSalesTable();
+            hideLoadingSpinner('delete-customer');
             showNotification('Customer and associated data deleted!', 'success');
         }
     }
@@ -11977,8 +12038,8 @@ function printCustomerList() {
     
     // Wait a moment for content to render, then print
     setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
+    printWindow.focus();
+    printWindow.print();
         // Don't close immediately - let user see the print dialog
         // Window will close after print dialog is dismissed
     }, 250);
@@ -12065,6 +12126,8 @@ async function editSale(index) {
 async function handleEditSale(e) {
     e.preventDefault();
     
+    showLoadingSpinner('Updating sale...', 'edit-sale');
+    
     const index = parseInt(document.getElementById('editSaleIndex').value);
     const saleType = document.getElementById('editSaleType').value;
     const saleChannel = document.getElementById('editSaleChannel').checked ? 'shop' : 'individual';
@@ -12090,6 +12153,7 @@ async function handleEditSale(e) {
     const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
     
     if (isNaN(index) || index < 0 || index >= sales.length) {
+        hideLoadingSpinner('edit-sale');
         showNotification('Invalid sale record', 'error');
         return;
     }
@@ -12165,6 +12229,8 @@ async function handleEditSale(e) {
     if (typeof loadMobileSalesCards === 'function' && hasMobileSales) {
     loadMobileSalesCards();
     }
+    hideLoadingSpinner('edit-sale');
+    
     closeModal('editSaleModal');
     
     showNotification('Sale updated successfully!', 'success');
@@ -12180,6 +12246,7 @@ async function deleteSale(saleIdOrIndex) {
         'Delete Sale',
         'Are you sure you want to delete this sale record?',
         () => {
+        showLoadingSpinner('Deleting sale...', 'delete-sale');
         let removedSale = null;
         if (typeof saleIdOrIndex === 'string' || typeof saleIdOrIndex === 'number' && saleIdOrIndex > 1000) {
             const saleIndex = sales.findIndex(sale => sale.id === saleIdOrIndex);
@@ -12208,6 +12275,7 @@ async function deleteSale(saleIdOrIndex) {
         loadSalesCards();
         loadMobileSalesCards();
         loadInventoryTable();
+        hideLoadingSpinner('delete-sale');
         showNotification('Sale record deleted!', 'success');
     }
     );
@@ -13016,8 +13084,7 @@ function loadWIPTab() {
     
     const wipItems = inventory.filter(item => 
         item.status === 'pending' || 
-        item.status === 'in-progress' || 
-        item.status === 'work-in-progress'
+        item.status === 'in-progress'
     );
     
     console.log('🔍 WIP Items found:', wipItems.length);
@@ -13042,7 +13109,7 @@ function loadWIPTab() {
 
 function updateWIPStats(wipItems) {
     const wipCount = wipItems.filter(item => 
-        item.status === 'in-progress' || item.status === 'work-in-progress'
+        item.status === 'in-progress'
     ).length;
     const pendingCount = wipItems.filter(item => item.status === 'pending').length;
     const completedToday = inventory.filter(item => {
@@ -13146,7 +13213,7 @@ function filterWIP() {
     let filteredItems = inventory.filter(item => 
         item.status === 'pending' || 
         item.status === 'in-progress' || 
-        item.status === 'work-in-progress'
+        item.status === 'in-progress'
     );
     
     if (searchTerm) {
@@ -13175,7 +13242,7 @@ function filterWIP() {
 
 function markAllWIPComplete() {
     const wipItems = inventory.filter(item => 
-        item.status === 'in-progress' || item.status === 'work-in-progress'
+        item.status === 'in-progress'
     );
     
     if (wipItems.length === 0) {
@@ -13206,7 +13273,7 @@ function updateWIPStatus(index) {
     let newStatus;
     if (currentStatus === 'pending') {
         newStatus = 'in-progress';
-    } else if (currentStatus === 'in-progress' || currentStatus === 'work-in-progress') {
+    } else if (currentStatus === 'in-progress') {
         newStatus = 'completed';
     } else {
         showNotification('Item is not in a work in progress status', 'info');
@@ -13341,22 +13408,27 @@ function openAddGalleryModal() {
 async function handleAddPhoto(e) {
     e.preventDefault();
     
+    showLoadingSpinner('Adding photo...', 'add-photo');
+    
     const fileInput = document.getElementById('photoFile');
     const file = fileInput.files[0];
     
     if (!file) {
+        hideLoadingSpinner('add-photo');
         showNotification('Please select a photo', 'error');
         return;
     }
     
     // Mobile-specific validation
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        hideLoadingSpinner('add-photo');
         showNotification('File too large. Please select an image smaller than 10MB.', 'error');
         return;
     }
     
     // Validate file type
     if (!file.type.startsWith('image/')) {
+        hideLoadingSpinner('add-photo');
         showNotification('Please select a valid image file', 'error');
         return;
     }
@@ -13376,17 +13448,20 @@ async function handleAddPhoto(e) {
             gallery.push(newPhoto);
             await saveData();
             loadGallery();
+            hideLoadingSpinner('add-photo');
             closeModal('addPhotoModal');
             
             showNotification('Photo added to gallery!', 'success');
         } catch (error) {
             console.error('Error processing gallery photo:', error);
+            hideLoadingSpinner('add-photo');
             showNotification('Error processing photo. Please try again.', 'error');
         }
     };
     
     reader.onerror = function(error) {
         console.error('Error reading gallery photo file:', error);
+        hideLoadingSpinner('add-photo');
         showNotification('Error reading photo file. Please try again.', 'error');
     };
     
@@ -13484,6 +13559,7 @@ async function deletePhoto(photoIdOrIndex) {
         'Delete Photo',
         'Are you sure you want to delete this photo from the gallery?',
         async () => {
+        showLoadingSpinner('Deleting photo...', 'delete-photo');
         // Handle both ID and index parameters
         if (typeof photoIdOrIndex === 'string' || typeof photoIdOrIndex === 'number' && photoIdOrIndex > 1000) {
             // It's an ID (string or large number)
@@ -13497,6 +13573,7 @@ async function deletePhoto(photoIdOrIndex) {
         }
         await saveData();
         loadGallery();
+        hideLoadingSpinner('delete-photo');
         showNotification('Photo deleted from gallery!', 'success');
     }
     );
@@ -14004,6 +14081,7 @@ async function handleAddIdea(event) {
     }); // Debug log
     
     if (!title) {
+        hideLoadingSpinner('add-idea');
         showNotification('Please enter an idea title', 'error');
         return;
     }
@@ -14052,6 +14130,7 @@ async function handleAddIdea(event) {
             showNotification('Invalid file type. Only images are allowed.', 'warning');
             await saveData();
             loadIdeasGrid();
+            hideLoadingSpinner('add-idea');
             closeModal('addIdeaModal');
             showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
             return;
@@ -14068,6 +14147,7 @@ async function handleAddIdea(event) {
                 showNotification('Image processing timed out. Idea saved without image.', 'warning');
                 await saveData();
                 loadIdeasGrid();
+                hideLoadingSpinner('add-idea');
                 closeModal('addIdeaModal');
                 showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
             }, 10000); // 10 second timeout
@@ -14096,6 +14176,7 @@ async function handleAddIdea(event) {
                     console.log('🎯 Image processed successfully, saving data...');
                     await saveData();
                     loadIdeasGrid();
+                    hideLoadingSpinner('add-idea');
                     closeModal('addIdeaModal');
                     showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
                 } catch (error) {
@@ -14104,6 +14185,7 @@ async function handleAddIdea(event) {
                     showNotification('Error processing image. Idea saved without image.', 'warning');
                     await saveData();
                     loadIdeasGrid();
+                    hideLoadingSpinner('add-idea');
                     closeModal('addIdeaModal');
                     showNotification(isEditing ? 'Idea updated successfully!' : 'Idea added successfully!', 'success');
                 }
@@ -14427,6 +14509,7 @@ async function deleteIdea(ideaIdOrIndex) {
         'Delete Idea',
         'Are you sure you want to delete this idea?',
         () => {
+        showLoadingSpinner('Deleting idea...', 'delete-idea');
         // Set flag to prevent storage events from interfering
         window.isModifying = true;
         console.log('🗑️ Set isModifying = true');
@@ -14444,6 +14527,7 @@ async function deleteIdea(ideaIdOrIndex) {
                 ideas.splice(index, 1);
             } else {
                 console.error('🚨 ERROR: Invalid index:', index);
+                hideLoadingSpinner('delete-idea');
                 showNotification('Error: Invalid item index. Please refresh the page.', 'error');
                 window.isModifying = false;
                 return;
@@ -14465,6 +14549,7 @@ async function deleteIdea(ideaIdOrIndex) {
         
         console.log('🗑️ About to call saveData() with', ideas.length, 'ideas');
         saveData();
+        hideLoadingSpinner('delete-idea');
         showNotification('Idea deleted', 'success');
         
         // Proactively refresh UI on both desktop and mobile
@@ -15532,6 +15617,9 @@ async function loadDataFromServer() {
         gallery = await galleryResponse.json();
         ideas = await ideasResponse.json();
         
+        // Migrate old status values
+        migrateWorkInProgressStatus();
+        
         console.log(`✅ Data loaded: ${inventory.length} inventory, ${customers.length} customers, ${sales.length} sales, ${gallery.length} gallery, ${ideas.length} ideas`);
         
         // Load the appropriate view based on current tab
@@ -16282,7 +16370,7 @@ function updateInvoiceNavigation() {
         counter.textContent = `${currentInvoiceIndex + 1} of ${allGeneratedInvoices.length}`;
         prevBtn.disabled = currentInvoiceIndex === 0;
         nextBtn.disabled = currentInvoiceIndex === allGeneratedInvoices.length - 1;
-    } else {
+        } else {
         navContainer.style.display = 'none';
     }
 }
