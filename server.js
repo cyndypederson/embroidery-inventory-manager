@@ -15,10 +15,15 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'embroidery_inventory';
 let db;
 
+// On Vercel, don't exit if env is missing so /version.json and health still work; set in Dashboard.
 if (!MONGODB_URI) {
-    console.error('❌ CRITICAL: MONGODB_URI environment variable is not set!');
-    console.error('Please set MONGODB_URI in your .env file or environment variables.');
-    process.exit(1);
+    if (process.env.VERCEL === '1') {
+        console.warn('⚠️ MONGODB_URI not set on Vercel — set it in Project Settings → Environment Variables. API will return 503 until then.');
+    } else {
+        console.error('❌ CRITICAL: MONGODB_URI environment variable is not set!');
+        console.error('Please set MONGODB_URI in your .env file or environment variables.');
+        process.exit(1);
+    }
 }
 
 // Connect to MongoDB (lazy connection)

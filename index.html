@@ -15,8 +15,8 @@
             }
         }
     </script>
-    <meta name="version" content="1.0.104">
-    <title>CyndyP StitchCraft Inventory - v1.0.104 - CACHE BUST</title>
+    <meta name="version" content="1.0.105">
+    <title>CyndyP StitchCraft Inventory - v1.0.105 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -44,7 +44,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.104&t=202511190200&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.105&t=202511190200&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -315,7 +315,7 @@
                         </button>
                     </div>
                     <div class="version-display" id="versionDisplay">
-                        <i class="fas fa-tag"></i> v1.0.104
+                        <i class="fas fa-tag"></i> v1.0.105
                     </div>
                     <div class="connection-status" id="connectionStatusContainer">
                         <span id="connectionStatus" class="status-indicator">
@@ -2441,7 +2441,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.104 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.105 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2481,7 +2481,7 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.104') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.105') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
@@ -2498,9 +2498,9 @@
                 }, 2000);
             }
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.104 - IMMEDIATE MOBILE RELOAD');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.105 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.104&t=202511190200&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.105&t=202511190200&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>

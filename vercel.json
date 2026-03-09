@@ -33,9 +33,21 @@
     {
       "src": "public/logos/(.*)",
       "use": "@vercel/static"
+    },
+    {
+      "src": "fonts/(.*)",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/version.json",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/server.js"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/server.js"
@@ -63,6 +75,10 @@
     {
       "src": "/logo.svg",
       "dest": "/logo.svg"
+    },
+    {
+      "src": "/fonts/(.*)",
+      "dest": "/fonts/$1"
     },
     {
       "src": "/(.*)",
