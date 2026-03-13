@@ -9912,12 +9912,12 @@ async function checkAndLoadVendorLogo(vendorName) {
 
 // Function to load vendor logos automatically
 async function loadVendorLogos(vendorName) {
-    // Always try to load user's logo first - use direct path
+    // Do NOT auto-fill the "Your Logo URL" field; leave it blank by default
+    // so the user explicitly opts in by typing or pasting a path/URL.
     const myLogoInput = document.getElementById('priceTagMyLogo');
-    if (myLogoInput && !myLogoInput.value) {
-        const myLogo = '/logos/my-logo.png';
-        myLogoInput.value = myLogo;
-        console.log(`✅ Using logo path: ${myLogo}`);
+    if (myLogoInput && myLogoInput.value && myLogoInput.value.trim() === '/logos/my-logo.png') {
+        // If an old auto-filled value is present from a previous version, clear it
+        myLogoInput.value = '';
     }
     
     // Handle vendor logo - always update when vendor name changes
@@ -10154,7 +10154,10 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
         return `<img src="${logoUrlWithCache}" alt="${vendorNameForLogo || 'Vendor'} Logo" class="price-tag-vendor-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.display='none';" onload="console.log('✅ Vendor logo loaded successfully:', this.src);">`;
     };
     
-    const tagsHTML = items.map(item => {
+    // Build a flat array of individual tag HTML strings (one per quantity)
+    const tagFragments = [];
+    
+    items.forEach(item => {
         const itemName = item.description || item.name || 'Untitled';
         const price = (item.price || 0).toFixed(2);
         const quantity = item.quantity || 1;
@@ -10214,8 +10217,25 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                 </div>
             `;
         }
-        return tagsForItem;
-    }).join('');
+        tagFragments.push(tagsForItem);
+    });
+    
+    // Chunk tags into pages of 9 (3x3 grid per page)
+    // 3 columns × 4 rows = 12 tags per page with 2in tags on letter paper
+    const TAGS_PER_PAGE = 12;
+    const pages = [];
+    for (let i = 0; i < tagFragments.length; i += TAGS_PER_PAGE) {
+        const pageTags = tagFragments.slice(i, i + TAGS_PER_PAGE).join('');
+        pages.push(`
+            <div class="price-tags-page">
+                <div class="price-tags-grid">
+                    ${pageTags}
+                </div>
+            </div>
+        `);
+    }
+    
+    const pagesHTML = pages.join('');
     
     // Determine header title - use vendor name if provided, otherwise show "Multiple Vendors"
     const headerTitle = vendorName || (items.length > 0 && items[0].customer ? `${items.length} Items - Multiple Vendors` : 'Price Tags');
@@ -10231,9 +10251,7 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                     <i class="fas fa-print"></i> Print
                 </button>
             </div>
-            <div class="price-tags-grid">
-                ${tagsHTML}
-            </div>
+            ${pagesHTML}
         </div>
     `;
 }
