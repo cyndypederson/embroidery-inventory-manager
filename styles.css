@@ -7310,9 +7310,12 @@ body {
 
 .price-tags-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.25in;
     margin-top: 1rem;
+    max-width: 8in;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .price-tag {
@@ -7412,10 +7415,10 @@ body {
 
 /* Print styles for price tags - 2.5" x 2.5" tags */
 @media print {
-    /* Fit 3 columns on letter with minimal margins */
+    /* Portrait: 8.5×11. Use 0.5in margins so browser doesn't override; printable area = 7.5in wide. */
     @page {
         size: letter portrait;
-        margin: 0.25in;
+        margin: 0.5in;
     }
     
     /* Hide everything except price tag preview */
@@ -7459,15 +7462,14 @@ body {
         visibility: hidden !important;
     }
     
-    /* Show only price tag preview - constrain to printable area */
+    /* Show only price tag preview */
     .price-tag-preview {
         display: block !important;
         visibility: visible !important;
         position: absolute;
         top: 0;
         left: 0;
-        width: 8in;
-        max-width: 100%;
+        width: 100%;
         margin: 0;
         padding: 0;
         background: white;
@@ -7475,9 +7477,9 @@ body {
     }
     
     .price-tags-container {
-        width: 8in;
-        max-width: 100%;
-        margin: 0;
+        width: 100%;
+        max-width: 7.5in;
+        margin: 0 auto;
         padding: 0;
         box-sizing: border-box;
     }
@@ -7486,30 +7488,37 @@ body {
         display: none !important;
     }
     
-    /* 3 columns: 3 × 2.5in + 2 × 0.2in gap = 7.9in (fits in 8in) */
+    /* Grid: 3×2.5in = 7.5in (no horizontal gap) so it fits in 7.5in printable width when browser enforces 0.5in margins */
     .price-tags-grid {
+        display: grid;
         grid-template-columns: repeat(3, 2.5in);
-        grid-auto-rows: 2.5in;
-        gap: 0.2in;
-        width: 8in;
-        max-width: 100%;
-        margin: 0;
+        gap: 0.25in 0;
+        margin: 0 auto;
         padding: 0;
+        width: 7.5in;
+        max-width: 100%;
         box-sizing: border-box;
-    }
-    
-    /* Remove pseudo-element "cut lines" that were incomplete/weird */
-    .price-tags-grid::before,
-    .price-tags-grid::after {
-        content: none;
-        display: none;
-    }
-    
-    .price-tags-grid {
         position: relative;
+        overflow: visible;
     }
     
-    /* Solid cut line around each tag - clear and printable */
+    /* Cut lines: dashed border around each tag (visible and inside tag so not clipped) */
+    .price-tag {
+        position: relative;
+        overflow: visible;
+    }
+    
+    /* Force page break after every 9 tags (3×3 grid) so no row is cut off */
+    .price-tag:nth-child(9n) {
+        break-after: page;
+        page-break-after: always;
+    }
+    
+    .price-tag:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+    
     .price-tag::after {
         content: '';
         position: absolute;
@@ -7517,13 +7526,12 @@ body {
         bottom: 0;
         left: 0;
         right: 0;
-        border: 1px solid #333;
+        border: 1px dashed rgba(0, 0, 0, 0.45);
         pointer-events: none;
         box-sizing: border-box;
     }
     
     .price-tag {
-        position: relative;
         width: 2.5in;
         height: 2.5in;
         min-height: 2.5in;

@@ -7,6 +7,13 @@
     "dateAdded": "2025-09-11T01:21:30.951Z"
   },
   {
+    "_id": "68eaf4891ceb3071ebf1bc49",
+    "name": "First Avenue Market",
+    "contact": "",
+    "location": "Fargo",
+    "dateAdded": "2025-09-11T01:21:58.417Z"
+  },
+  {
     "_id": "68eaf4891ceb3071ebf1bc48",
     "name": "Flippin' Happy",
     "contact": "",
@@ -14,11 +21,19 @@
     "dateAdded": "2025-09-11T01:21:45.432Z"
   },
   {
-    "_id": "68eaf4891ceb3071ebf1bc49",
-    "name": "First Avenue Market",
+    "_id": "690e543b3385ccfc24228dcd",
+    "name": "Peter Darling",
     "contact": "",
-    "location": "Fargo",
-    "dateAdded": "2025-09-11T01:21:58.417Z"
+    "location": "",
+    "dateAdded": "2025-11-07T20:19:06.893Z"
+  },
+  {
+    "_id": "690f88b4ec8e8e45a577b8b9",
+    "name": "Molly Pratt",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-11-08T18:14:15.490Z",
+    "status": "active"
   },
   {
     "_id": "68eaf4891ceb3071ebf1bc4a",
@@ -35,10 +50,53 @@
     "dateAdded": "2025-09-11T01:29:15.473Z"
   },
   {
+    "_id": "690e543b3385ccfc24228dcb",
+    "name": "Karla Crotts",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-11-07T20:03:50.731Z"
+  },
+  {
     "_id": "68eaf4891ceb3071ebf1bc4c",
     "name": "Sierra",
     "contact": "",
     "location": "Flippin' Happy",
     "dateAdded": "2025-09-11T01:29:26.689Z"
+  },
+  {
+    "_id": "690e543b3385ccfc24228dcc",
+    "name": "Jenn Darling",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-11-07T20:18:32.789Z"
+  },
+  {
+    "_id": "6903e4aea9f59f99261bdd00",
+    "name": "Kim Raddatz Kreamer ",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-10-30T22:19:40.841Z",
+    "status": "active"
+  },
+  {
+    "_id": "690f88b4ec8e8e45a577b8ba",
+    "name": "Barb Crotts",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-11-08T18:14:40.570Z"
+  },
+  {
+    "_id": "68eee740790b9d92a49ef1d8",
+    "name": "Rhonda R",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-10-15T00:10:29.597Z"
+  },
+  {
+    "_id": "691d2ef4ba82eb0eec76dfb4",
+    "name": "Bailey",
+    "contact": "",
+    "location": "",
+    "dateAdded": "2025-11-19T01:49:25.297Z"
   }
 ]

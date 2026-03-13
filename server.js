@@ -15,15 +15,10 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'embroidery_inventory';
 let db;
 
-// On Vercel, don't exit if env is missing so /version.json and health still work; set in Dashboard.
 if (!MONGODB_URI) {
-    if (process.env.VERCEL === '1') {
-        console.warn('⚠️ MONGODB_URI not set on Vercel — set it in Project Settings → Environment Variables. API will return 503 until then.');
-    } else {
-        console.error('❌ CRITICAL: MONGODB_URI environment variable is not set!');
-        console.error('Please set MONGODB_URI in your .env file or environment variables.');
-        process.exit(1);
-    }
+    console.error('❌ CRITICAL: MONGODB_URI environment variable is not set!');
+    console.error('Please set MONGODB_URI in your .env file or environment variables.');
+    process.exit(1);
 }
 
 // Connect to MongoDB (lazy connection)
@@ -206,6 +201,23 @@ app.get('/health', async (req, res) => {
         timestamp: new Date().toISOString(),
         database: database ? 'Connected' : 'Disconnected'
     });
+});
+
+// Restore DB from data/*.json (Settings → Data → Restore from data files)
+app.post('/api/seed-from-files', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) return res.status(500).json({ error: 'Database not connected' });
+        const fs = require('fs');
+        const load = (f) => { const p = path.join(__dirname, 'data', f); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : []; };
+        const inv = load('inventory.json'), cust = load('customers.json'), sal = load('sales.json'), gal = load('gallery.json'), ide = load('ideas.json');
+        if (inv.length) { await database.collection('inventory').deleteMany({}); await database.collection('inventory').insertMany(inv); }
+        if (cust.length) { await database.collection('customers').deleteMany({}); await database.collection('customers').insertMany(cust); }
+        if (sal.length) { await database.collection('sales').deleteMany({}); await database.collection('sales').insertMany(sal); }
+        if (gal.length) { await database.collection('gallery').deleteMany({}); await database.collection('gallery').insertMany(gal); }
+        if (ide.length) { await database.collection('ideas').deleteMany({}); await database.collection('ideas').insertMany(ide); }
+        res.json({ success: true, counts: { inventory: inv.length, customers: cust.length, sales: sal.length, gallery: gal.length, ideas: ide.length } });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Authentication endpoints
