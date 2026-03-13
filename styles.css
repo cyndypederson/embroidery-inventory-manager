@@ -7520,23 +7520,17 @@ body {
         position: relative;
     }
     
-    /* Full-bleed cut guide lines across the whole grid — straight vertical & horizontal lines
-       between tags so you can use a paper cutter to cut them cleanly. */
-    .price-tags-grid::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        /* Vertical lines at the centre of each 0.25in gap (every 2.25in starting at 2in) */
-        /* Horizontal lines at the centre of each 0.25in gap (every 2.25in starting at 2in) */
+    /* Cut guide lines: drawn on the page wrapper, not the grid,
+       so they extend across the full printable width/height regardless of content.
+       Lines sit in the GAP between tags — vertically at 2in and 4.25in,
+       horizontally at 2in, 4.25in, 6.5in (from top of grid). */
+    .price-tags-page {
         background-image:
-            /* Vertical cut lines — at 2in, 4.25in (after gap) */
-            linear-gradient(to right, transparent 2in, rgba(0,0,0,0.55) 2in, rgba(0,0,0,0.55) calc(2in + 1px), transparent calc(2in + 1px)),
-            linear-gradient(to right, transparent 4.25in, rgba(0,0,0,0.55) 4.25in, rgba(0,0,0,0.55) calc(4.25in + 1px), transparent calc(4.25in + 1px)),
-            /* Horizontal cut lines — at 2in, 4.25in, 6.5in */
-            linear-gradient(to bottom, transparent 2in, rgba(0,0,0,0.55) 2in, rgba(0,0,0,0.55) calc(2in + 1px), transparent calc(2in + 1px)),
-            linear-gradient(to bottom, transparent 4.25in, rgba(0,0,0,0.55) 4.25in, rgba(0,0,0,0.55) calc(4.25in + 1px), transparent calc(4.25in + 1px)),
-            linear-gradient(to bottom, transparent 6.5in, rgba(0,0,0,0.55) 6.5in, rgba(0,0,0,0.55) calc(6.5in + 1px), transparent calc(6.5in + 1px));
+            linear-gradient(to right,  transparent 2in,    rgba(0,0,0,0.5) 2in,    rgba(0,0,0,0.5) calc(2in + 1px),    transparent calc(2in + 1px)),
+            linear-gradient(to right,  transparent 4.25in, rgba(0,0,0,0.5) 4.25in, rgba(0,0,0,0.5) calc(4.25in + 1px), transparent calc(4.25in + 1px)),
+            linear-gradient(to bottom, transparent 2in,    rgba(0,0,0,0.5) 2in,    rgba(0,0,0,0.5) calc(2in + 1px),    transparent calc(2in + 1px)),
+            linear-gradient(to bottom, transparent 4.25in, rgba(0,0,0,0.5) 4.25in, rgba(0,0,0,0.5) calc(4.25in + 1px), transparent calc(4.25in + 1px)),
+            linear-gradient(to bottom, transparent 6.5in,  rgba(0,0,0,0.5) 6.5in,  rgba(0,0,0,0.5) calc(6.5in + 1px),  transparent calc(6.5in + 1px));
     }
     
     .price-tag {

@@ -10165,10 +10165,9 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
         // Get vendor name for this specific item (use item's customer if no global vendor)
         const itemVendorName = vendorName || item.customer || 'Vendor';
         
-        // Generate one tag per item (if quantity > 1, we'll duplicate)
-        let tagsForItem = '';
+        // Generate one tag per quantity — push each as its own array entry
+        // so page chunking counts individual tags, not items
         for (let i = 0; i < quantity; i++) {
-            // Get vendor logo for this specific item
             const itemVendorLogo = getVendorLogoForItem(item);
             const vendorLogoHTML = createVendorLogoHTML(itemVendorLogo, itemVendorName);
             
@@ -10178,20 +10177,26 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
             
             let myLogoHTML = '';
             if (myLogo) {
-                // Ensure path starts with / if it's a relative path
                 const logoUrl = myLogo.startsWith('/') ? myLogo : '/' + myLogo;
-                // Add cache-busting query parameter to force fresh load
                 const logoUrlWithCache = logoUrl + '?t=' + Date.now();
-                console.log(`🖼️ Creating my logo img tag with src: ${logoUrlWithCache}`);
-                myLogoHTML = `<img src="${logoUrlWithCache}" alt="My Logo" class="price-tag-my-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load my logo:', this.src); this.style.border='2px dashed red'; this.style.backgroundColor='#ffebee';" onload="console.log('✅ My logo loaded successfully:', this.src); this.style.border='none';">`;
-            } else {
-                console.log('⚠️ No my logo provided');
+                myLogoHTML = `<img src="${logoUrlWithCache}" alt="My Logo" class="price-tag-my-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="this.style.display='none';" onload="this.style.border='none';">`;
             }
             
-            // Add class to header if no vendor logo (for centering my logo)
             const headerClass = !itemVendorLogo ? 'price-tag-header no-vendor-logo' : 'price-tag-header';
             
-            tagsForItem += `
+            let itemVendorNumber = vendorNumber;
+            if (!itemVendorNumber && itemVendorName) {
+                itemVendorNumber = getVendorNumber(itemVendorName);
+            }
+            const vendorNumberHTML = (itemVendorNumber && vendorRequiresVendorNumber(itemVendorName))
+                ? `<div class="price-tag-vendor-number">Vendor #${SecurityManager.escapeHtml(itemVendorNumber)}</div>`
+                : '';
+            const vendorNameHTML = (itemVendorName && itemVendorName !== 'Vendor' && vendorRequiresVendorNumber(itemVendorName))
+                ? `<div class="price-tag-vendor-name" style="font-size: 0.7rem; color: #666; margin-top: 0.2rem;">${SecurityManager.escapeHtml(itemVendorName)}</div>`
+                : '';
+
+            // Push each individual tag as its own fragment so page-chunking counts correctly
+            tagFragments.push(`
                 <div class="price-tag">
                     <div class="${headerClass}">
                         ${vendorLogoHTML}
@@ -10200,24 +10205,12 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                     <div class="price-tag-body">
                         <div class="price-tag-item-name">${SecurityManager.escapeHtml(itemName)}</div>
                         <div class="price-tag-price">$${price}</div>
-                        ${(() => {
-                            // Get vendor number for this specific item
-                            let itemVendorNumber = vendorNumber;
-                            // If no vendor number provided globally, try to get it from this item's vendor
-                            if (!itemVendorNumber && itemVendorName) {
-                                itemVendorNumber = getVendorNumber(itemVendorName);
-                            }
-                            // Only show if vendor requires it and we have a number
-                            return (itemVendorNumber && vendorRequiresVendorNumber(itemVendorName)) 
-                                ? `<div class="price-tag-vendor-number">Vendor #${SecurityManager.escapeHtml(itemVendorNumber)}</div>` 
-                                : '';
-                        })()}
-                        ${(itemVendorName && itemVendorName !== 'Vendor' && vendorRequiresVendorNumber(itemVendorName)) ? `<div class="price-tag-vendor-name" style="font-size: 0.7rem; color: #666; margin-top: 0.2rem;">${SecurityManager.escapeHtml(itemVendorName)}</div>` : ''}
+                        ${vendorNumberHTML}
+                        ${vendorNameHTML}
                     </div>
                 </div>
-            `;
+            `);
         }
-        tagFragments.push(tagsForItem);
     });
     
     // Chunk tags into pages of 9 (3x3 grid per page)
