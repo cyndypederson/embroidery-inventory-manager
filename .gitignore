@@ -33,6 +33,13 @@ tmp/
 backups/
 backup-pre-deploy-*/
 
+# Patterns JSON has local absolute paths that break Vercel build
+data/patterns.json
+
+# Large local-only source files
+patterns-source/
+public/patterns/
+
 # ngrok
 ngrok
 .vercel
