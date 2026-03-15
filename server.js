@@ -163,18 +163,6 @@ app.get('/version.json', (req, res) => {
     });
 });
 
-// Serve the main HTML file with NUCLEAR cache busting
-app.get('/', (req, res) => {
-    // Add timestamp to response headers
-    res.setHeader('X-Timestamp', res.locals.timestamp);
-    res.setHeader('X-Random', res.locals.random);
-    res.setHeader('X-Cache-Bust', `${res.locals.timestamp}-${res.locals.random}`);
-    
-    // Always redirect with fresh cache bust parameters to force reload
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(7);
-    return res.redirect(`/?cb=${timestamp}&r=${random}&v=1.0.12&force=${timestamp}`);
-});
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -186,22 +174,6 @@ app.get('/health', async (req, res) => {
     });
 });
 
-// Restore DB from data/*.json (Settings → Data → Restore from data files)
-app.post('/api/seed-from-files', async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) return res.status(500).json({ error: 'Database not connected' });
-        const fs = require('fs');
-        const load = (f) => { const p = path.join(__dirname, 'data', f); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : []; };
-        const inv = load('inventory.json'), cust = load('customers.json'), sal = load('sales.json'), gal = load('gallery.json'), ide = load('ideas.json');
-        if (inv.length) { await database.collection('inventory').deleteMany({}); await database.collection('inventory').insertMany(inv); }
-        if (cust.length) { await database.collection('customers').deleteMany({}); await database.collection('customers').insertMany(cust); }
-        if (sal.length) { await database.collection('sales').deleteMany({}); await database.collection('sales').insertMany(sal); }
-        if (gal.length) { await database.collection('gallery').deleteMany({}); await database.collection('gallery').insertMany(gal); }
-        if (ide.length) { await database.collection('ideas').deleteMany({}); await database.collection('ideas').insertMany(ide); }
-        res.json({ success: true, counts: { inventory: inv.length, customers: cust.length, sales: sal.length, gallery: gal.length, ideas: ide.length } });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 // Authentication endpoints
 // Default admin credentials (should be changed in production)
@@ -210,12 +182,6 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
 
 // Check auth status
 app.get('/api/auth/status', (req, res) => {
-    console.log('🔍 Server auth status check:', { 
-        sessionID: req.sessionID,
-        authenticated: req.session && req.session.authenticated,
-        username: req.session && req.session.username,
-        sessionExists: !!req.session
-    });
     res.json({
         authenticated: req.session && req.session.authenticated === true,
         username: req.session && req.session.username,
@@ -226,30 +192,12 @@ app.get('/api/auth/status', (req, res) => {
 // Login endpoint
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
-    
-    console.log('🔐 Server login attempt:', { username, password: password ? password.substring(0, 3) + '***' : 'undefined' });
-    console.log('🔐 Expected credentials:', { username: ADMIN_USERNAME, password: ADMIN_PASSWORD ? ADMIN_PASSWORD.substring(0, 3) + '***' : 'undefined' });
-    
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        console.log('✅ Server login successful, setting session');
         req.session.authenticated = true;
         req.session.username = username;
-        console.log('🔐 Session after login:', { 
-            authenticated: req.session.authenticated, 
-            username: req.session.username,
-            sessionID: req.sessionID 
-        });
-        res.json({
-            success: true,
-            message: 'Login successful',
-            username: username
-        });
+        res.json({ success: true, message: 'Login successful', username });
     } else {
-        console.log('❌ Server login failed');
-        res.status(401).json({
-            success: false,
-            message: 'Invalid username or password'
-        });
+        res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
 });
 
@@ -302,32 +250,6 @@ app.post('/api/inventory', async (req, res) => {
     }
 });
 
-// Update individual inventory item
-app.put('/api/inventory/:id', async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) {
-            return res.status(500).json({ error: 'Database not connected' });
-        }
-        
-        const { id } = req.params;
-        const updateData = req.body;
-        
-        const result = await database.collection('inventory').updateOne(
-            { _id: new ObjectId(id) },
-            { $set: updateData }
-        );
-        
-        if (result.matchedCount === 0) {
-            return res.status(404).json({ error: 'Item not found' });
-        }
-        
-        res.json({ success: true, modifiedCount: result.modifiedCount });
-    } catch (error) {
-        console.error('Error updating inventory item:', error);
-        res.status(500).json({ error: 'Failed to update inventory item' });
-    }
-});
 
 app.get('/api/customers', async (req, res) => {
     try {
@@ -424,13 +346,9 @@ app.post('/api/gallery', async (req, res) => {
 
 app.get('/api/ideas', async (req, res) => {
     try {
-        console.log('📖 Server: Fetching ideas from database');
         const database = await connectToDatabase();
-        if (!database) {
-            return res.status(500).json({ error: 'Database not connected' });
-        }
+        if (!database) return res.status(500).json({ error: 'Database not connected' });
         const ideas = await database.collection('ideas').find({}).toArray();
-        console.log('📖 Server: Found', ideas.length, 'ideas in database');
         res.json(ideas);
     } catch (error) {
         console.error('Error fetching ideas:', error);
@@ -440,18 +358,11 @@ app.get('/api/ideas', async (req, res) => {
 
 app.post('/api/ideas', async (req, res) => {
     try {
-        console.log('💾 Server: Saving ideas, count:', req.body ? req.body.length : 'no body');
         const database = await connectToDatabase();
-        if (!database) {
-            return res.status(500).json({ error: 'Database not connected' });
-        }
+        if (!database) return res.status(500).json({ error: 'Database not connected' });
         await database.collection('ideas').deleteMany({});
-        console.log('💾 Server: Cleared all ideas from database');
         if (req.body && req.body.length > 0) {
             await database.collection('ideas').insertMany(req.body);
-            console.log('💾 Server: Inserted', req.body.length, 'ideas into database');
-        } else {
-            console.log('💾 Server: No ideas to insert (empty body)');
         }
         res.json({ success: true });
     } catch (error) {

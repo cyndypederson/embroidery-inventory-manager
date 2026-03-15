@@ -60,30 +60,9 @@ class EventManager {
 
 const eventManager = new EventManager();
 
-// Logging utility - only log on non-localhost environments
-function isLocalhost() {
-    return window.location.hostname === 'localhost' || 
-           window.location.hostname === '127.0.0.1' ||
-           window.location.hostname === '';
-}
-
-function debugLog(...args) {
-    if (!isLocalhost()) {
-        console.log(...args);
-    }
-}
-
-function debugError(...args) {
-    if (!isLocalhost()) {
-        console.error(...args);
-    }
-}
-
-function debugWarn(...args) {
-    if (!isLocalhost()) {
-        console.warn(...args);
-    }
-}
+function debugLog(...args) { if (isLocalhost()) { console.log(...args); } }
+function debugError(...args) { if (isLocalhost()) { console.error(...args); } }
+function debugWarn(...args) { if (isLocalhost()) { console.warn(...args); } }
 
 // Filter state management
 const filterState = {
@@ -4561,36 +4540,15 @@ function logError(context, error, additionalInfo = {}) {
     });
 }
 
-function handleApiError(operation, error) {
-    logError(`API ${operation} failed`, error);
-    // For internal use, just log - no user notifications needed
-}
-
-// Authentication - now implemented with server-side auth (see line 4143)
-// Old client-side auth variables removed (ADMIN_PASSWORD, isAuthenticated)
-
 // Check if running on localhost or local network
 function isLocalhost() {
     const hostname = window.location.hostname;
     return hostname === 'localhost' || 
            hostname === '127.0.0.1' || 
            hostname === '' ||
-           hostname.startsWith('192.168.') || // Local network IPs
-           hostname.startsWith('10.') || // Private network IPs
-           hostname.startsWith('172.'); // Private network IPs
-}
-
-// Function to change password (you can call this from browser console)
-// Note: Password is now managed server-side
-function changePassword(newPassword) {
-    console.log('Password changes must be made server-side in server.js or environment variables');
-}
-
-function logout() {
-    setAuthenticated(false);
-    console.log('Logged out successfully!');
-    // Switch to inventory tab
-    switchTab('inventory');
+           hostname.startsWith('192.168.') ||
+           hostname.startsWith('10.') ||
+           hostname.startsWith('172.');
 }
 
 function showChangePasswordModal() {
@@ -4688,52 +4646,6 @@ function generateInvoice() {
     document.getElementById('invoiceModal').style.display = 'block';
 }
 
-function generateTestInvoice() {
-    if (!checkAuthentication()) {
-        sessionStorage.setItem('requestedTab', 'sales');
-        showAuthModal();
-        return;
-    }
-    
-    // Create test invoice with sample data
-    const testInvoice = {
-        id: generateInvoiceId(),
-        customer: 'Test Customer',
-        date: new Date().toISOString().split('T')[0],
-        notes: 'This is a test invoice to preview the layout and branding.',
-        sales: [
-            {
-                itemName: 'Custom Embroidered T-Shirt',
-                customer: 'Test Customer',
-                dateSold: new Date().toISOString().split('T')[0],
-                salePrice: 35.00,
-                saleChannel: 'individual'
-            },
-            {
-                itemName: 'Personalized Baseball Cap',
-                customer: 'Test Customer',
-                dateSold: new Date().toISOString().split('T')[0],
-                salePrice: 25.00,
-                saleChannel: 'individual'
-            },
-            {
-                itemName: 'Logo Embroidery on Hoodie',
-                customer: 'Test Customer',
-                dateSold: new Date().toISOString().split('T')[0],
-                salePrice: 45.00,
-                saleChannel: 'individual'
-            }
-        ],
-        total: 105.00,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-    };
-    
-    // Show the test invoice preview
-    showInvoicePreview(testInvoice);
-    
-    showNotification('Test invoice generated successfully!', 'success');
-}
 
 function loadCustomersForInvoice() {
     const select = document.getElementById('invoiceCustomer');
@@ -5256,19 +5168,6 @@ function generateCleanInvoiceHTML(invoiceData) {
     `;
 }
 
-function viewInvoices() {
-    if (!checkAuthentication()) {
-        sessionStorage.setItem('requestedTab', 'sales');
-        showAuthModal();
-        return;
-    }
-    
-    // Clean up any existing invoices that contain shop sales
-    cleanupInvalidInvoices();
-    
-    loadInvoicesTable();
-    document.getElementById('invoicesListModal').style.display = 'block';
-}
 
 function cleanupInvalidInvoices() {
     let hasChanges = false;
@@ -5342,13 +5241,6 @@ function printInvoiceById(invoiceId) {
     }
 }
 
-function toggleAllSales() {
-    const selectAll = document.getElementById('selectAllSales');
-    const checkboxes = document.querySelectorAll('input[name="selectedSales"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
 
 function saveInvoicesToLocalStorage() {
     localStorage.setItem('embroideryInvoices', JSON.stringify(invoices));
@@ -5421,8 +5313,6 @@ function restoreExpandedCustomerGroups(expandedCustomers) {
     }, 50); // Increased timeout to ensure DOM is fully updated
 }
 
-// API base URL
-const API_BASE = '';
 
 // Authentication functions
 // Authentication state
@@ -7926,12 +7816,6 @@ function restoreExpandedCustomerGroups() {
     });
 }
 
-// Clear all expanded customer groups (for debugging)
-function clearAllExpandedCustomerGroups() {
-    localStorage.removeItem('expandedCustomerGroups');
-    console.log('🧹 Cleared all expanded customer groups from localStorage');
-    showNotification('All customer groups collapsed', 'info');
-}
 
 // Expand a customer group (without toggling)
 function expandCustomerGroup(customerName) {
@@ -15604,81 +15488,20 @@ function setupOCRFunctionality() {
     console.log('OCR functionality initialized');
 }
 
-// Load data from server
-async function loadDataFromServer() {
-    try {
-        console.log('🔄 Loading data from server...');
-        
-        // Load all data in parallel
-        const [inventoryResponse, customersResponse, salesResponse, galleryResponse, ideasResponse] = await Promise.all([
-            fetch('/api/inventory', { credentials: 'include' }),
-            fetch('/api/customers', { credentials: 'include' }),
-            fetch('/api/sales', { credentials: 'include' }),
-            fetch('/api/gallery', { credentials: 'include' }),
-            fetch('/api/ideas', { credentials: 'include' })
-        ]);
-        
-        // Check if responses are ok
-        if (!inventoryResponse.ok) throw new Error('Failed to load inventory');
-        if (!customersResponse.ok) throw new Error('Failed to load customers');
-        if (!salesResponse.ok) throw new Error('Failed to load sales');
-        if (!galleryResponse.ok) throw new Error('Failed to load gallery');
-        if (!ideasResponse.ok) throw new Error('Failed to load ideas');
-        
-        // Parse JSON responses
-        inventory = await inventoryResponse.json();
-        customers = await customersResponse.json();
-        sales = await salesResponse.json();
-        gallery = await galleryResponse.json();
-        ideas = await ideasResponse.json();
-        
-        // Migrate old status values
-        migrateWorkInProgressStatus();
-        
-        console.log(`✅ Data loaded: ${inventory.length} inventory, ${customers.length} customers, ${sales.length} sales, ${gallery.length} gallery, ${ideas.length} ideas`);
-        
-        // Load the appropriate view based on current tab
-        const activeTab = document.querySelector('.nav-btn.active');
-        if (activeTab) {
-            const tabName = activeTab.getAttribute('data-tab');
-            switchTab(tabName);
-        } else {
-            // Default to projects tab
-            switchTab('projects');
-        }
-        
-    } catch (error) {
-        console.error('❌ Failed to load data from server:', error);
-        showNotification('Failed to load data from server', 'error');
-    }
-}
-
 // Initialize authentication and OCR when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
-    // Check authentication status on page load
     await checkAuthStatus();
-    
-    // Load data from server
-    await loadDataFromServer();
-    
-    // Setup auth form handler
+    await loadDataFromAPI();
+
     const authForm = document.getElementById('authForm');
-    if (authForm) {
-        authForm.addEventListener('submit', handleAuthSubmit);
-    }
-    
-    // Setup auth modal close handlers
+    if (authForm) authForm.addEventListener('submit', handleAuthSubmit);
+
     const closeAuthModal = document.getElementById('closeAuthModal');
-    if (closeAuthModal) {
-        closeAuthModal.addEventListener('click', hideAuthModal);
-    }
-    
+    if (closeAuthModal) closeAuthModal.addEventListener('click', hideAuthModal);
+
     const cancelAuth = document.getElementById('cancelAuth');
-    if (cancelAuth) {
-        cancelAuth.addEventListener('click', hideAuthModal);
-    }
-    
-    // Add OCR setup to existing DOMContentLoaded handler
+    if (cancelAuth) cancelAuth.addEventListener('click', hideAuthModal);
+
     setTimeout(setupOCRFunctionality, 100);
 });
 
