@@ -10094,7 +10094,7 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                     </div>
                     <div class="price-tag-footer">
                         <img src="/logos/qr-facebook.png" alt="Facebook QR" class="price-tag-qr">
-                        <span class="price-tag-social">@cyndypembroidery</span>
+                        <span class="price-tag-social">@cyndypstitchcraft</span>
                     </div>
                 </div>
             `);
