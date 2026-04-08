@@ -10092,6 +10092,10 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                         ${vendorNumberHTML}
                         ${vendorNameHTML}
                     </div>
+                    <div class="price-tag-footer">
+                        <img src="/logos/qr-facebook.png" alt="Facebook QR" class="price-tag-qr">
+                        <span class="price-tag-social">@cyndypembroidery</span>
+                    </div>
                 </div>
             `);
         }

@@ -7386,6 +7386,30 @@ body {
     margin-top: auto;
 }
 
+.price-tag-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: auto;
+}
+
+.price-tag-qr {
+    width: 36px;
+    height: 36px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.price-tag-social {
+    font-size: 0.6rem;
+    color: #555;
+    line-height: 1.2;
+    text-align: right;
+}
+
 .price-tag-item-entry {
     padding: 0.5rem;
     margin-bottom: 0.5rem;
@@ -7616,6 +7640,33 @@ body {
         margin-top: 0.02in;
         font-weight: 500;
         flex-shrink: 0;
+    }
+
+    .price-tag-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.05in;
+        padding-top: 0.04in;
+        border-top: 0.5px solid #e0e0e0;
+        flex-shrink: 0;
+    }
+
+    .price-tag-qr {
+        width: 0.45in;
+        height: 0.45in;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        flex-shrink: 0;
+    }
+
+    .price-tag-social {
+        font-size: 5pt;
+        color: #555;
+        line-height: 1.2;
+        text-align: right;
+        word-break: break-all;
     }
 }
 
