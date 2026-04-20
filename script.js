@@ -11241,6 +11241,17 @@ function getProjectTotalPrice(item) {
     return pricePerUnit * quantity;
 }
 
+/** Default shop commission when marking inventory sold (project-linked sale). */
+const SHOP_VENDOR_AUTO_COMMISSION_PERCENT = 30;
+
+function getAutoCommissionPercentForShopCustomer(customerRaw) {
+    const n = (customerRaw || '').toLowerCase();
+    if (n.includes('flippin') || n.includes('first avenue')) {
+        return SHOP_VENDOR_AUTO_COMMISSION_PERCENT;
+    }
+    return 0;
+}
+
 function createOrUpdateSaleFromProject(index) {
     const item = inventory[index];
     if (!item) return;
@@ -11251,16 +11262,18 @@ function createOrUpdateSaleFromProject(index) {
     const saleId = existingSaleId || generateSaleId();
     const listedPrice = getProjectTotalPrice(item);
     const vendorDiscountPercent = 0;
-    const vendorDiscountAmount = 0;
-    const commissionPercent = 0;
-    const commissionAmount = 0;
-    const amountPaid = Math.max(0, listedPrice - vendorDiscountAmount);
-    const netAmount = Math.max(0, amountPaid - commissionAmount);
-    const discountValue = listedPrice - amountPaid;
+    const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
+    const commissionPercent = getAutoCommissionPercentForShopCustomer(item.customer);
+    const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
+    let commissionAmount = commissionBase * (commissionPercent / 100);
+    if (commissionAmount < 0) commissionAmount = 0;
+    const netAmount = Math.max(0, commissionBase - commissionAmount);
+    const amountPaid = commissionBase;
+    const discountValue = listedPrice - (netAmount + commissionAmount);
     const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
     const saleDate = new Date().toISOString().split('T')[0];
     const customerName = (item.customer || '').toLowerCase();
-    const isShopSale = customerName.includes('shop') || customerName.includes('flippin') || customerName.includes('vendor');
+    const isShopSale = customerName.includes('shop') || customerName.includes('flippin') || customerName.includes('vendor') || customerName.includes('first avenue');
     
     const saleData = {
         id: saleId,
@@ -11294,17 +11307,17 @@ function createOrUpdateSaleFromProject(index) {
         saleRecord.itemIndex = index;
         saleRecord.saleSource = 'project';
         saleRecord.saleType = saleRecord.saleType || 'inventory';
-        saleRecord.saleChannel = saleRecord.saleChannel || saleData.saleChannel;
+        saleRecord.saleChannel = saleData.saleChannel;
         saleRecord.dateSold = saleRecord.dateSold || saleData.dateSold;
-        if (saleRecord.salePrice === undefined) saleRecord.salePrice = saleData.salePrice;
-        if (saleRecord.netAmount === undefined) saleRecord.netAmount = saleData.netAmount;
-        if (saleRecord.amountPaid === undefined) saleRecord.amountPaid = saleData.amountPaid;
-        if (saleRecord.commission === undefined) saleRecord.commission = saleData.commission;
-        if (saleRecord.commissionAmount === undefined) saleRecord.commissionAmount = saleData.commissionAmount;
-        if (saleRecord.vendorDiscount === undefined) saleRecord.vendorDiscount = saleData.vendorDiscount;
-        if (saleRecord.vendorDiscountAmount === undefined) saleRecord.vendorDiscountAmount = saleData.vendorDiscountAmount;
-        if (saleRecord.discount === undefined) saleRecord.discount = saleData.discount;
-        if (saleRecord.discountPercent === undefined) saleRecord.discountPercent = saleData.discountPercent;
+        saleRecord.salePrice = saleData.salePrice;
+        saleRecord.netAmount = saleData.netAmount;
+        saleRecord.amountPaid = saleData.amountPaid;
+        saleRecord.commission = saleData.commission;
+        saleRecord.commissionAmount = saleData.commissionAmount;
+        saleRecord.vendorDiscount = saleData.vendorDiscount;
+        saleRecord.vendorDiscountAmount = saleData.vendorDiscountAmount;
+        saleRecord.discount = saleData.discount;
+        saleRecord.discountPercent = saleData.discountPercent;
         if (!saleRecord.notes || saleRecord.notes.includes('Auto-generated')) {
             saleRecord.notes = saleData.notes;
         }
