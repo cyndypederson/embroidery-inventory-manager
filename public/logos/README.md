@@ -6,11 +6,13 @@ This folder contains logo images that are automatically loaded when generating p
 
 ```
 public/logos/
-├── vendors/          # Vendor/Shop logos (vendor-dependent)
+├── vendors/              # Vendor/Shop logos (vendor-dependent)
 │   ├── flippin-happy.png
 │   ├── flippin-happy.jpg
 │   └── [vendor-name].png
-└── my-logo.png       # Your logo (auto-loaded)
+├── my-logo.png           # Your logo (auto-loaded for price tags)
+├── stitchcraft-logo.svg  # Fallback brand mark (logo tags + price tags if my-logo missing)
+└── qr-facebook.png       # QR image for Facebook (logo tags + price tag footer)
 ```
 
 ## Vendor Logos

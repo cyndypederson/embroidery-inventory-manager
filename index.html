@@ -660,9 +660,12 @@
 
                 <!-- Sales Filters -->
                 <div class="filters" style="margin-bottom: 1rem;">
-                    <input type="text" id="salesSearch" placeholder="Search sales..." onkeyup="loadSalesCards()">
-                    <select id="salesCustomerFilter" onchange="loadSalesCards()" aria-label="Filter sales by customer">
+                    <input type="text" id="salesSearch" placeholder="Search sales..." onkeyup="loadSalesCards(); if (typeof loadSalesTable === 'function') loadSalesTable(); if (typeof loadMobileSalesCards === 'function') loadMobileSalesCards();">
+                    <select id="salesCustomerFilter" onchange="loadSalesCards(); if (typeof loadSalesTable === 'function') loadSalesTable(); if (typeof loadMobileSalesCards === 'function') loadMobileSalesCards();" aria-label="Filter sales by customer">
                         <option value="">All Customers</option>
+                    </select>
+                    <select id="salesYearFilter" onchange="loadSalesCards(); if (typeof loadSalesTable === 'function') loadSalesTable(); if (typeof loadMobileSalesCards === 'function') loadMobileSalesCards();" aria-label="Filter sales by year" title="Filter by sale date year">
+                        <option value="">All years</option>
                     </select>
                     <button class="btn btn-outline" onclick="clearSalesFilters()" title="Clear all filters">
                         <i class="fas fa-times"></i> Clear Filters
@@ -682,9 +685,12 @@
                 </div>
             </div>
 
-            <!-- Price Tag Preview Container -->
+            <!-- Price / logo tag previews (outside tab panes so print CSS can target them) -->
             <div id="priceTagPreview" class="price-tag-preview" style="display: none;">
                 <!-- Price tags will be generated here -->
+            </div>
+            <div id="logoTagPreview" class="logo-tag-preview" style="display: none;" aria-live="polite">
+                <!-- Logo + Facebook QR hang tags -->
             </div>
 
             <!-- Completed Items Tab -->
@@ -703,6 +709,9 @@
                         </button>
                         <button class="btn btn-primary" onclick="openPriceTagModal()">
                             <i class="fas fa-tags"></i> Generate Price Tags
+                        </button>
+                        <button type="button" class="btn btn-outline" id="btnOpenLogoTags" onclick="openLogoTagModalFromUI(); return false;" title="Same size as price tags: your logo + Facebook QR">
+                            <i class="fas fa-qrcode"></i> Logo hang tags
                         </button>
                     </div>
                 </div>
@@ -757,6 +766,11 @@
                     <div class="completed-cards-grid" id="completedItemsCards">
                         <!-- Cards will be populated here -->
                     </div>
+                </div>
+                
+                <!-- Mobile cards for completed (filters + select-all stay above) -->
+                <div class="mobile-cards-container">
+                    <div class="mobile-cards-grid" id="mobileCompletedCards"></div>
                 </div>
                 
                 <!-- Invoice Summary -->
@@ -1195,6 +1209,12 @@
                             <option value="sold">Sold</option>
                         </select>
                     </div>
+                    <div class="form-group full-width">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="itemIsGift">
+                            <span>This is a gift (never sold)</span>
+                        </label>
+                    </div>
                     <div class="form-group half-width">
                         <label for="itemCustomer">Customer</label>
                         <div class="input-with-button">
@@ -1331,6 +1351,12 @@
                         <option value="completed">Completed</option>
                         <option value="sold">Sold</option>
                     </select>
+                </div>
+                <div class="form-group full-width">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="projectIsGift">
+                        <span>This is a gift (never sold)</span>
+                    </label>
                 </div>
                 <div class="form-group half-width">
                     <label for="projectCustomer">Customer</label>
@@ -1858,6 +1884,13 @@
                     </select>
                 </div>
                 
+                <div class="form-group full-width">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="editProjectIsGift">
+                        <span>This is a gift (never sold)</span>
+                    </label>
+                </div>
+                
                 <div class="form-group half-width">
                     <label for="editProjectDueDate">Due Date</label>
                     <input type="date" id="editProjectDueDate">
@@ -1944,6 +1977,13 @@
                     <input type="date" id="editCompletedItemInvoicedDate">
                 </div>
                 
+                <div class="form-group full-width">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="editCompletedItemIsGift">
+                        <span>This is a gift (never sold)</span>
+                    </label>
+                </div>
+                
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editCompletedItemModal')">Cancel</button>
                     <button type="button" class="btn btn-info" onclick="copyCurrentCompletedItem()" title="Create a copy of this item">
@@ -1997,6 +2037,13 @@
                 <div class="form-group half-width">
                     <label for="addCompletedItemInvoicedDate">Date Invoiced</label>
                     <input type="date" id="addCompletedItemInvoicedDate">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="addCompletedItemIsGift">
+                        <span>This is a gift (never sold)</span>
+                    </label>
                 </div>
                 
                 <div class="form-actions">
@@ -2404,7 +2451,6 @@
                 </div>
                 
                 <div class="form-group">
-                <div class="form-group">
                     <label>Selected Items</label>
                     <div id="priceTagSelectedItems" class="price-tag-items-list">
                         <p class="text-muted">No items selected. Please select completed items first.</p>
@@ -2426,9 +2472,27 @@
         </div>
     </div>
 
-    <!-- Price Tag Preview Container -->
-    <div id="priceTagPreview" class="price-tag-preview" style="display: none; position: relative; z-index: 1000;">
-        <!-- Price tags will be generated here -->
+    <!-- Logo tag modal (hang tags: logo + Facebook QR) -->
+    <div id="logoTagModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('logoTagModal')">&times;</span>
+            <h2><i class="fas fa-qrcode"></i> Logo hang tags</h2>
+            <form id="logoTagForm" class="modal-form" novalidate>
+                <div class="form-group half-width">
+                    <label for="logoTagCount">Number of tags (12 = one US Letter sheet)</label>
+                    <input type="number" id="logoTagCount" name="count" min="1" max="120" value="12" required title="3×4 grid of 2in tags = 12 per page">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('logoTagModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-eye"></i> Show preview
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="previewLogoTags(true)">
+                        <i class="fas fa-print"></i> Preview &amp; print
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>

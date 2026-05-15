@@ -80,7 +80,14 @@ function saveCurrentFilters(tabName) {
     const tabPrefix = tabName === 'projects' ? '' : tabName;
     
     // Save search filters
-    const searchInput = document.getElementById(tabName === 'projects' ? 'searchItems' : `${tabPrefix}Search`);
+    let searchInput = null;
+    if (tabName === 'projects') {
+        searchInput = document.getElementById('searchItems');
+    } else if (tabName === 'completed') {
+        searchInput = document.getElementById('completedSearchItems');
+    } else {
+        searchInput = document.getElementById(`${tabPrefix}Search`);
+    }
     if (searchInput) filters.search = searchInput.value;
     
     // Save status filters
@@ -109,6 +116,16 @@ function saveCurrentFilters(tabName) {
         if (customerFilter) filters.customer = customerFilter.value;
     }
     
+    if (tabName === 'completed') {
+        const dateFilter = document.getElementById('completedDateFilter');
+        if (dateFilter) filters.date = dateFilter.value;
+    }
+    
+    if (tabName === 'sales') {
+        const yearFilter = document.getElementById('salesYearFilter');
+        if (yearFilter) filters.year = yearFilter.value;
+    }
+    
     filterState[tabName] = filters;
 }
 
@@ -116,7 +133,14 @@ function restoreFilters(tabName) {
     const filters = filterState[tabName] || {};
     
     // Restore search filters
-    const searchInput = document.getElementById(tabName === 'projects' ? 'searchItems' : `${tabName}Search`);
+    let searchInput = null;
+    if (tabName === 'projects') {
+        searchInput = document.getElementById('searchItems');
+    } else if (tabName === 'completed') {
+        searchInput = document.getElementById('completedSearchItems');
+    } else {
+        searchInput = document.getElementById(`${tabName}Search`);
+    }
     if (searchInput && filters.search !== undefined) {
         searchInput.value = filters.search;
     }
@@ -155,6 +179,16 @@ function restoreFilters(tabName) {
             const customerFilter = document.getElementById('wipCustomerFilter');
             if (customerFilter) customerFilter.value = filters.customer;
         }
+    }
+    
+    if (tabName === 'completed' && filters.date !== undefined) {
+        const dateFilter = document.getElementById('completedDateFilter');
+        if (dateFilter) dateFilter.value = filters.date;
+    }
+    
+    if (tabName === 'sales' && filters.year !== undefined) {
+        const yearFilter = document.getElementById('salesYearFilter');
+        if (yearFilter) yearFilter.value = filters.year;
     }
 }
 
@@ -697,27 +731,66 @@ function loadCustomersCards() {
     });
 }
 
+// Sales tab: calendar year from dateSold (YYYY-MM-DD or similar)
+function getSaleCalendarYear(dateSold) {
+    if (!dateSold) return null;
+    const d = new Date(dateSold);
+    const y = d.getFullYear();
+    return Number.isNaN(y) ? null : y;
+}
+
+/** Rebuild year dropdown from current sales; keep selection when still valid. */
+function populateSalesYearFilter() {
+    const sel = document.getElementById('salesYearFilter');
+    if (!sel) return;
+    const prev = sel.value;
+    const years = [...new Set(sales.map(s => getSaleCalendarYear(s.dateSold)).filter(y => y != null))].sort((a, b) => b - a);
+    sel.innerHTML = '<option value="">All years</option>';
+    years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        sel.appendChild(opt);
+    });
+    if (prev && [...sel.options].some(o => o.value === prev)) {
+        sel.value = prev;
+    }
+}
+
+function saleMatchesSalesTabFilters(sale) {
+    const searchTerm = document.getElementById('salesSearch')?.value?.toLowerCase() || '';
+    const customerFilter = document.getElementById('salesCustomerFilter')?.value || '';
+    const yearFilter = document.getElementById('salesYearFilter')?.value || '';
+    if (searchTerm && !(sale.itemName?.toLowerCase().includes(searchTerm) || sale.customer?.toLowerCase().includes(searchTerm))) {
+        return false;
+    }
+    if (customerFilter && sale.customer !== customerFilter) {
+        return false;
+    }
+    if (yearFilter) {
+        const y = getSaleCalendarYear(sale.dateSold);
+        if (y === null || String(y) !== yearFilter) return false;
+    }
+    return true;
+}
+
 // Load Sales as Cards
 function loadSalesCards() {
     const container = document.getElementById('salesCards');
     if (!container) return;
     
+    populateSalesYearFilter();
+    
     container.innerHTML = '';
     
-    const filteredSales = sales.filter(sale => {
-        const searchTerm = document.getElementById('salesSearch')?.value?.toLowerCase() || '';
-        const customerFilter = document.getElementById('salesCustomerFilter')?.value || '';
-        if (searchTerm && !(sale.itemName?.toLowerCase().includes(searchTerm) || sale.customer?.toLowerCase().includes(searchTerm))) {
-            return false;
-        }
-        if (customerFilter && sale.customer !== customerFilter) {
-            return false;
-        }
-        return true;
-    });
+    const filteredSales = sales.filter(sale => saleMatchesSalesTabFilters(sale));
     
     if (filteredSales.length === 0) {
-        container.innerHTML = '<div class="no-data">No sales recorded. <a href="#" onclick="openAddSaleModal()">Record your first sale</a></div>';
+        if (sales.length === 0) {
+            container.innerHTML = '<div class="no-data">No sales recorded. <a href="#" onclick="openAddSaleModal()">Record your first sale</a></div>';
+        } else {
+            container.innerHTML = '<div class="no-data">No sales match the current filters.</div>';
+        }
         return;
     }
     
@@ -840,6 +913,7 @@ function loadInventoryTableWithPagination() {
         
         // Create quick action buttons based on current status
         let quickActions = '';
+        const giftProjectPag = item.type === 'project' && item.isGift;
         if (item.status === 'inventory') {
             quickActions = `
                 <button class="btn btn-sm btn-primary" onclick="quickStatusChange(${(currentPage - 1) * currentPageSize + index}, 'pending')" title="Start Project">
@@ -859,7 +933,7 @@ function loadInventoryTableWithPagination() {
                 </button>
             `;
         } else if (item.status === 'completed') {
-            quickActions = `
+            quickActions = giftProjectPag ? '' : `
                 <button class="btn btn-sm btn-info" onclick="quickStatusChange(${(currentPage - 1) * currentPageSize + index}, 'sold')" title="Mark Sold">
                     <i class="fas fa-dollar-sign"></i>
                 </button>
@@ -5396,7 +5470,11 @@ function updateAuthUI() {
     console.log('🔄 updateAuthUI called:', { authEnabled, isAuthenticated, currentUsername });
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
-    
+
+    if (!authContainer || !authUsernameSpan) {
+        return;
+    }
+
     if (authEnabled && isAuthenticated && currentUsername) {
         console.log('✅ Showing authenticated UI');
         authContainer.style.display = 'flex';
@@ -5716,6 +5794,8 @@ function initializeApp() {
     
     const addProjectForm = document.getElementById('addProjectForm');
     if (addProjectForm) addProjectForm.addEventListener('submit', handleAddProject);
+    
+    wireProjectGiftCheckboxes();
     
     const addCustomerForm = document.getElementById('addCustomerForm');
     if (addCustomerForm) addCustomerForm.addEventListener('submit', handleAddCustomer);
@@ -6076,6 +6156,14 @@ async function editItem(itemIdOrIndex) {
     // NOW set the customer value (this will override the dropdown population)
     setElementValue(`${fieldPrefix}Customer`, item.customer || '');
     
+    if (itemType === 'project') {
+        const editGift = document.getElementById('editProjectIsGift');
+        if (editGift) {
+            editGift.checked = !!item.isGift;
+            applyGiftRestrictionsToProjectStatusSelect('editProjectStatus', editGift.checked);
+        }
+    }
+    
     // Calculate and set total value
     calculateEditTotalValue();
     
@@ -6185,6 +6273,11 @@ function editProject(index) {
     document.getElementById('editProjectQuantity').value = item.quantity || 1;
     // document.getElementById('editProjectCategory').value = item.category || ''; // Field removed
     document.getElementById('editProjectStatus').value = item.status || 'pending';
+    const editGift = document.getElementById('editProjectIsGift');
+    if (editGift) {
+        editGift.checked = !!item.isGift;
+        applyGiftRestrictionsToProjectStatusSelect('editProjectStatus', editGift.checked);
+    }
     document.getElementById('editProjectDueDate').value = item.dueDate || '';
     document.getElementById('editProjectPriority').value = item.priority || 'medium';
     document.getElementById('editProjectTags').value = item.tags || '';
@@ -6243,6 +6336,12 @@ async function handleEditProject(e) {
     }
     
     const newStatus = getElementValue('editProjectStatus');
+    const isGift = document.getElementById('editProjectIsGift')?.checked || false;
+    if (isGift && newStatus === 'sold') {
+        hideLoadingSpinner('edit-project');
+        showNotification('Gift projects cannot be marked as sold.', 'error');
+        return;
+    }
     const shouldCreateSale = newStatus === 'sold';
     
     // Update the project
@@ -6253,6 +6352,7 @@ async function handleEditProject(e) {
         price: parseFloat(getElementValue('editProjectPrice')) || 0,
         category: '', // Field removed
         status: newStatus,
+        isGift: !!isGift,
         customer: getElementValue('editProjectCustomer'),
         location: getElementValue('editProjectLocation'),
         dueDate: getElementValue('editProjectDueDate'),
@@ -6395,6 +6495,7 @@ async function handleEditCompletedItem(e) {
         customer: getElementValue('editCompletedItemCustomer'),
         invoicedDate: getElementValue('editCompletedItemInvoicedDate'),
         status: 'completed', // Always set to completed
+        isGift: document.getElementById('editCompletedItemIsGift')?.checked === true,
         // Preserve existing image data
         photo: inventory[index].photo,
         imageData: inventory[index].imageData
@@ -6447,6 +6548,7 @@ async function handleAddCompletedItem(e) {
         invoicedDate: getElementValue('addCompletedItemInvoicedDate'),
         status: 'completed',
         type: 'project',
+        isGift: document.getElementById('addCompletedItemIsGift')?.checked === true,
         createdAt: new Date().toISOString()
     };
     
@@ -6889,13 +6991,10 @@ async function switchTab(tabName) {
             }
         }
         } else if (tabName === 'completed') {
-            // Load completed items
-            populateCompletedCustomerFilter(); // Populate customer filter first
+            // Load completed items — restore filters after repopulating customer list so the table uses the correct selection
+            populateCompletedCustomerFilter();
+            restoreFilters('completed');
             loadCompletedItemsTable();
-            // Load mobile cards for completed items if needed
-            if (isMobile()) {
-                // TODO: Add mobile cards for completed items
-            }
         } else if (tabName === 'reports') {
         loadReportsDashboard();
         // Show bulk actions as a separate section below report actions
@@ -7397,6 +7496,11 @@ function updateStatusOptions() {
         `;
         modalTitle.textContent = 'Add New Inventory Item';
         if (submitButton) submitButton.textContent = 'Add Item';
+        const igInv = document.getElementById('itemIsGift');
+        if (igInv) {
+            igInv.checked = false;
+            applyGiftRestrictionsToProjectStatusSelect('itemProjectStatus', false);
+        }
     } else if (typeSelect.value === 'project') {
         // Hide inventory fields, show project fields
         if (inventoryFields) inventoryFields.style.display = 'none';
@@ -7415,6 +7519,8 @@ function updateStatusOptions() {
         `;
         modalTitle.textContent = 'Add New Project';
         if (submitButton) submitButton.textContent = 'Add Project';
+        const ig = document.getElementById('itemIsGift');
+        applyGiftRestrictionsToProjectStatusSelect('itemProjectStatus', !!(ig && ig.checked));
     }
 }
 
@@ -7696,6 +7802,8 @@ function loadInventoryTable(showDetailed = false) {
             
             // Create quick action buttons based on current status
             let quickActions = '';
+            const giftProject = item.type === 'project' && item.isGift;
+            const markSoldDisabled = item.status === 'sold' || giftProject;
             if (item.status === 'inventory') {
                 quickActions = `
                     <button class="btn btn-sm btn-primary" onclick="quickStatusChange(${index}, 'pending')" title="Start Project">
@@ -7715,7 +7823,7 @@ function loadInventoryTable(showDetailed = false) {
                     </button>
                 `;
             } else if (item.status === 'completed') {
-                quickActions = `
+                quickActions = giftProject ? '' : `
                     <button class="btn btn-sm btn-info" onclick="quickStatusChange(${index}, 'sold')" title="Mark as Sold">
                         <i class="fas fa-dollar-sign"></i>
                     </button>
@@ -7759,7 +7867,7 @@ function loadInventoryTable(showDetailed = false) {
                             <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
                                 <i class="fas fa-copy"></i>
                             </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                            <button class="btn btn-success" onclick="markAsSold(${index})" ${markSoldDisabled ? 'disabled' : ''} title="${giftProject ? 'Gift project (not sold)' : 'Mark as Sold'}">
                                 <i class="fas fa-check"></i>
                             </button>
                             <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
@@ -7785,7 +7893,7 @@ function loadInventoryTable(showDetailed = false) {
                             <button class="btn btn-info" onclick="copyItem(${index})" title="Copy Item">
                                 <i class="fas fa-copy"></i>
                             </button>
-                            <button class="btn btn-success" onclick="markAsSold(${index})" ${item.status === 'sold' ? 'disabled' : ''} title="Mark as Sold">
+                            <button class="btn btn-success" onclick="markAsSold(${index})" ${markSoldDisabled ? 'disabled' : ''} title="${giftProject ? 'Gift project (not sold)' : 'Mark as Sold'}">
                                 <i class="fas fa-check"></i>
                             </button>
                             <button class="btn btn-danger" onclick="deleteItem(${index})" title="Delete Item">
@@ -7875,6 +7983,7 @@ const MobileCardManager = {
             'mobileWIPCards',
             'mobileGalleryCards',
             'mobileSalesCards',
+            'mobileCompletedCards',
             'mobileIdeasCards'
         ];
         
@@ -8278,7 +8387,27 @@ function loadMobileSalesCards() {
         return;
     }
     
-    sales.forEach((sale, index) => {
+    populateSalesYearFilter();
+    const matchingSales = sales.filter(saleMatchesSalesTabFilters);
+    if (matchingSales.length === 0) {
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'mobile-card';
+        emptyCard.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="empty-state">
+                    <i class="fas fa-filter"></i>
+                    <h3>No Matching Sales</h3>
+                    <p>Try changing search, customer, or year filters.</p>
+                </div>
+            </div>
+        `;
+        container.appendChild(emptyCard);
+        return;
+    }
+    
+    matchingSales.forEach((sale) => {
+        const index = sales.indexOf(sale);
+        if (index === -1) return;
         const listPrice = parseFloat(sale.listedPrice ?? sale.price ?? sale.salePrice ?? 0) || 0;
         const netPrice = parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0) || 0;
         const saleCard = document.createElement('div');
@@ -8550,11 +8679,21 @@ async function openAddProjectModal(prefilledData = null) {
                     field.value = fields[fieldId];
                 }
             });
+            const pg = document.getElementById('projectIsGift');
+            if (pg) {
+                pg.checked = !!prefilledData.isGift;
+                applyGiftRestrictionsToProjectStatusSelect('projectStatus', pg.checked);
+            }
         } else {
             // Reset modal title for new items
             const modalTitle = modal.querySelector('h3');
             if (modalTitle) {
                 modalTitle.innerHTML = 'Add New Project';
+            }
+            const pg = document.getElementById('projectIsGift');
+            if (pg) {
+                pg.checked = false;
+                applyGiftRestrictionsToProjectStatusSelect('projectStatus', false);
             }
         }
     }
@@ -8707,11 +8846,19 @@ async function handleAddProject(e) {
     const price = parseFloat(document.getElementById('projectPrice').value) || 0;
     
     if (!description) {
+        hideLoadingSpinner('add-project');
         alert('Please enter a description for the project.');
         return;
     }
     
     const status = document.getElementById('projectStatus').value;
+    const isGift = document.getElementById('projectIsGift')?.checked || false;
+    if (isGift && status === 'sold') {
+        hideLoadingSpinner('add-project');
+        showNotification('Gift projects cannot be marked as sold.', 'error');
+        return;
+    }
+    
     const projectData = {
         name: description,
         description: description,
@@ -8720,6 +8867,7 @@ async function handleAddProject(e) {
         totalValue: quantity * price,
         type: 'project',
         status: status,
+        isGift: !!isGift,
         priority: document.getElementById('projectPriority').value,
         dueDate: document.getElementById('projectDueDate').value || null,
         notes: document.getElementById('projectNotes').value,
@@ -8819,8 +8967,56 @@ function copyFromLastProject() {
     document.getElementById('projectPatternLink').value = lastProject.patternLink || '';
     document.getElementById('projectTags').value = lastProject.tags || '';
     document.getElementById('projectNotes').value = lastProject.notes || '';
+    const pg = document.getElementById('projectIsGift');
+    if (pg) {
+        pg.checked = !!lastProject.isGift;
+        applyGiftRestrictionsToProjectStatusSelect('projectStatus', pg.checked);
+    }
     
     showNotification('Copied', 'Form populated with last project data.');
+}
+
+/** Copy the project currently open in the edit project modal (button in edit modal). */
+async function copyCurrentProject() {
+    const indexField = document.getElementById('editProjectIndex');
+    if (!indexField) {
+        showNotification('Could not copy project', 'error');
+        return;
+    }
+    const idx = parseInt(indexField.value, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= inventory.length) {
+        showNotification('Error: Invalid project to copy', 'error');
+        return;
+    }
+    const currentItem = inventory[idx];
+    if (currentItem.type !== 'project') {
+        showNotification('Not a project', 'error');
+        return;
+    }
+    
+    const copiedItem = {
+        ...currentItem,
+        status: 'pending',
+        dateAdded: new Date().toISOString(),
+        dueDate: null
+    };
+    delete copiedItem.saleId;
+    
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+    const customerName = copiedItem.customer || 'No Customer';
+    if (!expandedCustomers.includes(customerName)) {
+        expandedCustomers.push(customerName);
+        saveExpandedCustomerGroups(expandedCustomers);
+    }
+    
+    inventory.push(copiedItem);
+    await saveData();
+    loadInventoryTable();
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
+    closeModal('editProjectModal');
+    showNotification('Project copied successfully!', 'success');
 }
 
 async function handleAddItem(e) {
@@ -8876,6 +9072,17 @@ async function handleAddItem(e) {
         dateAdded: new Date().toISOString(),
         photo: null // Will be set after photo processing
     };
+    
+    if (newItem.type === 'project') {
+        const giftEl = document.getElementById('itemIsGift');
+        newItem.isGift = !!(giftEl && giftEl.checked);
+        if (newItem.isGift && newItem.status === 'sold') {
+            showNotification('Gift projects cannot be marked as sold.', 'error');
+            return;
+        }
+    } else {
+        newItem.isGift = false;
+    }
     
     // Handle photo if present
     const photoInput = document.getElementById('itemPhoto');
@@ -9534,6 +9741,43 @@ document.addEventListener('DOMContentLoaded', function() {
             generatePriceTags();
         });
     }
+    
+    const logoTagForm = document.getElementById('logoTagForm');
+    if (logoTagForm) {
+        logoTagForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            previewLogoTags(false);
+        });
+    }
+    
+    if (!window.__afterPrintLogoTagHook) {
+        window.__afterPrintLogoTagHook = true;
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('printing-logo-tags');
+            if (window.__printTitleBackup !== undefined) {
+                document.title = window.__printTitleBackup;
+                delete window.__printTitleBackup;
+            }
+        });
+        window.addEventListener('beforeprint', () => {
+            window.__printTitleBackup = document.title;
+            const ltp = document.getElementById('logoTagPreview');
+            const ptp = document.getElementById('priceTagPreview');
+            const logoVisible = ltp && window.getComputedStyle(ltp).display !== 'none' && (ltp.innerHTML || '').trim().length > 0;
+            const priceVisible = ptp && window.getComputedStyle(ptp).display !== 'none' && (ptp.innerHTML || '').trim().length > 0;
+            const printingLogos = document.body.classList.contains('printing-logo-tags');
+
+            if (printingLogos || (logoVisible && !priceVisible)) {
+                if (logoVisible && !priceVisible) {
+                    document.body.classList.add('printing-logo-tags');
+                }
+                document.title = 'StitchCraft-Logo-Hang-Tags';
+            } else if (priceVisible) {
+                document.body.classList.remove('printing-logo-tags');
+                document.title = 'StitchCraft-Price-Tags';
+            }
+        });
+    }
 });
 
 // Helper function to toggle vendor number field visibility in customer forms
@@ -9575,6 +9819,142 @@ function getVendorNumber(vendorName) {
 
 
 // Price Tag Generation Functions
+function openLogoTagModal() {
+    const modal = document.getElementById('logoTagModal');
+    if (!modal) {
+        showNotification('Logo tag dialog not found', 'error');
+        return;
+    }
+    // Ensure the dialog is a direct child of body (last painted) so fixed + z-index wins over header/nav.
+    document.body.appendChild(modal);
+    modal.style.removeProperty('display');
+    modal.classList.add('logo-tag-modal-visible');
+    modal.setAttribute('aria-hidden', 'false');
+    debugLog('Logo tag modal opened');
+}
+
+/** Sync entry point for HTML `onclick` — catches errors and avoids async-handler quirks. */
+function openLogoTagModalFromUI() {
+    try {
+        openLogoTagModal();
+    } catch (err) {
+        console.error('openLogoTagModal failed:', err);
+        showNotification('Could not open logo tags. Try a hard refresh (Cmd+Shift+R).', 'error');
+    }
+}
+
+const LOGO_TAG_QR_PATH = '/logos/qr-facebook.png';
+/** Shown on price tag footer next to shop QR — change in one place for reprints. */
+const PRICE_TAG_SOCIAL_HANDLE = '@cyndypstitchcraft';
+/** 3×4 grid of 2in tags on US Letter — used for price tags and logo hang tags pagination. */
+const TAGS_PER_LETTER_SHEET = 12;
+
+async function resolveLogoForLogoTags() {
+    const found = await findMyLogo();
+    if (found) return found;
+    return '/logos/stitchcraft-logo.svg';
+}
+
+function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
+    const logoUrl = logoPath.startsWith('http') || logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+    const sep = logoUrl.includes('?') ? '&' : '?';
+    const logoCached = `${logoUrl}${sep}t=${Date.now()}`;
+    const qrSep = qrPath.includes('?') ? '&' : '?';
+    const qrCached = `${qrPath}${qrSep}t=${Date.now()}`;
+
+    const oneTag = (n) => `
+            <div class="price-tag logo-hang-tag" role="group" aria-label="Logo hang tag ${n}">
+                <div class="logo-hang-tag-brand-row">
+                    <img src="${SecurityManager.escapeHtml(logoCached)}" alt="Your brand logo" class="logo-hang-tag-brand-img">
+                </div>
+                <div class="price-tag-footer">
+                    <img src="${SecurityManager.escapeHtml(qrCached)}" alt="Facebook QR" class="price-tag-qr">
+                    <span class="price-tag-social">Find us on Facebook</span>
+                </div>
+            </div>`;
+
+    const tagFragments = [];
+    for (let i = 0; i < count; i++) {
+        tagFragments.push(oneTag(i + 1));
+    }
+
+    const TAGS_PER_PAGE = TAGS_PER_LETTER_SHEET;
+    const pages = [];
+    for (let i = 0; i < tagFragments.length; i += TAGS_PER_PAGE) {
+        const pageTags = tagFragments.slice(i, i + TAGS_PER_PAGE).join('');
+        pages.push(`
+            <div class="price-tags-page">
+                <div class="price-tags-grid">
+                    ${pageTags}
+                </div>
+            </div>`);
+    }
+
+    return `
+        <div class="logo-tags-container">
+            <div class="logo-tags-toolbar no-print">
+                <div>
+                    <h2>Logo hang tags</h2>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-outline" onclick="closeLogoTagPreview()">Close preview</button>
+                    <button type="button" class="btn btn-primary" onclick="document.body.classList.add('printing-logo-tags'); window.print();">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+            ${pages.join('')}
+        </div>`;
+}
+
+function closeLogoTagPreview() {
+    const el = document.getElementById('logoTagPreview');
+    if (el) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+    }
+    document.body.classList.remove('printing-logo-tags');
+}
+
+async function previewLogoTags(alsoPrint) {
+    const countRaw = parseInt(document.getElementById('logoTagCount')?.value, 10);
+    const maxTags = 120;
+    const count = Math.min(maxTags, Math.max(1, Number.isNaN(countRaw) ? TAGS_PER_LETTER_SHEET : countRaw));
+    showLoadingSpinner('Building logo tags...', 'logo-tags');
+    try {
+        const logoPath = await resolveLogoForLogoTags();
+        const html = buildLogoTagsSheetHTML(count, logoPath, LOGO_TAG_QR_PATH);
+        const preview = document.getElementById('logoTagPreview');
+        const ptp = document.getElementById('priceTagPreview');
+        if (ptp) {
+            ptp.style.display = 'none';
+        }
+        if (!preview) {
+            showNotification('Preview area not found', 'error');
+            return;
+        }
+        preview.innerHTML = html;
+        preview.style.display = 'block';
+        preview.style.visibility = 'visible';
+        closeModal('logoTagModal');
+        requestAnimationFrame(() => {
+            preview.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        });
+        showNotification(`Preview ready — ${count} tag(s). Use Print when you are ready.`, 'success');
+        if (alsoPrint) {
+            setTimeout(() => {
+                document.body.classList.add('printing-logo-tags');
+                window.print();
+            }, 400);
+        }
+    } catch (err) {
+        console.error('Logo tags error:', err);
+        showNotification('Could not build logo tags', 'error');
+    } finally {
+        hideLoadingSpinner('logo-tags');
+    }
+}
+
 function openPriceTagModal() {
     // Get selected completed items
     const selectedItems = getSelectedCompletedItems();
@@ -9728,37 +10108,27 @@ function checkFileExists(url) {
 
 // Function to find user's logo
 async function findMyLogo() {
-    // Try most likely names first (my-logo.png is the standard)
-    const names = ['my-logo', 'logo'];
-    const extensions = ['png', 'jpg', 'jpeg', 'svg'];
-    const basePaths = ['/logos/'];
-    
-    // Try each base path
-    for (const basePath of basePaths) {
-    // Try my-logo.png first (most likely)
-    const primaryPath = `${basePath}my-logo.png`;
-        console.log(`🔍 Checking my logo: ${primaryPath}`);
-    const primaryExists = await checkFileExists(primaryPath);
-    if (primaryExists) {
-            console.log(`✅ Found my logo at: ${primaryPath}`);
-        return primaryPath;
-    }
-    
-    // Then try other combinations
-    for (const name of names) {
-        for (const ext of extensions) {
-            if (name === 'my-logo' && ext === 'png') continue; // Already tried
-            const logoPath = `${basePath}${name}.${ext}`;
-                console.log(`🔍 Checking my logo: ${logoPath}`);
-            const exists = await checkFileExists(logoPath);
-            if (exists) {
-                    console.log(`✅ Found my logo at: ${logoPath}`);
-                return logoPath;
-                }
-            }
+    const extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
+    const basePath = '/logos/';
+
+    for (const ext of extensions) {
+        const logoPath = `${basePath}my-logo.${ext}`;
+        console.log(`🔍 Checking my logo: ${logoPath}`);
+        const exists = await checkFileExists(logoPath);
+        if (exists) {
+            console.log(`✅ Found my logo at: ${logoPath}`);
+            return logoPath;
         }
     }
-    
+
+    const stitchcraftPath = `${basePath}stitchcraft-logo.svg`;
+    console.log(`🔍 Checking bundled logo: ${stitchcraftPath}`);
+    const stitchExists = await checkFileExists(stitchcraftPath);
+    if (stitchExists) {
+        console.log(`✅ Found logo at: ${stitchcraftPath}`);
+        return stitchcraftPath;
+    }
+
     console.log('❌ My logo not found');
     return null;
 }
@@ -9836,6 +10206,13 @@ async function generatePriceTags(previewOnly = false) {
     if (!form) {
         showNotification('Price tag form not found', 'error');
         return;
+    }
+    
+    document.body.classList.remove('printing-logo-tags');
+    const logoTagPrev = document.getElementById('logoTagPreview');
+    if (logoTagPrev) {
+        logoTagPrev.style.display = 'none';
+        logoTagPrev.innerHTML = '';
     }
     
     const formData = new FormData(form);
@@ -10093,8 +10470,8 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                         ${vendorNameHTML}
                     </div>
                     <div class="price-tag-footer">
-                        <img src="/logos/qr-facebook.png" alt="Facebook QR" class="price-tag-qr">
-                        <span class="price-tag-social">@cyndypstitchcraft</span>
+                        <img src="${LOGO_TAG_QR_PATH}" alt="Facebook QR" class="price-tag-qr">
+                        <span class="price-tag-social">${SecurityManager.escapeHtml(PRICE_TAG_SOCIAL_HANDLE)}</span>
                     </div>
                 </div>
             `);
@@ -10103,7 +10480,7 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
     
     // Chunk tags into pages of 9 (3x3 grid per page)
     // 3 columns × 4 rows = 12 tags per page with 2in tags on letter paper
-    const TAGS_PER_PAGE = 12;
+    const TAGS_PER_PAGE = TAGS_PER_LETTER_SHEET;
     const pages = [];
     for (let i = 0; i < tagFragments.length; i += TAGS_PER_PAGE) {
         const pageTags = tagFragments.slice(i, i + TAGS_PER_PAGE).join('');
@@ -10186,6 +10563,7 @@ function loadSalesTable() {
         if (typeof loadSalesCards === 'function') loadSalesCards();
         return;
     }
+    populateSalesYearFilter();
     tbody.innerHTML = '';
     
     if (sales.length === 0) {
@@ -10200,7 +10578,21 @@ function loadSalesTable() {
         return;
     }
     
-    sales.forEach((sale, index) => {
+    const matchingSales = sales.filter(saleMatchesSalesTabFilters);
+    if (matchingSales.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-muted">
+                    No sales match the current filters.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    matchingSales.forEach((sale) => {
+        const index = sales.indexOf(sale);
+        if (index === -1) return;
         const row = document.createElement('tr');
         
         // Create item name without type badge
@@ -10687,6 +11079,10 @@ async function handleAddSale(e) {
             notes: notes
         };
         } else {
+            if (linkedItem.type === 'project' && linkedItem.isGift) {
+                showNotification('This project is marked as a gift and cannot be sold.', 'error');
+                return;
+            }
             newSale = {
                 itemName: linkedItem.name,
                 customer: customer,
@@ -10841,6 +11237,9 @@ function populateItemSelect(selectId, options = {}) {
     
     inventory.forEach((item, index) => {
         if (item.status !== 'sold' || includeSold || index === selectedIndex) {
+            if (item.type === 'project' && item.isGift && index !== selectedIndex) {
+                return;
+            }
             const option = document.createElement('option');
             option.value = index;
             const customerDisplay = item.customer || 'No Customer';
@@ -10913,6 +11312,10 @@ function updateCustomerFilters() {
             salesCustomerFilter.appendChild(option);
         });
         salesCustomerFilter.value = currentValue;
+    }
+    
+    if (typeof populateSalesYearFilter === 'function') {
+        populateSalesYearFilter();
     }
 }
 
@@ -11041,6 +11444,11 @@ function clearSalesFilters() {
     const customerFilter = document.getElementById('salesCustomerFilter');
     if (customerFilter) {
         customerFilter.value = '';
+    }
+    
+    const yearFilter = document.getElementById('salesYearFilter');
+    if (yearFilter) {
+        yearFilter.value = '';
     }
     
     // Re-apply filters by reloading sales cards
@@ -11252,9 +11660,33 @@ function getAutoCommissionPercentForShopCustomer(customerRaw) {
     return 0;
 }
 
+/** Disable "sold" in project status dropdowns when item is a gift; avoid leaving select on sold. */
+function applyGiftRestrictionsToProjectStatusSelect(statusSelectId, isGift) {
+    const sel = document.getElementById(statusSelectId);
+    if (!sel) return;
+    const soldOpt = sel.querySelector('option[value="sold"]');
+    if (soldOpt) soldOpt.disabled = !!isGift;
+    if (isGift && sel.value === 'sold') sel.value = 'completed';
+}
+
+function wireProjectGiftCheckboxes() {
+    const pairs = [
+        ['itemIsGift', 'itemProjectStatus'],
+        ['editProjectIsGift', 'editProjectStatus'],
+        ['projectIsGift', 'projectStatus']
+    ];
+    pairs.forEach(([checkboxId, selectId]) => {
+        const cb = document.getElementById(checkboxId);
+        if (!cb || cb.dataset.giftWired === '1') return;
+        cb.dataset.giftWired = '1';
+        cb.addEventListener('change', () => applyGiftRestrictionsToProjectStatusSelect(selectId, cb.checked));
+    });
+}
+
 function createOrUpdateSaleFromProject(index) {
     const item = inventory[index];
     if (!item) return;
+    if (item.type === 'project' && item.isGift) return;
     
     const existingSaleId = item.saleId;
     let saleRecord = existingSaleId ? sales.find(sale => sale.id === existingSaleId) : null;
@@ -11353,6 +11785,11 @@ async function quickStatusChange(index, newStatus) {
         'sold': 'Sold'
     };
     
+    if (newStatus === 'sold' && item && item.type === 'project' && item.isGift) {
+        showNotification('Gift projects cannot be marked as sold.', 'error');
+        return;
+    }
+    
     // Store expanded customer groups before updating
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
@@ -11392,32 +11829,37 @@ function markAsCompleted(index) {
 }
 
 async function markAsSold(index) {
-    if (confirm('Mark this item as sold?')) {
-        const item = inventory[index];
-        if (!item) {
-            showNotification('Item not found', 'error');
-            return;
-        }
-        
-        // Store expanded customer groups before updating
-        const expandedCustomers = getCurrentlyExpandedCustomerGroups();
-        
-        inventory[index].status = 'sold';
-        createOrUpdateSaleFromProject(index);
-        await saveData();
-        loadInventoryTable();
-        if (typeof loadProjectsCards === 'function') {
-            loadProjectsCards();
-        }
-        loadCompletedItemsTable(); // Ensure completed tab reflects change
-        refreshSalesViews();
-        updateInvoiceSelection();
-        
-        // Restore expanded customer groups after reload
-        restoreExpandedCustomerGroups(expandedCustomers);
-        
-        showNotification('Item marked as sold!', 'success');
+    const item = inventory[index];
+    if (!item) {
+        showNotification('Item not found', 'error');
+        return;
     }
+    if (item.type === 'project' && item.isGift) {
+        showNotification('Gift projects cannot be marked as sold.', 'error');
+        return;
+    }
+    if (!confirm('Mark this item as sold?')) {
+        return;
+    }
+    
+    // Store expanded customer groups before updating
+    const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+    
+    inventory[index].status = 'sold';
+    createOrUpdateSaleFromProject(index);
+    await saveData();
+    loadInventoryTable();
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
+    loadCompletedItemsTable(); // Ensure completed tab reflects change
+    refreshSalesViews();
+    updateInvoiceSelection();
+    
+    // Restore expanded customer groups after reload
+    restoreExpandedCustomerGroups(expandedCustomers);
+    
+    showNotification('Item marked as sold!', 'success');
 }
 
 // Test function removed - no longer needed
@@ -11585,6 +12027,34 @@ async function copyItem(index) {
             return;
         }
         
+        if (originalItem.status === 'completed') {
+            window.copyMode = null;
+            const form = document.getElementById('addCompletedItemForm');
+            if (form) {
+                form.reset();
+            }
+            populateCustomerSelect('addCompletedItemCustomer');
+            const setVal = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.value = value != null ? String(value) : '';
+            };
+            setVal('addCompletedItemDescription', originalItem.description || originalItem.name || '');
+            setVal('addCompletedItemQuantity', originalItem.quantity || 1);
+            setVal('addCompletedItemPrice', (originalItem.price != null ? originalItem.price : 0));
+            setVal('addCompletedItemCustomer', originalItem.customer || '');
+            setVal('addCompletedItemInvoicedDate', originalItem.invoicedDate || '');
+            const giftEl = document.getElementById('addCompletedItemIsGift');
+            if (giftEl) {
+                giftEl.checked = !!originalItem.isGift;
+            }
+            calculateAddCompletedItemTotal();
+            const modal = document.getElementById('addCompletedItemModal');
+            if (modal) {
+                modal.style.display = 'block';
+            }
+            return;
+        }
+        
         // Create a copy with reset status and without MongoDB _id
         const { _id, ...itemWithoutId } = originalItem;
         const copiedItem = {
@@ -11648,6 +12118,13 @@ async function copyFromLastItem() {
     document.getElementById('itemPriority').value = lastItem.priority || 'medium';
     document.getElementById('itemTags').value = lastItem.tags || '';
     document.getElementById('itemPatternLink').value = lastItem.patternLink || '';
+    const addGift = document.getElementById('itemIsGift');
+    if (addGift) {
+        addGift.checked = !!lastItem.isGift;
+        if (lastItem.type === 'project') {
+            applyGiftRestrictionsToProjectStatusSelect('itemProjectStatus', addGift.checked);
+        }
+    }
     
     // Update status options and modal title
     updateStatusOptions();
@@ -12075,6 +12552,19 @@ async function handleEditSale(e) {
     }
     
     const previousItemIndex = sales[index].itemIndex !== undefined && sales[index].itemIndex !== null ? parseInt(sales[index].itemIndex) : null;
+    
+    if (saleType === 'inventory') {
+        const selectedItemIndex = document.getElementById('editSaleItem')?.value;
+        if (selectedItemIndex) {
+            const parsedIdx = parseInt(selectedItemIndex, 10);
+            const cand = !Number.isNaN(parsedIdx) ? inventory[parsedIdx] : null;
+            if (cand && cand.type === 'project' && cand.isGift) {
+                hideLoadingSpinner('edit-sale');
+                showNotification('Cannot link a sale to a gift project.', 'error');
+                return;
+            }
+        }
+    }
     
     // Update the sale record
     sales[index] = {
@@ -12962,6 +13452,10 @@ function closeModal(modalId) {
     console.log('Closing modal:', modalId); // Debug log
     const modal = document.getElementById(modalId);
     if (modal) {
+        if (modalId === 'logoTagModal') {
+            modal.classList.remove('logo-tag-modal-visible');
+            modal.setAttribute('aria-hidden', 'true');
+        }
         modal.style.display = 'none';
         
         // Remove mobile modal-open class from body
@@ -12983,15 +13477,21 @@ function closeModal(modalId) {
     }
 }
 
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
+// Close modal when clicking the dimmed backdrop (use addEventListener so we never overwrite window.onclick)
+(function setupModalBackdropClose() {
+    if (window.__modalBackdropCloseInstalled) return;
+    window.__modalBackdropCloseInstalled = true;
+    document.addEventListener('click', function modalBackdropCloseListener(event) {
+        document.querySelectorAll('.modal').forEach(modal => {
+            if (event.target !== modal) return;
+            if (modal.id) {
+                closeModal(modal.id);
+            } else {
+                modal.style.display = 'none';
+            }
+        });
     });
-}
+})();
 
 // Work In Progress Management
 function loadWIPTab() {
@@ -15596,28 +16096,32 @@ function populateCompletedCustomerFilter() {
         option.textContent = customer;
         customerSelect.appendChild(option);
     });
+    
+    const savedCustomer = filterState.completed && filterState.completed.customer;
+    if (savedCustomer && ![...customerSelect.options].some(o => o.value === savedCustomer)) {
+        const option = document.createElement('option');
+        option.value = savedCustomer;
+        option.textContent = savedCustomer;
+        customerSelect.appendChild(option);
+    }
 }
 
-// Load completed projects into the invoicing tab
-function loadCompletedItemsTable() {
-    // Apply filters to completed projects
+// Completed tab: shared filter logic (desktop grid + mobile cards)
+function getFilteredCompletedProjects() {
     const completedProjects = inventory.filter(item => {
         if (item.status !== 'completed') return false;
         
-        // Apply search filter
         const searchElement = document.getElementById('completedSearchItems');
         const searchTerm = searchElement?.value?.toLowerCase() || '';
         if (searchTerm && !item.description?.toLowerCase().includes(searchTerm)) {
             return false;
         }
         
-        // Apply customer filter
         const customerFilter = document.getElementById('completedCustomerFilter')?.value || '';
         if (customerFilter && item.customer !== customerFilter) {
             return false;
         }
         
-        // Apply date filter
         const dateFilter = document.getElementById('completedDateFilter')?.value || '';
         if (dateFilter && item.invoicedDate) {
             const itemDate = new Date(item.invoicedDate);
@@ -15627,34 +16131,150 @@ function loadCompletedItemsTable() {
                 case 'today':
                     if (itemDate.toDateString() !== now.toDateString()) return false;
                     break;
-                case 'week':
+                case 'week': {
                     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                     if (itemDate < weekAgo) return false;
                     break;
-                case 'month':
+                }
+                case 'month': {
                     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                     if (itemDate < monthAgo) return false;
                     break;
-                case 'quarter':
+                }
+                case 'quarter': {
                     const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
                     if (itemDate < quarterAgo) return false;
                     break;
-                case 'year':
+                }
+                case 'year': {
                     const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
                     if (itemDate < yearAgo) return false;
                     break;
+                }
             }
         }
         
         return true;
     });
     
+    return completedProjects.map((item, filteredIndex) => {
+        const actualIndex = inventory.findIndex(invItem =>
+            invItem._id ? invItem._id === item._id : invItem === item
+        );
+        return { item, actualIndex, filteredIndex };
+    });
+}
+
+function loadMobileCompletedCards(filteredRows) {
+    const container = document.getElementById('mobileCompletedCards');
+    if (!container) return;
+    
+    const rows = filteredRows ?? getFilteredCompletedProjects();
+    container.innerHTML = '';
+    
+    const addButtonCard = document.createElement('div');
+    addButtonCard.className = 'mobile-card mobile-add-card';
+    addButtonCard.innerHTML = `
+        <div class="mobile-card-content">
+            <button class="btn btn-primary mobile-add-btn" onclick="addCompletedItem()">
+                <i class="fas fa-plus"></i><span>Add Completed Item</span>
+            </button>
+        </div>`;
+    container.appendChild(addButtonCard);
+    
+    if (rows.length === 0) {
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'mobile-card';
+        emptyCard.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>No Completed Items</h3>
+                    <p>Mark some projects as completed to see them here.</p>
+                </div>
+            </div>`;
+        container.appendChild(emptyCard);
+        return;
+    }
+    
+    rows.forEach(({ item, actualIndex, filteredIndex }) => {
+        const itemId = item._id || `item-${filteredIndex}`;
+        const invoicedDate = item.invoicedDate ? new Date(item.invoicedDate).toLocaleDateString() : 'Not invoiced';
+        const totalPrice = ((item.quantity || 1) * (item.price || 0)).toFixed(2);
+        const isGiftProject = item.type === 'project' && item.isGift;
+        const giftBadgeHtml = isGiftProject
+            ? '<span class="completed-item-card-gift" title="Gift — not for sale">Gift</span>'
+            : '';
+        const markSoldButtonHtml = isGiftProject ? '' : `
+                    <button class="btn btn-sm btn-success" onclick="markAsSold(${actualIndex})" title="Mark as Sold">
+                        <i class="fas fa-dollar-sign"></i> Mark as Sold
+                    </button>`;
+        
+        const card = document.createElement('div');
+        card.className = 'mobile-card completed-item-card';
+        card.dataset.itemId = itemId;
+        
+        card.innerHTML = `
+            <div class="mobile-card-content">
+                <div class="completed-item-card-header" style="background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 100%); color: white; padding: 0.75rem 1rem; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                    <h3 class="completed-item-card-title" style="margin: 0; font-size: 1rem; flex: 1;">${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}${giftBadgeHtml}</h3>
+                    <input type="checkbox" class="completed-item-card-checkbox" data-item-id="${itemId}" data-actual-index="${actualIndex}" onchange="updateInvoiceSelection()" style="width: 20px; height: 20px; flex-shrink: 0;">
+                </div>
+                <div class="completed-item-card-body" style="padding: 1rem;">
+                    <div class="completed-item-card-meta" style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem; color: #555;">
+                        <span class="completed-item-card-customer">${SecurityManager.escapeHtml(item.customer || 'No Customer')}</span>
+                        <span class="completed-item-card-date">${invoicedDate}</span>
+                    </div>
+                    <div class="completed-item-card-details" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                        <div class="completed-item-card-detail">
+                            <span class="completed-item-card-detail-label">Qty</span>
+                            <span class="completed-item-card-detail-value">${item.quantity || 1}</span>
+                        </div>
+                        <div class="completed-item-card-detail">
+                            <span class="completed-item-card-detail-label">Price</span>
+                            <span class="completed-item-card-detail-value">$${(item.price || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="completed-item-card-detail">
+                            <span class="completed-item-card-detail-label">Total</span>
+                            <span class="completed-item-card-detail-value">$${totalPrice}</span>
+                        </div>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn btn-outline btn-sm" onclick="editCompletedItem(${actualIndex})" title="Edit">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="copyItem(${actualIndex})" title="Copy">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>${markSoldButtonHtml}
+                    </div>
+                </div>
+            </div>`;
+        
+        container.appendChild(card);
+    });
+}
+
+// Load completed projects into the invoicing tab
+function loadCompletedItemsTable() {
+    const filtered = getFilteredCompletedProjects();
+    
+    if (isMobile()) {
+        const desktop = document.getElementById('completedItemsCards');
+        if (desktop) desktop.innerHTML = '';
+        loadMobileCompletedCards(filtered);
+        updateInvoiceSelection();
+        return;
+    }
+    
+    const mob = document.getElementById('mobileCompletedCards');
+    if (mob) mob.innerHTML = '';
+    
     const container = document.getElementById('completedItemsCards');
     if (!container) return;
     
     container.innerHTML = '';
     
-    if (completedProjects.length === 0) {
+    if (filtered.length === 0) {
         container.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666;">
                 <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
@@ -15662,26 +16282,27 @@ function loadCompletedItemsTable() {
                 <p>Mark some projects as completed to see them here.</p>
             </div>
         `;
-        return;
-    }
-    
-    completedProjects.forEach((item, filteredIndex) => {
-        // Find the actual index in the inventory array
-        const actualIndex = inventory.findIndex(invItem => 
-            invItem._id ? invItem._id === item._id : invItem === item
-        );
-        
-        const card = document.createElement('div');
-        card.className = 'completed-item-card';
-        const itemId = item._id || `item-${filteredIndex}`;
-        card.dataset.itemId = itemId;
-        
-        const invoicedDate = item.invoicedDate ? new Date(item.invoicedDate).toLocaleDateString() : 'Not invoiced';
-        const totalPrice = ((item.quantity || 1) * (item.price || 0)).toFixed(2);
-        
-        card.innerHTML = `
+    } else {
+        filtered.forEach(({ item, actualIndex, filteredIndex }) => {
+            const card = document.createElement('div');
+            card.className = 'completed-item-card';
+            const itemId = item._id || `item-${filteredIndex}`;
+            card.dataset.itemId = itemId;
+            
+            const invoicedDate = item.invoicedDate ? new Date(item.invoicedDate).toLocaleDateString() : 'Not invoiced';
+            const totalPrice = ((item.quantity || 1) * (item.price || 0)).toFixed(2);
+            const isGiftProject = item.type === 'project' && item.isGift;
+            const giftBadgeHtml = isGiftProject
+                ? '<span class="completed-item-card-gift" title="Gift — not for sale">Gift</span>'
+                : '';
+            const markSoldButtonHtml = isGiftProject ? '' : `
+                    <button class="btn btn-sm btn-success" onclick="markAsSold(${actualIndex})" title="Mark as Sold">
+                        <i class="fas fa-dollar-sign"></i> Mark as Sold
+                    </button>`;
+            
+            card.innerHTML = `
             <div class="completed-item-card-header">
-                <h3 class="completed-item-card-title">${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}</h3>
+                <h3 class="completed-item-card-title">${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}${giftBadgeHtml}</h3>
                 <input type="checkbox" class="completed-item-card-checkbox" data-item-id="${itemId}" data-actual-index="${actualIndex}" onchange="updateInvoiceSelection()">
             </div>
             <div class="completed-item-card-body">
@@ -15709,18 +16330,15 @@ function loadCompletedItemsTable() {
                     </button>
                     <button class="btn btn-sm btn-outline" onclick="copyItem(${actualIndex})" title="Copy">
                         <i class="fas fa-copy"></i> Copy
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="markAsSold(${actualIndex})" title="Mark as Sold">
-                        <i class="fas fa-dollar-sign"></i> Mark as Sold
-                    </button>
+                    </button>${markSoldButtonHtml}
                 </div>
             </div>
         `;
-        
-        container.appendChild(card);
-    });
+            
+            container.appendChild(card);
+        });
+    }
     
-    // Update invoice summary
     updateInvoiceSelection();
 }
 
@@ -15774,6 +16392,11 @@ async function editCompletedItem(index) {
     
     // Calculate total
     calculateCompletedItemTotal();
+    
+    const giftEl = document.getElementById('editCompletedItemIsGift');
+    if (giftEl) {
+        giftEl.checked = !!item.isGift;
+    }
     
     // Show the modal
     const modal = document.getElementById('editCompletedItemModal');
@@ -15834,6 +16457,11 @@ async function addCompletedItem() {
     
     // Populate customer dropdown
     populateCustomerSelect('addCompletedItemCustomer');
+    
+    const addGift = document.getElementById('addCompletedItemIsGift');
+    if (addGift) {
+        addGift.checked = false;
+    }
     
     // Show the modal
     const modal = document.getElementById('addCompletedItemModal');
@@ -16031,55 +16659,7 @@ function printFilteredCompletedItems() {
 
 // Helper function to get currently filtered completed items
 function getCurrentlyFilteredCompletedItems() {
-    // Apply the same filters that loadCompletedItemsTable uses
-    const completedProjects = inventory.filter(item => {
-        if (item.status !== 'completed') return false;
-        
-        // Apply search filter
-        const searchTerm = document.getElementById('completedSearchItems')?.value?.toLowerCase() || '';
-        if (searchTerm && !item.description?.toLowerCase().includes(searchTerm)) {
-            return false;
-        }
-        
-        // Apply customer filter
-        const customerFilter = document.getElementById('completedCustomerFilter')?.value || '';
-        if (customerFilter && item.customer !== customerFilter) {
-            return false;
-        }
-        
-        // Apply date filter
-        const dateFilter = document.getElementById('completedDateFilter')?.value || '';
-        if (dateFilter && item.invoicedDate) {
-            const itemDate = new Date(item.invoicedDate);
-            const now = new Date();
-            
-            switch (dateFilter) {
-                case 'today':
-                    if (itemDate.toDateString() !== now.toDateString()) return false;
-                    break;
-                case 'week':
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    if (itemDate < weekAgo) return false;
-                    break;
-                case 'month':
-                    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    if (itemDate < monthAgo) return false;
-                    break;
-                case 'quarter':
-                    const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                    if (itemDate < quarterAgo) return false;
-                    break;
-                case 'year':
-                    const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-                    if (itemDate < yearAgo) return false;
-                    break;
-            }
-        }
-        
-        return true;
-    });
-    
-    return completedProjects;
+    return getFilteredCompletedProjects().map(({ item }) => item);
 }
 
 // Create invoice from selected items

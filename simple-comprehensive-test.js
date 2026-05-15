@@ -77,6 +77,35 @@ class SimpleComprehensiveTest {
         }
     }
 
+    async testGiftProjectCannotBeSold() {
+        await this.page.goto(this.baseUrl, {
+            waitUntil: 'networkidle2',
+            timeout: 15000
+        });
+        await this.page.waitForFunction(
+            () => typeof markAsSold === 'function' && Array.isArray(window.inventory),
+            { timeout: 15000 }
+        );
+        const statusAfter = await this.page.evaluate(async () => {
+            window.inventory.length = 0;
+            window.inventory.push({
+                type: 'project',
+                description: 'GiftProjTest',
+                name: 'GiftProjTest',
+                status: 'completed',
+                isGift: true,
+                quantity: 1,
+                price: 0,
+                customer: ''
+            });
+            await markAsSold(0);
+            return window.inventory[0].status;
+        });
+        if (statusAfter !== 'completed') {
+            throw new Error(`Gift project should stay completed after markAsSold; got ${statusAfter}`);
+        }
+    }
+
     async testNavigationTabs() {
         const tabs = ['projects', 'inventory', 'customers', 'wip', 'ideas', 'gallery', 'sales', 'reports'];
         
@@ -216,6 +245,7 @@ class SimpleComprehensiveTest {
         await this.runTest('Server Connection', () => this.testServerConnection(), 'Core');
         await this.runTest('Page Loads', () => this.testPageLoads(), 'Core');
         await this.runTest('API Endpoints', () => this.testAPIEndpoints(), 'Core');
+        await this.runTest('Gift project cannot be sold', () => this.testGiftProjectCannotBeSold(), 'Core');
         
         // Navigation and UI
         await this.runTest('Navigation Tabs', () => this.testNavigationTabs(), 'UI');
