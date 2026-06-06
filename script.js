@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.114'
+                appVersion: '1.0.115'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.114'; // Current app version
+                const currentVersion = '1.0.115'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5989,6 +5989,12 @@ function updateAuthUI() {
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
     const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const loginPromptBtn = document.getElementById('loginPromptBtn');
+    const showLoginBtn = authEnabled && !isAuthenticated;
+
+    if (loginPromptBtn) {
+        loginPromptBtn.style.display = showLoginBtn ? 'inline-flex' : 'none';
+    }
 
     if (!authContainer || !authUsernameSpan) {
         return;
@@ -6307,7 +6313,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.114';
+        const currentVersion = '1.0.115';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -6448,6 +6454,11 @@ function initializeApp() {
     
     const cancelAuth = document.getElementById('cancelAuth');
     if (cancelAuth) cancelAuth.addEventListener('click', hideAuthModal);
+
+    const loginPromptBtn = document.getElementById('loginPromptBtn');
+    if (loginPromptBtn) {
+        loginPromptBtn.addEventListener('click', () => showAuthModal());
+    }
     
     // Close auth modal when clicking outside
     const authModal = document.getElementById('authModal');

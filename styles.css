@@ -126,6 +126,13 @@ header {
     gap: 1rem;
 }
 
+.header-login-btn {
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .version-display {
     display: flex;
     align-items: center;
