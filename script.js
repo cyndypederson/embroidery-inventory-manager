@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.107'
+                appVersion: '1.0.108'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.107'; // Current app version
+                const currentVersion = '1.0.108'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5539,28 +5539,54 @@ function loadInvoicesTable() {
     
     list.forEach(invoice => {
         const row = document.createElement('tr');
-        const idAttr = JSON.stringify(invoice.id);
         const displayDate = invoice.dateDisplay || formatInvoiceDisplayDate(invoice.date);
         const total = parseFloat(invoice.total) || 0;
+        const safeId = SecurityManager.escapeHtml(String(invoice.id));
         row.innerHTML = `
-            <td>${SecurityManager.escapeHtml(invoice.id)}</td>
+            <td title="${safeId}">${safeId}</td>
             <td>${SecurityManager.escapeHtml(invoice.customer || '')}</td>
             <td>${SecurityManager.escapeHtml(displayDate)}</td>
             <td>${SecurityManager.escapeHtml(invoiceSourceLabel(invoice.source))}</td>
             <td>$${total.toFixed(2)}</td>
             <td class="invoice-history-actions">
-                <button type="button" class="btn btn-small btn-outline" onclick="viewInvoice(${idAttr})" title="View">
-                    <i class="fas fa-eye"></i> View
+                <button type="button" class="btn btn-small btn-outline invoice-action-btn" data-invoice-action="view" data-invoice-id="${safeId}" title="View" aria-label="View invoice">
+                    <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn btn-small btn-primary" onclick="printInvoiceById(${idAttr})" title="Print">
-                    <i class="fas fa-print"></i> Print
+                <button type="button" class="btn btn-small btn-primary invoice-action-btn" data-invoice-action="print" data-invoice-id="${safeId}" title="Print" aria-label="Print invoice">
+                    <i class="fas fa-print"></i>
                 </button>
-                <button type="button" class="btn btn-small btn-danger" onclick="deleteInvoiceFromHistory(${idAttr})" title="Remove from history">
+                <button type="button" class="btn btn-small btn-danger invoice-action-btn" data-invoice-action="delete" data-invoice-id="${safeId}" title="Remove from history" aria-label="Remove invoice from history">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
         `;
         tbody.appendChild(row);
+    });
+}
+
+function initInvoicesTableActions() {
+    const table = document.getElementById('invoicesTable');
+    if (!table || table.dataset.invoiceActionsWired === '1') return;
+    table.dataset.invoiceActionsWired = '1';
+
+    table.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-invoice-action]');
+        if (!button) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const invoiceId = button.getAttribute('data-invoice-id');
+        const action = button.getAttribute('data-invoice-action');
+        if (!invoiceId || !action) return;
+
+        if (action === 'view') {
+            viewInvoice(invoiceId);
+        } else if (action === 'print') {
+            printInvoiceById(invoiceId);
+        } else if (action === 'delete') {
+            await deleteInvoiceFromHistory(invoiceId);
+        }
     });
 }
 
@@ -6209,7 +6235,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.107';
+        const currentVersion = '1.0.108';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -6408,6 +6434,7 @@ function initializeApp() {
     
     // Load invoices from localStorage
     loadInvoicesFromLocalStorage();
+    initInvoicesTableActions();
     
     // Check for logo
     checkLogo();

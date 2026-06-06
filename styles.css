@@ -8012,6 +8012,52 @@ body {
     width: 95%;
 }
 
+.invoice-history-modal .table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+#invoicesTable {
+    width: 100%;
+    min-width: 36rem;
+    table-layout: fixed;
+}
+
+#invoicesTable th:nth-child(1),
+#invoicesTable td:nth-child(1) {
+    width: 28%;
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#invoicesTable th:nth-child(2),
+#invoicesTable td:nth-child(2) {
+    width: 18%;
+}
+
+#invoicesTable th:nth-child(3),
+#invoicesTable td:nth-child(3) {
+    width: 12%;
+}
+
+#invoicesTable th:nth-child(4),
+#invoicesTable td:nth-child(4) {
+    width: 12%;
+}
+
+#invoicesTable th:nth-child(5),
+#invoicesTable td:nth-child(5) {
+    width: 10%;
+}
+
+#invoicesTable th:nth-child(6),
+#invoicesTable td:nth-child(6) {
+    width: 20%;
+    min-width: 9rem;
+}
+
 .invoice-history-hint {
     margin: 0.5rem 0 1rem;
     font-size: 0.9rem;
@@ -8031,13 +8077,31 @@ body {
 
 .invoice-history-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.35rem;
+    justify-content: flex-end;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
 }
 
-.invoice-history-actions .btn-small {
+.invoice-history-actions .btn-small,
+.invoice-history-actions .invoice-action-btn {
+    flex-shrink: 0;
     font-size: 0.75rem;
-    padding: 0.35rem 0.5rem;
+    padding: 0.4rem 0.55rem;
+    min-width: 2.25rem;
+    position: relative;
+    z-index: 3;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.invoice-history-actions .invoice-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Completed Items Table Checkbox */
