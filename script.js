@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.112'
+                appVersion: '1.0.113'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.112'; // Current app version
+                const currentVersion = '1.0.113'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5224,7 +5224,10 @@ function generateInvoiceHTML(invoice) {
     `;
 }
 
-function printInvoice() {
+async function printInvoice() {
+    if (!await requireAuthentication('print an invoice')) {
+        return;
+    }
     try {
         // Use the stored invoice data instead of extracting from modal
         if (!currentInvoiceData) {
@@ -5982,16 +5985,6 @@ function updateAuthUI() {
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
     const changePasswordBtn = document.getElementById('changePasswordBtn');
-    const loginPromptBtn = document.getElementById('loginPromptBtn');
-    const loginBanner = document.getElementById('loginRequiredBanner');
-    const showLoginPrompt = authEnabled && !isAuthenticated;
-
-    if (loginPromptBtn) {
-        loginPromptBtn.style.display = showLoginPrompt ? '' : 'none';
-    }
-    if (loginBanner) {
-        loginBanner.style.display = showLoginPrompt ? 'flex' : 'none';
-    }
 
     if (!authContainer || !authUsernameSpan) {
         return;
@@ -6305,7 +6298,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.112';
+        const currentVersion = '1.0.113';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -6446,12 +6439,6 @@ function initializeApp() {
     
     const cancelAuth = document.getElementById('cancelAuth');
     if (cancelAuth) cancelAuth.addEventListener('click', hideAuthModal);
-
-    const loginPromptBtn = document.getElementById('loginPromptBtn');
-    if (loginPromptBtn) loginPromptBtn.addEventListener('click', () => showAuthModal());
-
-    const loginBannerBtn = document.getElementById('loginBannerBtn');
-    if (loginBannerBtn) loginBannerBtn.addEventListener('click', () => showAuthModal());
     
     // Close auth modal when clicking outside
     const authModal = document.getElementById('authModal');

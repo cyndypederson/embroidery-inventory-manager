@@ -95,25 +95,6 @@ header {
     color: #fff;
 }
 
-.login-required-banner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin: 0 0 0.75rem;
-    padding: 0.65rem 1rem;
-    background: #fff3cd;
-    border: 1px solid #ffc107;
-    border-radius: 8px;
-    color: #664d03;
-    font-size: 0.95rem;
-}
-
-.login-required-banner .btn {
-    flex-shrink: 0;
-}
-
 /* Center the branding section */
 .branding {
     display: flex;
