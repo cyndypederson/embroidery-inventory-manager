@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.109'
+                appVersion: '1.0.110'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.109'; // Current app version
+                const currentVersion = '1.0.110'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5764,6 +5764,22 @@ async function persistInvoices() {
     }
 }
 
+async function syncInvoicesAfterLogin() {
+    const localInvoices = getInvoicesFromLocalStorage();
+    const merged = mergeInvoiceLists(invoices, localInvoices);
+    if (merged.length === 0) return;
+    const beforeIds = new Set(invoices.map((inv) => inv.id));
+    invoices = merged;
+    saveInvoicesToLocalStorage();
+    const needsCloudSync = merged.some((inv) => !beforeIds.has(inv.id)) || merged.length > beforeIds.size;
+    if (needsCloudSync) {
+        const synced = await persistInvoices();
+        if (synced) {
+            console.log('✅ Invoice history synced to cloud after login');
+        }
+    }
+}
+
 async function syncMergedInvoicesToCloud(serverInvoices, mergedInvoices) {
     if (!mergedInvoices.length) return;
     const serverIds = new Set((serverInvoices || []).map((inv) => inv.id));
@@ -6119,6 +6135,7 @@ async function handleAuthSubmit(event) {
             hideAuthModal();
             updateAuthUI();
             showNotification('Login successful!', 'success');
+            await syncInvoicesAfterLogin();
             
             // Switch to the requested tab if any
             const requestedTab = sessionStorage.getItem('requestedTab');
@@ -6276,7 +6293,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.109';
+        const currentVersion = '1.0.110';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -17244,11 +17261,16 @@ async function printFilteredCompletedItems() {
         return;
     }
 
-    addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
+    const synced = await addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
     allGeneratedInvoices = [invoice];
     currentInvoiceIndex = 0;
     displayInvoice(invoice);
-    showNotification('Invoice created and saved', 'success');
+    showNotification(
+        synced
+            ? 'Invoice created and saved — find it under Past Invoices'
+            : 'Invoice created on this device only — log in to save for later on all devices',
+        synced ? 'success' : 'warning'
+    );
 }
 
 // Helper function to get currently filtered completed items
@@ -17287,10 +17309,12 @@ async function createInvoiceFromSelected() {
     currentInvoiceIndex = 0;
     
     // Generate all invoices and save to history
+    let allSyncedToCloud = true;
     for (const customer of customers) {
         const invoice = generateInvoiceForItems(byCustomer[customer], customer, false);
         if (invoice) {
-            await addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
+            const synced = await addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
+            if (!synced) allSyncedToCloud = false;
             allGeneratedInvoices.push(invoice);
         }
     }
@@ -17303,9 +17327,17 @@ async function createInvoiceFromSelected() {
         // Show summary notification
         if (invoiceCount > 1) {
             const customerList = customers.join(', ');
-            showNotification(`Created ${invoiceCount} separate invoices for: ${customerList}. Use navigation arrows to view all.`, 'success');
+            const saveMsg = allSyncedToCloud
+                ? `Created ${invoiceCount} separate invoices for: ${customerList}. Saved for Past Invoices.`
+                : `Created ${invoiceCount} invoices for: ${customerList}. Saved on this device only — log in to sync.`;
+            showNotification(saveMsg, allSyncedToCloud ? 'success' : 'warning');
         } else {
-            showNotification('Invoice created and saved', 'success');
+            showNotification(
+                allSyncedToCloud
+                    ? 'Invoice created and saved — find it under Past Invoices'
+                    : 'Invoice created on this device only — log in to save for later on all devices',
+                allSyncedToCloud ? 'success' : 'warning'
+            );
         }
     } else {
         showNotification('Could not create invoice from selected items', 'error');
