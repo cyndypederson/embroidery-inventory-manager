@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.108'
+                appVersion: '1.0.109'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.108'; // Current app version
+                const currentVersion = '1.0.109'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5089,7 +5089,11 @@ async function handleInvoiceGeneration(event) {
         total,
         status: 'pending'
     });
-    addInvoiceToHistory(stored);
+    addInvoiceToHistory(stored).then((synced) => {
+        if (!synced) {
+            showNotification('Invoice shown — log in to save it to the cloud', 'warning');
+        }
+    });
     
     // Close modal
     closeModal('invoiceModal');
@@ -5612,17 +5616,38 @@ function saveInvoicesToLocalStorage() {
     localStorage.setItem('embroideryInvoices', JSON.stringify(invoices));
 }
 
-function loadInvoicesFromLocalStorage() {
-    const stored = localStorage.getItem('embroideryInvoices');
-    if (stored) {
-        try {
-            invoices = JSON.parse(stored);
-            if (!Array.isArray(invoices)) invoices = [];
-        } catch (e) {
-            console.warn('Could not parse saved invoices:', e);
-            invoices = [];
-        }
+function getInvoicesFromLocalStorage() {
+    try {
+        const stored = localStorage.getItem('embroideryInvoices');
+        if (!stored) return [];
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.warn('Could not parse saved invoices:', e);
+        return [];
     }
+}
+
+function mergeInvoiceLists(serverList, localList) {
+    const byId = new Map();
+    const add = (inv) => {
+        if (!inv || !inv.id) return;
+        const existing = byId.get(inv.id);
+        if (!existing) {
+            byId.set(inv.id, inv);
+            return;
+        }
+        const existingTime = new Date(existing.createdAt || existing.date || 0).getTime();
+        const newTime = new Date(inv.createdAt || inv.date || 0).getTime();
+        byId.set(inv.id, newTime >= existingTime ? inv : existing);
+    };
+    (serverList || []).forEach(add);
+    (localList || []).forEach(add);
+    return Array.from(byId.values());
+}
+
+function loadInvoicesFromLocalStorage() {
+    invoices = getInvoicesFromLocalStorage();
 }
 
 function formatInvoiceDisplayDate(dateValue) {
@@ -5704,14 +5729,14 @@ function invoiceForPreview(invoice) {
 }
 
 function addInvoiceToHistory(invoiceRecord) {
-    if (!invoiceRecord || !invoiceRecord.id) return;
+    if (!invoiceRecord || !invoiceRecord.id) return Promise.resolve(false);
     const existingIndex = invoices.findIndex((inv) => inv.id === invoiceRecord.id);
     if (existingIndex >= 0) {
         invoices[existingIndex] = invoiceRecord;
     } else {
         invoices.push(invoiceRecord);
     }
-    persistInvoices();
+    return persistInvoices();
 }
 
 async function persistInvoices() {
@@ -5726,13 +5751,29 @@ async function persistInvoices() {
         if (!response.ok) {
             const errText = await response.text().catch(() => response.statusText);
             if (response.status === 401 || response.status === 403) {
-                showNotification('Invoice saved locally — log in to sync to the cloud', 'warning');
+                showNotification('Invoice saved on this device only — log in to sync to the cloud', 'warning');
+            } else {
+                showNotification('Invoice saved locally but cloud sync failed', 'warning');
             }
             throw new Error(errText || response.statusText);
         }
+        return true;
     } catch (error) {
         console.warn('Invoice cloud save failed (kept in browser storage):', error.message);
+        return false;
     }
+}
+
+async function syncMergedInvoicesToCloud(serverInvoices, mergedInvoices) {
+    if (!mergedInvoices.length) return;
+    const serverIds = new Set((serverInvoices || []).map((inv) => inv.id));
+    const hasLocalOnly = mergedInvoices.some((inv) => !serverIds.has(inv.id));
+    if (!hasLocalOnly && mergedInvoices.length <= (serverInvoices || []).length) {
+        return;
+    }
+    const status = await checkAuthStatus();
+    if (!status.authenticated) return;
+    await persistInvoices();
 }
 
 async function openInvoicesHistoryModal() {
@@ -6235,7 +6276,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.108';
+        const currentVersion = '1.0.109';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -7260,24 +7301,11 @@ async function loadDataFromAPI() {
         ideas = await ideasRes.json();
         invoices = await invoicesRes.json();
         if (!Array.isArray(invoices)) invoices = [];
-        
-        // Migrate browser-only invoice history to the server when cloud is empty
-        if (invoices.length === 0) {
-            const localInvoices = localStorage.getItem('embroideryInvoices');
-            if (localInvoices) {
-                try {
-                    const parsed = JSON.parse(localInvoices);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        invoices = parsed;
-                        await persistInvoices();
-                    }
-                } catch (e) {
-                    console.warn('Could not migrate local invoices:', e);
-                }
-            }
-        } else {
-            saveInvoicesToLocalStorage();
-        }
+        const serverInvoices = [...invoices];
+        const localInvoices = getInvoicesFromLocalStorage();
+        invoices = mergeInvoiceLists(serverInvoices, localInvoices);
+        saveInvoicesToLocalStorage();
+        await syncMergedInvoicesToCloud(serverInvoices, invoices);
         
         // Assign to window object for mobile cards
         window.inventory = inventory;
@@ -17220,7 +17248,7 @@ async function printFilteredCompletedItems() {
     allGeneratedInvoices = [invoice];
     currentInvoiceIndex = 0;
     displayInvoice(invoice);
-    showNotification('Invoice created successfully', 'success');
+    showNotification('Invoice created and saved', 'success');
 }
 
 // Helper function to get currently filtered completed items
@@ -17259,13 +17287,13 @@ async function createInvoiceFromSelected() {
     currentInvoiceIndex = 0;
     
     // Generate all invoices and save to history
-    customers.forEach((customer) => {
+    for (const customer of customers) {
         const invoice = generateInvoiceForItems(byCustomer[customer], customer, false);
         if (invoice) {
-            addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
+            await addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
             allGeneratedInvoices.push(invoice);
         }
-    });
+    }
     
     if (allGeneratedInvoices.length > 0) {
         // Display the first invoice
@@ -17277,7 +17305,7 @@ async function createInvoiceFromSelected() {
             const customerList = customers.join(', ');
             showNotification(`Created ${invoiceCount} separate invoices for: ${customerList}. Use navigation arrows to view all.`, 'success');
         } else {
-            showNotification('Invoice created successfully', 'success');
+            showNotification('Invoice created and saved', 'success');
         }
     } else {
         showNotification('Could not create invoice from selected items', 'error');
