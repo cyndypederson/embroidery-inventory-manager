@@ -80,6 +80,21 @@ header {
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.site-link {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.site-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
 /* Center the branding section */
 .branding {
     display: flex;
@@ -7990,6 +8005,39 @@ body {
 
 .invoice-summary strong {
     color: #000;
+}
+
+.invoice-history-modal {
+    max-width: 920px;
+    width: 95%;
+}
+
+.invoice-history-hint {
+    margin: 0.5rem 0 1rem;
+    font-size: 0.9rem;
+}
+
+.invoice-history-toolbar {
+    margin-bottom: 1rem;
+}
+
+.invoice-history-toolbar input[type="search"] {
+    width: 100%;
+    max-width: 360px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.invoice-history-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.invoice-history-actions .btn-small {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
 }
 
 /* Completed Items Table Checkbox */

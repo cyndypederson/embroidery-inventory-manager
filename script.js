@@ -6,6 +6,248 @@ let gallery = [];
 let invoices = [];
 let ideas = [];
 
+// Tenant configuration (loaded from /api/config)
+let tenantConfig = {
+    tenantId: 'embroidery',
+    appTitle: 'CyndyP StitchCraft Inventory Management',
+    enabledTabs: ['projects', 'inventory', 'customers', 'wip', 'completed', 'ideas', 'gallery', 'sales', 'reports', 'data'],
+    defaultShopCustomer: '',
+    hideTags: false,
+    multiUserEnabled: false,
+    partnerUsername: 'akeeler',
+    knittingSiteUrl: '',
+    embroiderySiteUrl: ''
+};
+let currentUserIsDbUser = false;
+let partnerAccountExists = false;
+
+async function loadTenantConfig() {
+    try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+            tenantConfig = { ...tenantConfig, ...await response.json() };
+        }
+    } catch (error) {
+        console.warn('Could not load tenant config, using defaults:', error);
+    }
+    applyTenantConfig();
+}
+
+function isKnittingTenant() {
+    return tenantConfig.tenantId === 'knitting';
+}
+
+function getDefaultShopCustomer() {
+    return tenantConfig.defaultShopCustomer || '';
+}
+
+function applyTenantCustomerDefault(customerValue) {
+    if (customerValue) return customerValue;
+    return getDefaultShopCustomer();
+}
+
+function applyTenantConfig() {
+    const titleEl = document.getElementById('appTitle');
+    if (titleEl) {
+        titleEl.textContent = tenantConfig.appTitle;
+    }
+    document.title = tenantConfig.appTitle;
+
+    const enabled = new Set(tenantConfig.enabledTabs || []);
+    document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+        const tab = btn.getAttribute('data-tab');
+        btn.style.display = enabled.has(tab) ? '' : 'none';
+    });
+
+    if (tenantConfig.hideTags) {
+        document.querySelectorAll('[data-tags-field]').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+
+    const knittingLink = document.getElementById('knittingSiteLink');
+    if (knittingLink) {
+        if (tenantConfig.knittingSiteUrl && !isKnittingTenant()) {
+            knittingLink.href = tenantConfig.knittingSiteUrl;
+            knittingLink.style.display = '';
+        } else {
+            knittingLink.style.display = 'none';
+        }
+    }
+
+    const embroideryLink = document.getElementById('embroiderySiteLink');
+    if (embroideryLink) {
+        if (isKnittingTenant() && tenantConfig.embroiderySiteUrl) {
+            embroideryLink.href = tenantConfig.embroiderySiteUrl;
+            embroideryLink.style.display = '';
+        } else {
+            embroideryLink.style.display = 'none';
+        }
+    }
+
+    const activeBtn = document.querySelector('.nav-btn.active');
+    const activeTab = activeBtn && activeBtn.style.display === 'none'
+        ? null
+        : activeBtn?.getAttribute('data-tab');
+    if (!activeTab || !enabled.has(activeTab)) {
+        const firstTab = tenantConfig.enabledTabs[0] || 'projects';
+        const firstBtn = document.querySelector(`.nav-btn[data-tab="${firstTab}"]`);
+        if (firstBtn) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            firstBtn.classList.add('active');
+            const content = document.getElementById(firstTab);
+            if (content) content.classList.add('active');
+        }
+    }
+}
+
+async function checkPartnerAccountStatus() {
+    if (!tenantConfig.multiUserEnabled) return;
+    try {
+        const response = await fetch('/api/users/status');
+        if (response.ok) {
+            const data = await response.json();
+            partnerAccountExists = !!data.partnerExists;
+            updatePartnerSetupUI();
+        }
+    } catch (error) {
+        console.warn('Could not check partner account status:', error);
+    }
+}
+
+function updatePartnerSetupUI() {
+    const setupBtn = document.getElementById('partnerSetupBtn');
+    const partnerLabel = document.getElementById('partnerSetupUsername');
+    if (partnerLabel) partnerLabel.textContent = tenantConfig.partnerUsername;
+    if (!setupBtn) return;
+    const showSetup = tenantConfig.multiUserEnabled &&
+        isAuthenticated &&
+        !currentUserIsDbUser &&
+        !partnerAccountExists;
+    setupBtn.style.display = showSetup ? '' : 'none';
+}
+
+async function handlePartnerSetup(event) {
+    event.preventDefault();
+    const password = document.getElementById('partnerSetupPassword').value;
+    const confirm = document.getElementById('partnerSetupPasswordConfirm').value;
+    const errorDiv = document.getElementById('partnerSetupError');
+    const errorText = document.getElementById('partnerSetupErrorText');
+
+    errorDiv.style.display = 'none';
+    if (password.length < 4) {
+        errorText.textContent = 'Password must be at least 4 characters.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    if (password !== confirm) {
+        errorText.textContent = 'Passwords do not match.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/users/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ username: tenantConfig.partnerUsername, password })
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            partnerAccountExists = true;
+            hidePartnerSetupModal();
+            updatePartnerSetupUI();
+            showNotification(`Partner account "${data.username}" created`, 'success');
+        } else {
+            errorText.textContent = data.error || 'Failed to create account';
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        errorText.textContent = 'Failed to create account. Please try again.';
+        errorDiv.style.display = 'block';
+    }
+}
+
+function showPartnerSetupModal() {
+    const modal = document.getElementById('partnerSetupModal');
+    if (modal) modal.style.display = 'block';
+}
+
+function hidePartnerSetupModal() {
+    const modal = document.getElementById('partnerSetupModal');
+    const form = document.getElementById('partnerSetupForm');
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+    const errorDiv = document.getElementById('partnerSetupError');
+    if (errorDiv) errorDiv.style.display = 'none';
+}
+
+async function handlePartnerSetPassword(event) {
+    event.preventDefault();
+    const token = document.getElementById('partnerSetPasswordToken').value;
+    const password = document.getElementById('partnerSetPasswordNew').value;
+    const confirm = document.getElementById('partnerSetPasswordConfirm').value;
+    const errorDiv = document.getElementById('partnerSetPasswordError');
+    const errorText = document.getElementById('partnerSetPasswordErrorText');
+
+    errorDiv.style.display = 'none';
+    if (password.length < 4) {
+        errorText.textContent = 'Password must be at least 4 characters.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    if (password !== confirm) {
+        errorText.textContent = 'Passwords do not match.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/users/set-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, password })
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            hidePartnerSetPasswordModal();
+            showNotification('Password set! You can now log in.', 'success');
+            showAuthModal();
+            const usernameInput = document.getElementById('adminUsername');
+            if (usernameInput) usernameInput.value = tenantConfig.partnerUsername;
+        } else {
+            errorText.textContent = data.error || 'Failed to set password';
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        errorText.textContent = 'Failed to set password. Please try again.';
+        errorDiv.style.display = 'block';
+    }
+}
+
+function showPartnerSetPasswordModal(token) {
+    const modal = document.getElementById('partnerSetPasswordModal');
+    const tokenInput = document.getElementById('partnerSetPasswordToken');
+    if (tokenInput) tokenInput.value = token || '';
+    if (modal) modal.style.display = 'block';
+}
+
+function hidePartnerSetPasswordModal() {
+    const modal = document.getElementById('partnerSetPasswordModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function checkPartnerSetupUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const setupToken = params.get('setup');
+    if (setupToken && tenantConfig.multiUserEnabled) {
+        showPartnerSetPasswordModal(setupToken);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
 function generateSaleId() {
     return `sale-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
@@ -1857,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.106'
+                appVersion: '1.0.107'
             }
         };
         
@@ -3766,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.106'; // Current app version
+                const currentVersion = '1.0.107'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -4649,55 +4891,60 @@ function hideChangePasswordModal() {
     if (successDiv) successDiv.style.display = 'none';
 }
 
-function handleChangePassword(event) {
+async function handleChangePassword(event) {
     event.preventDefault();
     const currentPassword = document.getElementById('currentPassword').value;
     const newPassword = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     
-    // Clear previous messages
     document.getElementById('changePasswordError').style.display = 'none';
     document.getElementById('changePasswordSuccess').style.display = 'none';
     
-    // Validate current password - now handled server-side
-    console.log('Password validation is now handled server-side');
-    // Note: Password validation is now handled server-side, so we skip client-side validation
-    
-    // Validate new password
     if (newPassword.length < 4) {
         const errorText = document.getElementById('changePasswordErrorText');
         const errorDiv = document.getElementById('changePasswordError');
-        
         if (errorText) errorText.textContent = 'New password must be at least 4 characters long.';
         if (errorDiv) errorDiv.style.display = 'block';
         return;
     }
     
-    // Validate password confirmation
     if (newPassword !== confirmPassword) {
         const errorText = document.getElementById('changePasswordErrorText');
         const errorDiv = document.getElementById('changePasswordError');
-        
         if (errorText) errorText.textContent = 'New passwords do not match.';
         if (errorDiv) errorDiv.style.display = 'block';
         return;
     }
-    
-    // Change password - now handled server-side
-    console.log('Password changes must be made server-side');
-    document.getElementById('changePasswordSuccess').style.display = 'block';
-    
-    // Hide success message after 2 seconds and close modal
-    setTimeout(() => {
-        hideChangePasswordModal();
-    }, 2000);
+
+    try {
+        const response = await fetch('/api/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+            document.getElementById('changePasswordSuccess').style.display = 'block';
+            setTimeout(() => hideChangePasswordModal(), 2000);
+        } else {
+            const errorText = document.getElementById('changePasswordErrorText');
+            const errorDiv = document.getElementById('changePasswordError');
+            if (errorText) errorText.textContent = data.message || 'Failed to change password';
+            if (errorDiv) errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        const errorText = document.getElementById('changePasswordErrorText');
+        const errorDiv = document.getElementById('changePasswordError');
+        if (errorText) errorText.textContent = 'Failed to change password. Please try again.';
+        if (errorDiv) errorDiv.style.display = 'block';
+    }
 }
 
 // Invoice Generation Functions
-function generateInvoice() {
-    if (!checkAuthentication()) {
+async function generateInvoice() {
+    if (!await requireAuthentication('generate an invoice')) {
         sessionStorage.setItem('requestedTab', 'sales');
-        showAuthModal();
         return;
     }
     
@@ -4780,8 +5027,12 @@ function loadSalesForInvoice() {
     });
 }
 
-function handleInvoiceGeneration(event) {
+async function handleInvoiceGeneration(event) {
     event.preventDefault();
+
+    if (!await requireAuthentication('generate an invoice')) {
+        return;
+    }
     
     const customer = document.getElementById('invoiceCustomer').value;
     const date = document.getElementById('invoiceDate').value;
@@ -4829,17 +5080,22 @@ function handleInvoiceGeneration(event) {
         createdAt: new Date().toISOString()
     };
     
-    // Add to invoices array
-    invoices.push(invoice);
-    
-    // Save to localStorage
-    saveInvoicesToLocalStorage();
+    const stored = buildInvoiceRecordFromSales({
+        id: invoice.id,
+        customer,
+        date,
+        notes,
+        sales: selectedSales,
+        total,
+        status: 'pending'
+    });
+    addInvoiceToHistory(stored);
     
     // Close modal
     closeModal('invoiceModal');
     
     // Show preview
-    showInvoicePreview(invoice);
+    showInvoicePreview(invoiceForPreview(stored));
 }
 
 function generateInvoiceId() {
@@ -4853,23 +5109,20 @@ function generateInvoiceId() {
 
 function showInvoicePreview(invoice) {
     const content = document.getElementById('invoiceContent');
+    const preview = invoiceForPreview(invoice);
     
-    // Clear any existing content completely
     content.innerHTML = '';
+    content.innerHTML = generateInvoiceHTML(preview);
     
-    // Generate new invoice HTML
-    content.innerHTML = generateInvoiceHTML(invoice);
-    
-    // Store the invoice data for printing
     currentInvoiceData = {
         businessName: "CyndyP Stitchcraft",
         businessEmail: "cyndypstitchcraft@gmail.com",
         invoiceTitle: "INVOICE",
-        id: invoice.id,
-        date: invoice.date,
-        customer: invoice.customer,
-        sales: invoice.sales,
-        total: invoice.total
+        id: preview.id,
+        date: preview.date,
+        customer: preview.customer,
+        sales: preview.sales,
+        total: preview.total
     };
     
     document.getElementById('invoicePreviewModal').style.display = 'block';
@@ -5262,7 +5515,7 @@ function cleanupInvalidInvoices() {
     if (hasChanges) {
         invoices.length = 0; // Clear the array
         invoices.push(...validInvoices); // Add back only valid invoices
-        saveInvoicesToLocalStorage();
+        persistInvoices();
         console.log(`Cleaned up ${removedCount} invalid invoices`);
         showNotification(`Cleaned up ${removedCount} invalid invoices containing shop sales`, 'success');
     } else {
@@ -5272,27 +5525,38 @@ function cleanupInvalidInvoices() {
 
 function loadInvoicesTable() {
     const tbody = document.getElementById('invoicesTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
-    if (invoices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">No invoices found.</td></tr>';
+    const list = getInvoicesForHistoryList();
+    if (list.length === 0) {
+        const emptyMsg = invoices.length === 0
+            ? 'No saved invoices yet. Create one from Completed items or Sales — it will appear here.'
+            : 'No invoices match your search.';
+        tbody.innerHTML = `<tr><td colspan="6">${emptyMsg}</td></tr>`;
         return;
     }
     
-    invoices.forEach(invoice => {
+    list.forEach(invoice => {
         const row = document.createElement('tr');
+        const idAttr = JSON.stringify(invoice.id);
+        const displayDate = invoice.dateDisplay || formatInvoiceDisplayDate(invoice.date);
+        const total = parseFloat(invoice.total) || 0;
         row.innerHTML = `
-            <td>${invoice.id}</td>
-            <td>${SecurityManager.escapeHtml(invoice.customer)}</td>
-            <td>${invoice.date}</td>
-            <td>$${invoice.total.toFixed(2)}</td>
-            <td><span class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</span></td>
-            <td>
-                <button class="btn btn-small" onclick="viewInvoice('${invoice.id}')">
+            <td>${SecurityManager.escapeHtml(invoice.id)}</td>
+            <td>${SecurityManager.escapeHtml(invoice.customer || '')}</td>
+            <td>${SecurityManager.escapeHtml(displayDate)}</td>
+            <td>${SecurityManager.escapeHtml(invoiceSourceLabel(invoice.source))}</td>
+            <td>$${total.toFixed(2)}</td>
+            <td class="invoice-history-actions">
+                <button type="button" class="btn btn-small btn-outline" onclick="viewInvoice(${idAttr})" title="View">
                     <i class="fas fa-eye"></i> View
                 </button>
-                <button class="btn btn-small" onclick="printInvoiceById('${invoice.id}')">
+                <button type="button" class="btn btn-small btn-primary" onclick="printInvoiceById(${idAttr})" title="Print">
                     <i class="fas fa-print"></i> Print
+                </button>
+                <button type="button" class="btn btn-small btn-danger" onclick="deleteInvoiceFromHistory(${idAttr})" title="Remove from history">
+                    <i class="fas fa-trash"></i>
                 </button>
             </td>
         `;
@@ -5303,15 +5567,17 @@ function loadInvoicesTable() {
 function viewInvoice(invoiceId) {
     const invoice = invoices.find(inv => inv.id === invoiceId);
     if (invoice) {
-        showInvoicePreview(invoice);
+        allGeneratedInvoices = [];
+        currentInvoiceIndex = 0;
+        showInvoicePreview(invoiceForPreview(invoice));
     }
 }
 
 function printInvoiceById(invoiceId) {
     const invoice = invoices.find(inv => inv.id === invoiceId);
     if (invoice) {
-        showInvoicePreview(invoice);
-        setTimeout(() => printInvoice(), 100);
+        viewInvoice(invoiceId);
+        setTimeout(() => printInvoice(), 150);
     }
 }
 
@@ -5323,8 +5589,179 @@ function saveInvoicesToLocalStorage() {
 function loadInvoicesFromLocalStorage() {
     const stored = localStorage.getItem('embroideryInvoices');
     if (stored) {
-        invoices = JSON.parse(stored);
+        try {
+            invoices = JSON.parse(stored);
+            if (!Array.isArray(invoices)) invoices = [];
+        } catch (e) {
+            console.warn('Could not parse saved invoices:', e);
+            invoices = [];
+        }
     }
+}
+
+function formatInvoiceDisplayDate(dateValue) {
+    if (!dateValue) return '';
+    if (typeof dateValue === 'string' && !dateValue.includes('T')) {
+        return dateValue;
+    }
+    const d = new Date(dateValue);
+    return Number.isNaN(d.getTime()) ? String(dateValue) : d.toLocaleDateString();
+}
+
+function normalizeInvoiceLineItems(salesOrItems, fallbackDate) {
+    if (!salesOrItems || !salesOrItems.length) return [];
+    return salesOrItems.map((row) => {
+        if (row.itemName != null || row.description != null) {
+            const price = row.salePrice != null ? row.salePrice : row.total != null
+                ? row.total
+                : (row.quantity || 1) * (row.price || 0);
+            return {
+                itemName: row.itemName || row.description || row.name || 'Item',
+                dateSold: row.dateSold || fallbackDate || formatInvoiceDisplayDate(new Date()),
+                salePrice: parseFloat(price) || 0
+            };
+        }
+        const qty = row.quantity || 1;
+        const unit = row.price || 0;
+        return {
+            itemName: row.description || row.name || 'Item',
+            dateSold: fallbackDate || formatInvoiceDisplayDate(new Date()),
+            salePrice: row.total != null ? parseFloat(row.total) : qty * unit
+        };
+    });
+}
+
+function buildInvoiceRecordFromCompleted(invoice) {
+    const displayDate = formatInvoiceDisplayDate(invoice.date);
+    return {
+        id: invoice.id,
+        customer: invoice.customer,
+        date: invoice.date || new Date().toISOString(),
+        dateDisplay: displayDate,
+        total: parseFloat(invoice.total) || 0,
+        status: invoice.status || 'completed',
+        source: 'completed',
+        notes: invoice.notes || `Generated from ${(invoice.items || []).length} completed item(s)`,
+        createdAt: invoice.createdAt || new Date().toISOString(),
+        sales: normalizeInvoiceLineItems(invoice.items || [], displayDate)
+    };
+}
+
+function buildInvoiceRecordFromSales({ id, customer, date, notes, sales: saleRows, total, status }) {
+    const displayDate = formatInvoiceDisplayDate(date);
+    return {
+        id,
+        customer,
+        date: date || new Date().toISOString().split('T')[0],
+        dateDisplay: displayDate,
+        total: parseFloat(total) || 0,
+        status: status || 'pending',
+        source: 'sales',
+        notes: notes || '',
+        createdAt: new Date().toISOString(),
+        sales: normalizeInvoiceLineItems(saleRows, displayDate)
+    };
+}
+
+function invoiceForPreview(invoice) {
+    const displayDate = invoice.dateDisplay || formatInvoiceDisplayDate(invoice.date);
+    const lineItems = normalizeInvoiceLineItems(invoice.sales || invoice.items || [], displayDate);
+    return {
+        id: invoice.id,
+        date: displayDate,
+        customer: invoice.customer,
+        sales: lineItems,
+        total: parseFloat(invoice.total) || lineItems.reduce((sum, line) => sum + (parseFloat(line.salePrice) || 0), 0),
+        notes: invoice.notes || '',
+        status: invoice.status || 'completed'
+    };
+}
+
+function addInvoiceToHistory(invoiceRecord) {
+    if (!invoiceRecord || !invoiceRecord.id) return;
+    const existingIndex = invoices.findIndex((inv) => inv.id === invoiceRecord.id);
+    if (existingIndex >= 0) {
+        invoices[existingIndex] = invoiceRecord;
+    } else {
+        invoices.push(invoiceRecord);
+    }
+    persistInvoices();
+}
+
+async function persistInvoices() {
+    saveInvoicesToLocalStorage();
+    try {
+        const response = await fetch('/api/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(invoices)
+        });
+        if (!response.ok) {
+            const errText = await response.text().catch(() => response.statusText);
+            if (response.status === 401 || response.status === 403) {
+                showNotification('Invoice saved locally — log in to sync to the cloud', 'warning');
+            }
+            throw new Error(errText || response.statusText);
+        }
+    } catch (error) {
+        console.warn('Invoice cloud save failed (kept in browser storage):', error.message);
+    }
+}
+
+async function openInvoicesHistoryModal() {
+    if (!await requireAuthentication('view past invoices')) {
+        return;
+    }
+    const search = document.getElementById('invoiceHistorySearch');
+    if (search) search.value = '';
+    loadInvoicesTable();
+    document.getElementById('invoicesListModal').style.display = 'block';
+}
+
+function filterInvoicesHistory() {
+    loadInvoicesTable();
+}
+
+function getInvoicesForHistoryList() {
+    const term = (document.getElementById('invoiceHistorySearch')?.value || '').trim().toLowerCase();
+    const sorted = [...invoices].sort((a, b) => {
+        const ta = new Date(a.createdAt || a.date || 0).getTime();
+        const tb = new Date(b.createdAt || b.date || 0).getTime();
+        return tb - ta;
+    });
+    if (!term) return sorted;
+    return sorted.filter((inv) => {
+        const haystack = [
+            inv.id,
+            inv.customer,
+            inv.source,
+            inv.notes,
+            inv.dateDisplay,
+            formatInvoiceDisplayDate(inv.date)
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(term);
+    });
+}
+
+function invoiceSourceLabel(source) {
+    if (source === 'completed') return 'Completed';
+    if (source === 'sales') return 'Sales';
+    return 'Invoice';
+}
+
+async function deleteInvoiceFromHistory(invoiceId) {
+    if (!await requireAuthentication('delete this invoice')) {
+        return;
+    }
+    const inv = invoices.find((i) => i.id === invoiceId);
+    if (!inv) return;
+    const ok = confirm(`Remove invoice ${invoiceId} for ${inv.customer}? This cannot be undone.`);
+    if (!ok) return;
+    invoices = invoices.filter((i) => i.id !== invoiceId);
+    await persistInvoices();
+    loadInvoicesTable();
+    showNotification('Invoice removed from history', 'success');
 }
 
 // Password visibility toggle function
@@ -5388,8 +5825,6 @@ function restoreExpandedCustomerGroups(expandedCustomers) {
 }
 
 
-// Authentication functions
-// Authentication state
 let isAuthenticated = false;
 let authEnabled = false;
 let currentUsername = null;
@@ -5454,9 +5889,10 @@ async function checkAuthStatus() {
         }
         
         isAuthenticated = data.authenticated;
-        authEnabled = data.authEnabled;
+        authEnabled = data.authEnabled !== false;
         currentUsername = data.username;
-        console.log('🔍 Setting auth state from server:', { isAuthenticated, authEnabled, currentUsername });
+        currentUserIsDbUser = !!data.isDbUser;
+        console.log('🔍 Setting auth state from server:', { isAuthenticated, authEnabled, currentUsername, currentUserIsDbUser });
         updateAuthUI();
         return { authenticated: isAuthenticated, authEnabled: authEnabled };
     } catch (error) {
@@ -5467,9 +5903,10 @@ async function checkAuthStatus() {
 
 // Update auth UI elements
 function updateAuthUI() {
-    console.log('🔄 updateAuthUI called:', { authEnabled, isAuthenticated, currentUsername });
+    console.log('🔄 updateAuthUI called:', { authEnabled, isAuthenticated, currentUsername, currentUserIsDbUser });
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
 
     if (!authContainer || !authUsernameSpan) {
         return;
@@ -5479,9 +5916,16 @@ function updateAuthUI() {
         console.log('✅ Showing authenticated UI');
         authContainer.style.display = 'flex';
         authUsernameSpan.textContent = currentUsername;
+        if (changePasswordBtn) {
+            changePasswordBtn.style.display = currentUserIsDbUser ? '' : 'none';
+        }
+        updatePartnerSetupUI();
     } else {
         console.log('❌ Hiding authenticated UI');
         authContainer.style.display = 'none';
+        if (changePasswordBtn) changePasswordBtn.style.display = 'none';
+        const setupBtn = document.getElementById('partnerSetupBtn');
+        if (setupBtn) setupBtn.style.display = 'none';
     }
 }
 
@@ -5595,6 +6039,7 @@ async function handleAuthSubmit(event) {
             console.log('✅ Login successful, setting authentication state');
             isAuthenticated = true;
             currentUsername = data.username;
+            currentUserIsDbUser = !!data.isDbUser;
             
             // Store authentication in session storage for persistence
             sessionStorage.setItem('embroidery_auth', JSON.stringify({
@@ -5642,6 +6087,7 @@ async function logout() {
         if (data.success) {
             isAuthenticated = false;
             currentUsername = null;
+            currentUserIsDbUser = false;
             
             // Clear session storage
             sessionStorage.removeItem('embroidery_auth');
@@ -5681,8 +6127,11 @@ if (window.performance && window.performance.navigation.type === 1) {
 }
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Embroidery Inventory Manager Initialized');
+    
+    await loadTenantConfig();
+    checkPartnerSetupUrl();
     
     // Debug hostname detection for authentication
     debugHostnameDetection();
@@ -5736,6 +6185,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     initializeApp();
     updateVersionDisplay();
+    await checkAuthStatus();
+    await checkPartnerAccountStatus();
     loadDataFromAPI().then(() => {
         // Update existing sales with commission fields after data is loaded (notifications disabled)
         // updateExistingSalesWithCommission();
@@ -5758,7 +6209,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.106';
+        const currentVersion = '1.0.107';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -5913,6 +6364,24 @@ function initializeApp() {
     // Password change event listeners with null checks
     const changePasswordBtn = document.getElementById('changePasswordBtn');
     if (changePasswordBtn) changePasswordBtn.addEventListener('click', showChangePasswordModal);
+
+    const partnerSetupBtn = document.getElementById('partnerSetupBtn');
+    if (partnerSetupBtn) partnerSetupBtn.addEventListener('click', showPartnerSetupModal);
+
+    const partnerSetupForm = document.getElementById('partnerSetupForm');
+    if (partnerSetupForm) partnerSetupForm.addEventListener('submit', handlePartnerSetup);
+
+    const partnerSetPasswordForm = document.getElementById('partnerSetPasswordForm');
+    if (partnerSetPasswordForm) partnerSetPasswordForm.addEventListener('submit', handlePartnerSetPassword);
+
+    const cancelPartnerSetup = document.getElementById('cancelPartnerSetup');
+    if (cancelPartnerSetup) cancelPartnerSetup.addEventListener('click', hidePartnerSetupModal);
+
+    const closePartnerSetupModal = document.getElementById('closePartnerSetupModal');
+    if (closePartnerSetupModal) closePartnerSetupModal.addEventListener('click', hidePartnerSetupModal);
+
+    const closePartnerSetPasswordModal = document.getElementById('closePartnerSetPasswordModal');
+    if (closePartnerSetPasswordModal) closePartnerSetPasswordModal.addEventListener('click', hidePartnerSetPasswordModal);
     
     const changePasswordForm = document.getElementById('changePasswordForm');
     if (changePasswordForm) changePasswordForm.addEventListener('submit', handleChangePassword);
@@ -6353,7 +6822,7 @@ async function handleEditProject(e) {
         category: '', // Field removed
         status: newStatus,
         isGift: !!isGift,
-        customer: getElementValue('editProjectCustomer'),
+        customer: applyTenantCustomerDefault(getElementValue('editProjectCustomer')),
         location: getElementValue('editProjectLocation'),
         dueDate: getElementValue('editProjectDueDate'),
         priority: getElementValue('editProjectPriority'),
@@ -6492,7 +6961,7 @@ async function handleEditCompletedItem(e) {
         description: description.trim(),
         quantity: parseInt(getElementValue('editCompletedItemQuantity')) || 1,
         price: parseFloat(getElementValue('editCompletedItemPrice')) || 0,
-        customer: getElementValue('editCompletedItemCustomer'),
+        customer: applyTenantCustomerDefault(getElementValue('editCompletedItemCustomer')),
         invoicedDate: getElementValue('editCompletedItemInvoicedDate'),
         status: 'completed', // Always set to completed
         isGift: document.getElementById('editCompletedItemIsGift')?.checked === true,
@@ -6544,7 +7013,7 @@ async function handleAddCompletedItem(e) {
         description: description.trim(),
         quantity: parseInt(getElementValue('addCompletedItemQuantity')) || 1,
         price: parseFloat(getElementValue('addCompletedItemPrice')) || 0,
-        customer: getElementValue('addCompletedItemCustomer'),
+        customer: applyTenantCustomerDefault(getElementValue('addCompletedItemCustomer')),
         invoicedDate: getElementValue('addCompletedItemInvoicedDate'),
         status: 'completed',
         type: 'project',
@@ -6613,7 +7082,7 @@ async function handleEditItem(e) {
     inventory[index] = {
         ...inventory[index],
         name: description, // Use description as name
-        customer: getElementValue('editItemCustomer'),
+        customer: applyTenantCustomerDefault(getElementValue('editItemCustomer')),
         location: getElementValue('editItemLocation') || 'Not specified',
         description: description,
         quantity: quantity,
@@ -6730,12 +7199,13 @@ async function loadDataFromAPI() {
     
     try {
         console.log('📡 Loading data from API...');
-        const [inventoryRes, customersRes, salesRes, galleryRes, ideasRes] = await Promise.all([
+        const [inventoryRes, customersRes, salesRes, galleryRes, ideasRes, invoicesRes] = await Promise.all([
             fetch('/api/inventory'),
             fetch('/api/customers'),
             fetch('/api/sales'),
             fetch('/api/gallery'),
-            fetch('/api/ideas')
+            fetch('/api/ideas'),
+            fetch('/api/invoices')
         ]);
 
         // Check each response for errors
@@ -6744,7 +7214,8 @@ async function loadDataFromAPI() {
             { name: 'customers', response: customersRes },
             { name: 'sales', response: salesRes },
             { name: 'gallery', response: galleryRes },
-            { name: 'ideas', response: ideasRes }
+            { name: 'ideas', response: ideasRes },
+            { name: 'invoices', response: invoicesRes }
         ];
 
         for (const { name, response } of responses) {
@@ -6760,6 +7231,26 @@ async function loadDataFromAPI() {
         sales = await salesRes.json();
         gallery = await galleryRes.json();
         ideas = await ideasRes.json();
+        invoices = await invoicesRes.json();
+        if (!Array.isArray(invoices)) invoices = [];
+        
+        // Migrate browser-only invoice history to the server when cloud is empty
+        if (invoices.length === 0) {
+            const localInvoices = localStorage.getItem('embroideryInvoices');
+            if (localInvoices) {
+                try {
+                    const parsed = JSON.parse(localInvoices);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        invoices = parsed;
+                        await persistInvoices();
+                    }
+                } catch (e) {
+                    console.warn('Could not migrate local invoices:', e);
+                }
+            }
+        } else {
+            saveInvoicesToLocalStorage();
+        }
         
         // Assign to window object for mobile cards
         window.inventory = inventory;
@@ -6777,6 +7268,7 @@ async function loadDataFromAPI() {
         console.log('  💰 Sales records:', sales.length);
         console.log('  🖼️ Gallery items:', gallery.length);
         console.log('  💡 Ideas:', ideas.length);
+        console.log('  📄 Invoices:', invoices.length);
 
         hideLoadingSpinner('load');
         loadData();
@@ -6836,6 +7328,7 @@ function loadDataFromLocalStorage() {
     sales = JSON.parse(localStorage.getItem('embroiderySales')) || [];
     gallery = JSON.parse(localStorage.getItem('embroideryGallery')) || [];
     ideas = JSON.parse(localStorage.getItem('embroideryIdeas')) || [];
+    loadInvoicesFromLocalStorage();
     
     // Assign to window object for mobile cards
     window.inventory = inventory;
@@ -6867,6 +7360,9 @@ function clearAllMobileCards() {
 }
 
 async function switchTab(tabName) {
+    if (tenantConfig.enabledTabs && !tenantConfig.enabledTabs.includes(tabName)) {
+        return;
+    }
     // Check authentication for protected tabs
     if (!await requireAuth(tabName)) {
         return; // Authentication modal will be shown
@@ -6895,7 +7391,8 @@ async function switchTab(tabName) {
     document.getElementById(tabName).classList.add('active');
     
     // Add active class to clicked button
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+    if (tabBtn) tabBtn.classList.add('active');
     
     // Hide bulk actions by default and move back to body
     const bulkContainer = document.getElementById('bulkActionsContainer');
@@ -7140,7 +7637,8 @@ async function saveDataToAPI() {
             { name: 'customers', data: customers },
             { name: 'sales', data: sales },
             { name: 'gallery', data: gallery },
-            { name: 'ideas', data: ideas }
+            { name: 'ideas', data: ideas },
+            { name: 'invoices', data: invoices }
         ].map(async ({ name, data }) => {
             console.log(`🌐 Saving ${name}: ${data.length} items`);
             const response = await fetch(`/api/${name}`, {
@@ -7183,6 +7681,7 @@ async function saveDataToLocalStorage() {
         localStorage.setItem('embroiderySales', JSON.stringify(sales));
         localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
         localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
+        saveInvoicesToLocalStorage();
         
         // Add timestamp for synchronization tracking
         localStorage.setItem('lastDataSave', Date.now().toString());
@@ -7202,6 +7701,7 @@ async function saveDataToLocalStorage() {
                 localStorage.setItem('embroiderySales', JSON.stringify(sales));
                 localStorage.setItem('embroideryGallery', JSON.stringify(gallery));
                 localStorage.setItem('embroideryIdeas', JSON.stringify(ideas));
+                saveInvoicesToLocalStorage();
                 localStorage.setItem('lastDataSave', Date.now().toString());
                 console.log('Data saved to localStorage after cleanup');
                 showNotification('Data saved after cleanup', 'success');
@@ -7362,6 +7862,11 @@ function validateDataIntegrity() {
         // Validate ideas data
         if (!Array.isArray(ideas)) {
             console.error('Ideas is not an array');
+            return false;
+        }
+        
+        if (!Array.isArray(invoices)) {
+            console.error('Invoices is not an array');
             return false;
         }
         
@@ -8699,6 +9204,13 @@ async function openAddProjectModal(prefilledData = null) {
     }
     
     populateCustomerSelect('projectCustomer');
+    const defaultShop = getDefaultShopCustomer();
+    if (defaultShop) {
+        const projectCustomerEl = document.getElementById('projectCustomer');
+        if (projectCustomerEl && !projectCustomerEl.value) {
+            projectCustomerEl.value = defaultShop;
+        }
+    }
     
     if (modal) {
         // Ensure modal is fully visible and positioned correctly
@@ -8871,7 +9383,7 @@ async function handleAddProject(e) {
         priority: document.getElementById('projectPriority').value,
         dueDate: document.getElementById('projectDueDate').value || null,
         notes: document.getElementById('projectNotes').value,
-        customer: document.getElementById('projectCustomer').value,
+        customer: applyTenantCustomerDefault(document.getElementById('projectCustomer').value),
         location: document.getElementById('projectLocation').value,
         patternLink: document.getElementById('projectPatternLink').value,
         tags: document.getElementById('projectTags').value,
@@ -9051,7 +9563,7 @@ async function handleAddItem(e) {
     // Create the new item first
     const newItem = {
         name: document.getElementById('itemDescription').value, // Use description as name
-        customer: getElementValue('itemCustomer'),
+        customer: applyTenantCustomerDefault(getElementValue('itemCustomer')),
         location: getElementValue('itemLocation'),
         description: document.getElementById('itemDescription').value,
         quantity: quantity,
@@ -10183,10 +10695,9 @@ function getSelectedCompletedItems() {
     const checkboxes = document.querySelectorAll('.completed-item-card-checkbox:checked');
     
     checkboxes.forEach(checkbox => {
-        // Use the actual index stored in the data attribute
-        const actualIndex = parseInt(checkbox.dataset.actualIndex);
+        const actualIndex = parseInt(checkbox.dataset.actualIndex, 10);
         
-        if (actualIndex >= 0 && actualIndex < inventory.length) {
+        if (!Number.isNaN(actualIndex) && actualIndex >= 0 && actualIndex < inventory.length) {
             const item = inventory[actualIndex];
             if (item && item.status === 'completed') {
                 selectedItems.push(item);
@@ -11196,6 +11707,13 @@ function populateCustomerSelect(selectId) {
     const isFilter = selectId.includes('Filter');
     const defaultOptionText = isFilter ? 'All Customers' : 'Select Customer';
     select.innerHTML = `<option value="">${defaultOptionText}</option>`;
+    const defaultShop = getDefaultShopCustomer();
+    if (defaultShop && !isFilter && !customers.some(c => c.name === defaultShop)) {
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = defaultShop;
+        defaultOpt.textContent = defaultShop;
+        select.appendChild(defaultOpt);
+    }
     customers.forEach(customer => {
         const option = document.createElement('option');
         option.value = customer.name;
@@ -11687,6 +12205,10 @@ function createOrUpdateSaleFromProject(index) {
     const item = inventory[index];
     if (!item) return;
     if (item.type === 'project' && item.isGift) return;
+
+    if (!item.customer && getDefaultShopCustomer()) {
+        item.customer = getDefaultShopCustomer();
+    }
     
     const existingSaleId = item.saleId;
     let saleRecord = existingSaleId ? sales.find(sale => sale.id === existingSaleId) : null;
@@ -16621,8 +17143,11 @@ function clearCompletedSelection() {
 }
 
 // Print invoice for all currently filtered items
-function printFilteredCompletedItems() {
-    // Get all currently displayed/filtered completed items
+async function printFilteredCompletedItems() {
+    if (!await requireAuthentication('create an invoice')) {
+        return;
+    }
+
     const filteredItems = getCurrentlyFilteredCompletedItems();
     
     if (filteredItems.length === 0) {
@@ -16630,7 +17155,6 @@ function printFilteredCompletedItems() {
         return;
     }
     
-    // Group by customer
     const byCustomer = {};
     filteredItems.forEach(item => {
         const customer = item.customer || 'No Customer';
@@ -16640,21 +17164,36 @@ function printFilteredCompletedItems() {
         byCustomer[customer].push(item);
     });
     
-    // If multiple customers, ask which one to invoice
-    const customers = Object.keys(byCustomer);
-    if (customers.length > 1) {
-        const customerList = customers.join(', ');
+    const customerNames = Object.keys(byCustomer);
+    let itemsToInvoice;
+    let customerForInvoice;
+
+    if (customerNames.length > 1) {
+        const customerList = customerNames.join(', ');
         const selectedCustomer = prompt(`Filtered items belong to multiple customers:\n${customerList}\n\nEnter the customer name for this invoice:`);
         
         if (!selectedCustomer || !byCustomer[selectedCustomer]) {
             showNotification('Invalid customer selection', 'error');
             return;
         }
-        
-        generateInvoiceForItems(byCustomer[selectedCustomer], selectedCustomer);
+        itemsToInvoice = byCustomer[selectedCustomer];
+        customerForInvoice = selectedCustomer;
     } else {
-        generateInvoiceForItems(filteredItems, customers[0]);
+        itemsToInvoice = filteredItems;
+        customerForInvoice = customerNames[0];
     }
+
+    const invoice = generateInvoiceForItems(itemsToInvoice, customerForInvoice, false);
+    if (!invoice) {
+        showNotification('Could not create invoice', 'error');
+        return;
+    }
+
+    addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
+    allGeneratedInvoices = [invoice];
+    currentInvoiceIndex = 0;
+    displayInvoice(invoice);
+    showNotification('Invoice created successfully', 'success');
 }
 
 // Helper function to get currently filtered completed items
@@ -16663,19 +17202,16 @@ function getCurrentlyFilteredCompletedItems() {
 }
 
 // Create invoice from selected items
-function createInvoiceFromSelected() {
-    if (selectedCompletedItems.size === 0) {
+async function createInvoiceFromSelected() {
+    if (!await requireAuthentication('create an invoice')) {
+        return;
+    }
+
+    const selectedItems = getSelectedCompletedItems();
+    if (selectedItems.length === 0) {
         showNotification('Please select at least one item to invoice', 'warning');
         return;
     }
-    
-    const selectedItems = [];
-    selectedCompletedItems.forEach(itemId => {
-        const item = inventory.find(i => (i._id || `item-${inventory.indexOf(i)}`) === itemId);
-        if (item) {
-            selectedItems.push(item);
-        }
-    });
     
     // Group by customer
     const byCustomer = {};
@@ -16695,10 +17231,11 @@ function createInvoiceFromSelected() {
     allGeneratedInvoices = [];
     currentInvoiceIndex = 0;
     
-    // Generate all invoices
+    // Generate all invoices and save to history
     customers.forEach((customer) => {
         const invoice = generateInvoiceForItems(byCustomer[customer], customer, false);
         if (invoice) {
+            addInvoiceToHistory(buildInvoiceRecordFromCompleted(invoice));
             allGeneratedInvoices.push(invoice);
         }
     });
@@ -16712,7 +17249,11 @@ function createInvoiceFromSelected() {
         if (invoiceCount > 1) {
             const customerList = customers.join(', ');
             showNotification(`Created ${invoiceCount} separate invoices for: ${customerList}. Use navigation arrows to view all.`, 'success');
+        } else {
+            showNotification('Invoice created successfully', 'success');
         }
+    } else {
+        showNotification('Could not create invoice from selected items', 'error');
     }
 }
 
@@ -16748,7 +17289,8 @@ function generateInvoiceForItems(items, customer, shouldDisplay = false) {
         })),
         subtotal: items.reduce((sum, item) => sum + ((item.quantity || 1) * (item.price || 0)), 0),
         tax: 0,
-        total: items.reduce((sum, item) => sum + ((item.quantity || 1) * (item.price || 0)), 0)
+        total: items.reduce((sum, item) => sum + ((item.quantity || 1) * (item.price || 0)), 0),
+        createdAt: new Date().toISOString()
     };
     
     // Return the invoice object (don't display it here - that will be handled by createInvoiceFromSelected)

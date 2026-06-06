@@ -1,6 +1,6 @@
 {
   "name": "embroidery-inventory-manager",
-  "version": "1.0.106",
+  "version": "1.0.107",
   "description": "A web-based inventory management system for embroidery businesses",
   "main": "server.js",
   "scripts": {
@@ -36,6 +36,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^4.18.2",

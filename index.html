@@ -16,7 +16,7 @@
         }
     </script>
     <meta name="version" content="1.0.104">
-    <title>CyndyP StitchCraft Inventory - v1.0.106 - CACHE BUST</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.107 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -44,7 +44,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.106&t=202604200118&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.107&t=202606061838&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -303,13 +303,25 @@
         <header>
             <div class="top-bar">
                 <div class="branding">
-                    <h1>CyndyP StitchCraft Inventory Management</h1>
+                    <h1 id="appTitle">CyndyP StitchCraft Inventory Management</h1>
+                    <a id="knittingSiteLink" href="#" class="site-link" style="display: none;" target="_blank" rel="noopener">
+                        <i class="fas fa-external-link-alt"></i> Knitting inventory
+                    </a>
+                    <a id="embroiderySiteLink" href="#" class="site-link" style="display: none;" target="_blank" rel="noopener">
+                        <i class="fas fa-external-link-alt"></i> Embroidery inventory
+                    </a>
                 </div>
                 <div class="header-right">
                     <div class="auth-status" id="authStatusContainer" style="display: none;">
                         <span id="authStatus" class="status-indicator">
                             <i class="fas fa-user"></i> <span id="authUsername"></span>
                         </span>
+                        <button class="btn btn-sm btn-secondary" id="partnerSetupBtn" style="display: none; margin-left: 0.5rem; padding: 0.25rem 0.75rem;" title="Create partner login">
+                            <i class="fas fa-user-plus"></i> Setup partner
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="changePasswordBtn" style="display: none; margin-left: 0.5rem; padding: 0.25rem 0.75rem;" title="Change password">
+                            <i class="fas fa-key"></i>
+                        </button>
                         <button class="btn btn-sm btn-secondary" id="logoutBtn" style="margin-left: 0.5rem; padding: 0.25rem 0.75rem;" onclick="logout()">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </button>
@@ -649,6 +661,9 @@
                         <button class="btn btn-outline" onclick="cleanupInvalidInvoices()" title="Remove any invoices containing shop sales">
                             <i class="fas fa-broom"></i> Clean Invalid Invoices
                         </button>
+                        <button class="btn btn-outline" onclick="openInvoicesHistoryModal()" title="View and reprint saved invoices">
+                            <i class="fas fa-history"></i> Past Invoices
+                        </button>
                         <button class="btn btn-secondary" onclick="openAddSaleModal()">
                             <i class="fas fa-plus"></i> Record Sale
                         </button>
@@ -703,6 +718,9 @@
                         </button>
                         <button class="btn btn-primary" onclick="createInvoiceFromSelected()">
                             <i class="fas fa-file-invoice"></i> Create Invoice from Selected
+                        </button>
+                        <button class="btn btn-outline" onclick="openInvoicesHistoryModal()" title="View and reprint saved invoices">
+                            <i class="fas fa-history"></i> Past Invoices
                         </button>
                         <button class="btn btn-info" onclick="printFilteredCompletedItems()">
                             <i class="fas fa-print"></i> Print Filtered Items
@@ -1130,6 +1148,58 @@
         </div>
     </div>
 
+    <!-- Partner account setup (admin only, knitting site) -->
+    <div id="partnerSetupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closePartnerSetupModal">&times;</span>
+            <h2><i class="fas fa-user-plus"></i> Create Partner Account</h2>
+            <p>Set the username and password for <strong id="partnerSetupUsername">akeeler</strong>:</p>
+            <form id="partnerSetupForm">
+                <div class="form-group">
+                    <label for="partnerSetupPassword">Password:</label>
+                    <input type="password" id="partnerSetupPassword" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="partnerSetupPasswordConfirm">Confirm Password:</label>
+                    <input type="password" id="partnerSetupPasswordConfirm" required minlength="4">
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Create Account</button>
+                    <button type="button" class="btn btn-secondary" id="cancelPartnerSetup"><i class="fas fa-times"></i> Cancel</button>
+                </div>
+            </form>
+            <div id="partnerSetupError" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> <span id="partnerSetupErrorText"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner set password (from setup link) -->
+    <div id="partnerSetPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closePartnerSetPasswordModal">&times;</span>
+            <h2><i class="fas fa-key"></i> Set Your Password</h2>
+            <p>Choose a password for your account:</p>
+            <form id="partnerSetPasswordForm">
+                <input type="hidden" id="partnerSetPasswordToken">
+                <div class="form-group">
+                    <label for="partnerSetPasswordNew">New Password:</label>
+                    <input type="password" id="partnerSetPasswordNew" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="partnerSetPasswordConfirm">Confirm Password:</label>
+                    <input type="password" id="partnerSetPasswordConfirm" required minlength="4">
+                </div>
+                <div class="form-row">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Set Password</button>
+                </div>
+            </form>
+            <div id="partnerSetPasswordError" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> <span id="partnerSetPasswordErrorText"></span>
+            </div>
+        </div>
+    </div>
+
     <!-- Modals -->
     <div id="addItemModal" class="modal">
         <div class="modal-content">
@@ -1243,7 +1313,7 @@
                         <input type="url" id="itemPatternLink" placeholder="https://drive.google.com/file/d/..." maxlength="500">
                         <small class="form-help">Paste your Google Drive shareable link here</small>
                     </div>
-                    <div class="form-group full-width">
+                    <div class="form-group full-width" data-tags-field>
                         <label for="itemTags">Tags (comma-separated)</label>
                         <input type="text" id="itemTags" placeholder="e.g., wedding, baby, holiday" maxlength="200">
                     </div>
@@ -1394,7 +1464,7 @@
                     <label for="projectPatternLink">Pattern Link (Google Drive)</label>
                     <input type="url" id="projectPatternLink" placeholder="https://drive.google.com/file/d/..." maxlength="500">
                 </div>
-                <div class="form-group half-width">
+                <div class="form-group half-width" data-tags-field>
                     <label for="projectTags">Tags (comma-separated)</label>
                     <input type="text" id="projectTags" placeholder="e.g., wedding, baby, holiday" maxlength="200">
                 </div>
@@ -1905,7 +1975,7 @@
                     </select>
                 </div>
                 
-                <div class="form-group half-width">
+                <div class="form-group half-width" data-tags-field>
                     <label for="editProjectTags">Tags (comma-separated)</label>
                     <input type="text" id="editProjectTags" placeholder="e.g., wedding, baby, holiday">
                 </div>
@@ -2185,9 +2255,13 @@
 
     <!-- Invoices List Modal -->
     <div id="invoicesListModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content invoice-history-modal">
             <span class="close" onclick="closeModal('invoicesListModal')">&times;</span>
-            <h2><i class="fas fa-list"></i> Invoices</h2>
+            <h2><i class="fas fa-history"></i> Past Invoices</h2>
+            <p class="text-muted invoice-history-hint">Invoices are saved when you create them from Completed items or Sales. Open any invoice to view or print again.</p>
+            <div class="invoice-history-toolbar">
+                <input type="search" id="invoiceHistorySearch" placeholder="Search by invoice #, customer…" oninput="filterInvoicesHistory()" aria-label="Search saved invoices">
+            </div>
             <div class="table-container">
                 <table id="invoicesTable">
                     <thead>
@@ -2195,8 +2269,8 @@
                             <th>Invoice #</th>
                             <th>Customer</th>
                             <th>Date</th>
+                            <th>Source</th>
                             <th>Total</th>
-                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -2334,7 +2408,7 @@
                         <input type="number" id="advancedPriceMax" step="0.01" min="0">
                     </div>
                     
-                    <div class="form-group full-width">
+                    <div class="form-group full-width" data-tags-field>
                         <label for="advancedTags">Tags (comma-separated)</label>
                         <input type="text" id="advancedTags" placeholder="wedding, baby, holiday">
                     </div>
@@ -2562,6 +2636,6 @@
             console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.104 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.106&t=202604200118&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.107&t=202606061838&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>

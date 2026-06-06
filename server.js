@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const { MongoClient, ObjectId } = require('mongodb');
 
 // Load environment variables
@@ -13,7 +15,76 @@ const PORT = process.env.PORT || 3000;
 // SECURITY: Credentials must be in environment variables only
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'embroidery_inventory';
+const TENANT_ID = process.env.TENANT_ID || 'embroidery';
+const PARTNER_USERNAME = process.env.PARTNER_USERNAME || 'akeeler';
+const MULTI_USER_ENABLED = TENANT_ID === 'knitting';
+const IS_KNITTING_TENANT = MULTI_USER_ENABLED || DB_NAME === 'knitting_inventory';
 let db;
+
+const ALL_TABS = ['projects', 'inventory', 'customers', 'wip', 'completed', 'ideas', 'gallery', 'sales', 'reports', 'data'];
+
+function getTenantConfig() {
+    const enabledTabsRaw = process.env.ENABLED_TABS;
+    const enabledTabs = enabledTabsRaw
+        ? enabledTabsRaw.split(',').map(t => t.trim()).filter(Boolean)
+        : ALL_TABS;
+
+    return {
+        tenantId: TENANT_ID,
+        appTitle: process.env.APP_TITLE || 'CyndyP StitchCraft Inventory Management',
+        enabledTabs,
+        defaultShopCustomer: process.env.DEFAULT_SHOP_CUSTOMER || '',
+        hideTags: process.env.HIDE_TAGS === 'true' || IS_KNITTING_TENANT,
+        multiUserEnabled: MULTI_USER_ENABLED,
+        partnerUsername: PARTNER_USERNAME,
+        knittingSiteUrl: process.env.KNITTING_SITE_URL || '',
+        embroiderySiteUrl: process.env.EMBROIDERY_SITE_URL || 'https://embroidery-inventory-manager.vercel.app/'
+    };
+}
+
+function isAdminCredential(username, password) {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
+    return username === adminUser && password === adminPass;
+}
+
+function isSessionAuthenticated(req) {
+    return !!(req.session && req.session.authenticated === true);
+}
+
+function requireSessionAuth(req, res, next) {
+    if (isSessionAuthenticated(req)) {
+        return next();
+    }
+    res.status(401).json({ error: 'Authentication required', message: 'You must be logged in to perform this action' });
+}
+
+function requireAdminSession(req, res, next) {
+    if (!isSessionAuthenticated(req)) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    if (req.session.username !== adminUser) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+}
+
+async function findUserByUsername(username) {
+    const database = await connectToDatabase();
+    if (!database) return null;
+    return database.collection('users').findOne({ username: username.toLowerCase() });
+}
+
+async function verifyUserPassword(username, password) {
+    const user = await findUserByUsername(username);
+    if (!user || !user.passwordHash) return false;
+    return bcrypt.compare(password, user.passwordHash);
+}
+
+async function hashPassword(password) {
+    return bcrypt.hash(password, 10);
+}
 
 if (!MONGODB_URI) {
     console.error('❌ CRITICAL: MONGODB_URI environment variable is not set!');
@@ -48,6 +119,11 @@ async function connectToDatabase() {
 // Initialize collections with sample data
 async function initializeCollections() {
     try {
+        if (IS_KNITTING_TENANT) {
+            await initializeKnittingDefaults();
+            return;
+        }
+
         // Check if inventory collection is empty
         const inventoryCount = await db.collection('inventory').countDocuments();
         if (inventoryCount === 0) {
@@ -94,6 +170,26 @@ async function initializeCollections() {
     }
 }
 
+async function initializeKnittingDefaults() {
+    try {
+        const config = getTenantConfig();
+        const customersCount = await db.collection('customers').countDocuments();
+        if (customersCount === 0 && config.defaultShopCustomer) {
+            await db.collection('customers').insertOne({
+                name: config.defaultShopCustomer,
+                contact: '',
+                location: '',
+                dateAdded: new Date().toISOString(),
+                status: 'active'
+            });
+            console.log(`👥 Knitting default shop customer: ${config.defaultShopCustomer}`);
+        }
+        console.log('🧶 Knitting tenant initialized (empty inventory, no sample seed data)');
+    } catch (error) {
+        console.error('Error initializing knitting defaults:', error);
+    }
+}
+
 // Middleware
 app.use(cors({
     origin: true,
@@ -109,10 +205,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, // Set to false for local development (http)
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'lax', // Required for modern browsers
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
@@ -175,29 +271,249 @@ app.get('/health', async (req, res) => {
 });
 
 
-// Authentication endpoints
-// Default admin credentials (should be changed in production)
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
+// Tenant configuration (public)
+app.get('/api/config', (req, res) => {
+    res.json(getTenantConfig());
+});
 
-// Check auth status
+// Authentication endpoints
 app.get('/api/auth/status', (req, res) => {
+    const config = getTenantConfig();
     res.json({
-        authenticated: req.session && req.session.authenticated === true,
+        authenticated: isSessionAuthenticated(req),
         username: req.session && req.session.username,
-        authEnabled: true
+        authEnabled: true,
+        isDbUser: !!(req.session && req.session.isDbUser),
+        multiUserEnabled: config.multiUserEnabled,
+        partnerUsername: config.partnerUsername
     });
 });
 
-// Login endpoint
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        req.session.authenticated = true;
-        req.session.username = username;
-        res.json({ success: true, message: 'Login successful', username });
-    } else {
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Username and password are required' });
+    }
+
+    try {
+        if (isAdminCredential(username, password)) {
+            req.session.authenticated = true;
+            req.session.username = username;
+            req.session.isDbUser = false;
+            return res.json({ success: true, message: 'Login successful', username, isDbUser: false });
+        }
+
+        if (MULTI_USER_ENABLED) {
+            const validUser = await verifyUserPassword(username, password);
+            if (validUser) {
+                req.session.authenticated = true;
+                req.session.username = username.toLowerCase();
+                req.session.isDbUser = true;
+                return res.json({
+                    success: true,
+                    message: 'Login successful',
+                    username: username.toLowerCase(),
+                    isDbUser: true
+                });
+            }
+        }
+
         res.status(401).json({ success: false, message: 'Invalid username or password' });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Login failed' });
+    }
+});
+
+app.post('/api/change-password', requireSessionAuth, async (req, res) => {
+    if (!req.session.isDbUser) {
+        return res.status(403).json({
+            success: false,
+            message: 'Admin password is managed via server environment variables'
+        });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Current and new password are required' });
+    }
+    if (newPassword.length < 4) {
+        return res.status(400).json({ success: false, message: 'New password must be at least 4 characters' });
+    }
+
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ success: false, message: 'Database not connected' });
+        }
+
+        const user = await findUserByUsername(req.session.username);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!valid) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        const passwordHash = await hashPassword(newPassword);
+        await database.collection('users').updateOne(
+            { username: req.session.username },
+            { $set: { passwordHash, updatedAt: new Date().toISOString() } }
+        );
+
+        res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({ success: false, message: 'Failed to change password' });
+    }
+});
+
+app.get('/api/users/status', async (req, res) => {
+    const config = getTenantConfig();
+    if (!config.multiUserEnabled) {
+        return res.json({ multiUserEnabled: false, partnerExists: false });
+    }
+
+    try {
+        const partner = await findUserByUsername(config.partnerUsername);
+        res.json({
+            multiUserEnabled: true,
+            partnerUsername: config.partnerUsername,
+            partnerExists: !!partner
+        });
+    } catch (error) {
+        console.error('User status error:', error);
+        res.status(500).json({ error: 'Failed to check user status' });
+    }
+});
+
+app.post('/api/users/create', requireAdminSession, async (req, res) => {
+    if (!MULTI_USER_ENABLED) {
+        return res.status(404).json({ error: 'Multi-user is not enabled on this deployment' });
+    }
+
+    const { username, password } = req.body;
+    const partnerName = (username || PARTNER_USERNAME).toLowerCase();
+    if (!password || password.length < 4) {
+        return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+
+        const existing = await findUserByUsername(partnerName);
+        if (existing) {
+            return res.status(409).json({ error: `User "${partnerName}" already exists` });
+        }
+
+        const passwordHash = await hashPassword(password);
+        await database.collection('users').insertOne({
+            username: partnerName,
+            passwordHash,
+            role: 'partner',
+            createdAt: new Date().toISOString(),
+            createdBy: req.session.username
+        });
+
+        res.json({ success: true, username: partnerName, message: 'Partner account created' });
+    } catch (error) {
+        console.error('Create user error:', error);
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
+app.post('/api/users/setup-token', requireAdminSession, async (req, res) => {
+    if (!MULTI_USER_ENABLED) {
+        return res.status(404).json({ error: 'Multi-user is not enabled on this deployment' });
+    }
+
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+
+        const partnerName = PARTNER_USERNAME.toLowerCase();
+        const existing = await findUserByUsername(partnerName);
+        if (existing) {
+            return res.status(409).json({ error: 'Partner account already exists' });
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        await database.collection('users').insertOne({
+            username: partnerName,
+            passwordHash: null,
+            setupToken: token,
+            setupTokenExpires: expiresAt.toISOString(),
+            role: 'partner',
+            createdAt: new Date().toISOString(),
+            createdBy: req.session.username
+        });
+
+        res.json({
+            success: true,
+            token,
+            username: partnerName,
+            expiresAt: expiresAt.toISOString(),
+            setupPath: `/?setup=${token}`
+        });
+    } catch (error) {
+        console.error('Setup token error:', error);
+        res.status(500).json({ error: 'Failed to generate setup token' });
+    }
+});
+
+app.post('/api/users/set-password', async (req, res) => {
+    if (!MULTI_USER_ENABLED) {
+        return res.status(404).json({ error: 'Multi-user is not enabled on this deployment' });
+    }
+
+    const { token, password } = req.body;
+    if (!token || !password || password.length < 4) {
+        return res.status(400).json({ error: 'Valid token and password (4+ chars) are required' });
+    }
+
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+
+        const user = await database.collection('users').findOne({
+            username: PARTNER_USERNAME.toLowerCase(),
+            setupToken: token
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired setup link' });
+        }
+        if (user.setupTokenExpires && new Date(user.setupTokenExpires) < new Date()) {
+            return res.status(400).json({ error: 'Setup link has expired. Ask admin for a new one.' });
+        }
+        if (user.passwordHash) {
+            return res.status(409).json({ error: 'Account already set up. Use Change Password or login.' });
+        }
+
+        const passwordHash = await hashPassword(password);
+        await database.collection('users').updateOne(
+            { _id: user._id },
+            {
+                $set: { passwordHash, updatedAt: new Date().toISOString() },
+                $unset: { setupToken: '', setupTokenExpires: '' }
+            }
+        );
+
+        res.json({ success: true, message: 'Password set successfully. You can now log in.' });
+    } catch (error) {
+        console.error('Set password error:', error);
+        res.status(500).json({ error: 'Failed to set password' });
     }
 });
 
@@ -233,7 +549,7 @@ app.get('/api/inventory', async (req, res) => {
     }
 });
 
-app.post('/api/inventory', async (req, res) => {
+app.post('/api/inventory', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -265,7 +581,7 @@ app.get('/api/customers', async (req, res) => {
     }
 });
 
-app.post('/api/customers', async (req, res) => {
+app.post('/api/customers', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -296,7 +612,7 @@ app.get('/api/sales', async (req, res) => {
     }
 });
 
-app.post('/api/sales', async (req, res) => {
+app.post('/api/sales', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -327,7 +643,7 @@ app.get('/api/gallery', async (req, res) => {
     }
 });
 
-app.post('/api/gallery', async (req, res) => {
+app.post('/api/gallery', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -356,7 +672,7 @@ app.get('/api/ideas', async (req, res) => {
     }
 });
 
-app.post('/api/ideas', async (req, res) => {
+app.post('/api/ideas', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) return res.status(500).json({ error: 'Database not connected' });
@@ -371,7 +687,32 @@ app.post('/api/ideas', async (req, res) => {
     }
 });
 
+app.get('/api/invoices', async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) return res.status(500).json({ error: 'Database not connected' });
+        const invoices = await database.collection('invoices').find({}).toArray();
+        res.json(invoices);
+    } catch (error) {
+        console.error('Error fetching invoices:', error);
+        res.status(500).json({ error: 'Failed to fetch invoices' });
+    }
+});
 
+app.post('/api/invoices', requireSessionAuth, async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) return res.status(500).json({ error: 'Database not connected' });
+        await database.collection('invoices').deleteMany({});
+        if (req.body && req.body.length > 0) {
+            await database.collection('invoices').insertMany(req.body);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving invoices:', error);
+        res.status(500).json({ error: 'Failed to save invoices' });
+    }
+});
 
 // Connect to database and start server
 connectToDatabase().then(() => {
