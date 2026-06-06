@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.113'
+                appVersion: '1.0.114'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.113'; // Current app version
+                const currentVersion = '1.0.114'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5914,6 +5914,8 @@ function restoreExpandedCustomerGroups(expandedCustomers) {
 let isAuthenticated = false;
 let authEnabled = false;
 let currentUsername = null;
+let authLastConfirmedAt = 0;
+const AUTH_CONFIRM_TTL_MS = 5 * 60 * 1000;
 
 function isLocalDevelopmentHost() {
     const hostname = window.location.hostname;
@@ -5954,6 +5956,7 @@ async function checkAuthStatus() {
         currentUserIsDbUser = !!data.isDbUser;
 
         if (isAuthenticated && currentUsername) {
+            authLastConfirmedAt = Date.now();
             sessionStorage.setItem('embroidery_auth', JSON.stringify({
                 authenticated: true,
                 username: currentUsername,
@@ -5964,6 +5967,7 @@ async function checkAuthStatus() {
             isAuthenticated = false;
             currentUsername = null;
             currentUserIsDbUser = false;
+            authLastConfirmedAt = 0;
         }
 
         console.log('🔍 Setting auth state from server:', { isAuthenticated, authEnabled, currentUsername, currentUserIsDbUser });
@@ -6020,14 +6024,16 @@ function promptLoginRequired(message, operationName) {
 
 // Check if user is authenticated (for operations)
 async function checkAuthentication() {
+    if (isLocalDevelopmentHost()) {
+        return true;
+    }
+    if (isAuthenticated && authLastConfirmedAt && (Date.now() - authLastConfirmedAt) < AUTH_CONFIRM_TTL_MS) {
+        return true;
+    }
     const status = await checkAuthStatus();
-    
-    // If auth is not enabled, always allow
     if (!status.authEnabled) {
         return true;
     }
-    
-    // If auth is enabled, check if authenticated
     return status.authenticated;
 }
 
@@ -6124,6 +6130,8 @@ async function handleAuthSubmit(event) {
             isAuthenticated = true;
             currentUsername = data.username;
             currentUserIsDbUser = !!data.isDbUser;
+            authLastConfirmedAt = Date.now();
+            authEnabled = true;
             
             // Store authentication in session storage for persistence
             sessionStorage.setItem('embroidery_auth', JSON.stringify({
@@ -6173,6 +6181,7 @@ async function logout() {
             isAuthenticated = false;
             currentUsername = null;
             currentUserIsDbUser = false;
+            authLastConfirmedAt = 0;
             
             // Clear session storage
             sessionStorage.removeItem('embroidery_auth');
@@ -6298,7 +6307,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.113';
+        const currentVersion = '1.0.114';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }

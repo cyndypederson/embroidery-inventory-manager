@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const MongoStore = require('connect-mongo').default;
 const { MongoClient, ObjectId } = require('mongodb');
 
 // Load environment variables
@@ -10,6 +11,11 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+if (IS_PRODUCTION) {
+    app.set('trust proxy', 1);
+}
 
 // MongoDB connection
 // SECURITY: Credentials must be in environment variables only
@@ -84,6 +90,24 @@ async function verifyUserPassword(username, password) {
 
 async function hashPassword(password) {
     return bcrypt.hash(password, 10);
+}
+
+function saveSession(req) {
+    return new Promise((resolve, reject) => {
+        req.session.save((err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+function sendLoginSuccess(req, res, payload) {
+    saveSession(req)
+        .then(() => res.json({ success: true, message: 'Login successful', ...payload }))
+        .catch((err) => {
+            console.error('Session save error:', err);
+            res.status(500).json({ success: false, message: 'Login succeeded but session could not be saved' });
+        });
 }
 
 if (!MONGODB_URI) {
@@ -198,14 +222,21 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded support
 
-// Session middleware
+// Session middleware — MongoDB store so sessions survive Vercel serverless restarts
 const session = require('express-session');
 app.use(session({
     secret: process.env.SESSION_SECRET || 'embroidery-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
+    rolling: true,
+    store: MongoStore.create({
+        mongoUrl: MONGODB_URI,
+        dbName: DB_NAME,
+        collectionName: 'sessions',
+        ttl: 24 * 60 * 60
+    }),
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000
@@ -300,7 +331,7 @@ app.post('/api/login', async (req, res) => {
             req.session.authenticated = true;
             req.session.username = username;
             req.session.isDbUser = false;
-            return res.json({ success: true, message: 'Login successful', username, isDbUser: false });
+            return sendLoginSuccess(req, res, { username, isDbUser: false });
         }
 
         if (MULTI_USER_ENABLED) {
@@ -309,9 +340,7 @@ app.post('/api/login', async (req, res) => {
                 req.session.authenticated = true;
                 req.session.username = username.toLowerCase();
                 req.session.isDbUser = true;
-                return res.json({
-                    success: true,
-                    message: 'Login successful',
+                return sendLoginSuccess(req, res, {
                     username: username.toLowerCase(),
                     isDbUser: true
                 });
