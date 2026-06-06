@@ -2099,7 +2099,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.110'
+                appVersion: '1.0.111'
             }
         };
         
@@ -4008,7 +4008,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.110'; // Current app version
+                const currentVersion = '1.0.111'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5912,47 +5912,30 @@ let isAuthenticated = false;
 let authEnabled = false;
 let currentUsername = null;
 
+function isLocalDevelopmentHost() {
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    return hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '' ||
+        hostname === '0.0.0.0' ||
+        (hostname.startsWith('192.168.') && port === '3002') ||
+        (hostname.startsWith('10.') && port === '3002') ||
+        (hostname.startsWith('172.') && port === '3002');
+}
+
 // Check auth status with server
 async function checkAuthStatus() {
     console.log('🔍 checkAuthStatus called');
     
-    // First check if we're on localhost (bypass auth)
-    const hostname = window.location.hostname;
-    const port = window.location.port;
-    const isLocalhost = hostname === 'localhost' || 
-                       hostname === '127.0.0.1' ||
-                       hostname === '' ||
-                       hostname === '0.0.0.0' ||
-                       (hostname.startsWith('192.168.') && port === '3002') ||
-                       (hostname.startsWith('10.') && port === '3002') ||
-                       (hostname.startsWith('172.') && port === '3002');
-    
-    if (isLocalhost) {
+    if (isLocalDevelopmentHost()) {
         console.log('🔓 Localhost detected in checkAuthStatus - bypassing auth');
         isAuthenticated = true;
         authEnabled = false;
         currentUsername = 'localhost';
+        currentUserIsDbUser = false;
         updateAuthUI();
         return { authenticated: true, authEnabled: false };
-    }
-    
-    // Check session storage first (for persistence across page reloads)
-    const storedAuth = sessionStorage.getItem('embroidery_auth');
-    if (storedAuth) {
-        try {
-            const authData = JSON.parse(storedAuth);
-            if (authData.authenticated && authData.timestamp && (Date.now() - authData.timestamp) < 24 * 60 * 60 * 1000) {
-                console.log('🔍 Using stored authentication');
-                isAuthenticated = true;
-                authEnabled = true;
-                currentUsername = authData.username;
-                updateAuthUI();
-                return { authenticated: true, authEnabled: true };
-            }
-        } catch (e) {
-            console.log('🔍 Invalid stored auth data, clearing');
-            sessionStorage.removeItem('embroidery_auth');
-        }
     }
     
     try {
@@ -5962,25 +5945,34 @@ async function checkAuthStatus() {
         const data = await response.json();
         console.log('🔍 Auth status response:', data);
         
-        if (data.authenticated) {
-            // Store auth in session storage for persistence
+        isAuthenticated = !!data.authenticated;
+        authEnabled = data.authEnabled !== false;
+        currentUsername = data.username || null;
+        currentUserIsDbUser = !!data.isDbUser;
+
+        if (isAuthenticated && currentUsername) {
             sessionStorage.setItem('embroidery_auth', JSON.stringify({
                 authenticated: true,
-                username: data.username,
+                username: currentUsername,
                 timestamp: Date.now()
             }));
+        } else {
+            sessionStorage.removeItem('embroidery_auth');
+            isAuthenticated = false;
+            currentUsername = null;
+            currentUserIsDbUser = false;
         }
-        
-        isAuthenticated = data.authenticated;
-        authEnabled = data.authEnabled !== false;
-        currentUsername = data.username;
-        currentUserIsDbUser = !!data.isDbUser;
+
         console.log('🔍 Setting auth state from server:', { isAuthenticated, authEnabled, currentUsername, currentUserIsDbUser });
         updateAuthUI();
         return { authenticated: isAuthenticated, authEnabled: authEnabled };
     } catch (error) {
         console.error('Failed to check auth status:', error);
-        return { authenticated: false, authEnabled: false };
+        sessionStorage.removeItem('embroidery_auth');
+        isAuthenticated = false;
+        currentUsername = null;
+        updateAuthUI();
+        return { authenticated: false, authEnabled: true };
     }
 }
 
@@ -5990,6 +5982,16 @@ function updateAuthUI() {
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
     const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const loginPromptBtn = document.getElementById('loginPromptBtn');
+    const loginBanner = document.getElementById('loginRequiredBanner');
+    const showLoginPrompt = authEnabled && !isAuthenticated;
+
+    if (loginPromptBtn) {
+        loginPromptBtn.style.display = showLoginPrompt ? '' : 'none';
+    }
+    if (loginBanner) {
+        loginBanner.style.display = showLoginPrompt ? 'flex' : 'none';
+    }
 
     if (!authContainer || !authUsernameSpan) {
         return;
@@ -6012,6 +6014,17 @@ function updateAuthUI() {
     }
 }
 
+function promptLoginRequired(message, operationName) {
+    const defaultMessage = 'Please log in to save invoices, add items, and make changes.';
+    showAuthModal(message || defaultMessage);
+    showNotification(
+        operationName
+            ? `You must be logged in to ${operationName}`
+            : 'Please log in to continue',
+        'error'
+    );
+}
+
 // Check if user is authenticated (for operations)
 async function checkAuthentication() {
     const status = await checkAuthStatus();
@@ -6028,26 +6041,17 @@ async function checkAuthentication() {
 // Require authentication for protected operations
 // Returns true if authenticated, false if not (and shows login modal)
 async function requireAuthentication(operationName = 'this action') {
-    // Bypass authentication for localhost and local development
-    const hostname = window.location.hostname;
-    const port = window.location.port;
-    const isLocalhost = hostname === 'localhost' || 
-                       hostname === '127.0.0.1' ||
-                       hostname === '' ||
-                       hostname === '0.0.0.0' ||
-                       (hostname.startsWith('192.168.') && port === '3002') ||
-                       (hostname.startsWith('10.') && port === '3002') ||
-                       (hostname.startsWith('172.') && port === '3002');
-    
-    if (isLocalhost) {
-        debugLog('🔓 Localhost detected - bypassing authentication', { hostname, port, isLocalhost });
+    if (isLocalDevelopmentHost()) {
         return true;
     }
     
     const isAuth = await checkAuthentication();
     if (!isAuth) {
-        showNotification(`You must be logged in to ${operationName}`, 'error');
-        showAuthModal();
+        const invoiceOps = ['create an invoice', 'generate an invoice', 'view past invoices'];
+        const message = invoiceOps.some((op) => operationName.includes(op))
+            ? 'Log in to create and save invoices for Past Invoices.'
+            : 'Please log in to save changes to the cloud.';
+        promptLoginRequired(message, operationName);
         return false;
     }
     return true;
@@ -6078,7 +6082,11 @@ function debugHostnameDetection() {
 }
 
 // Show login modal
-function showAuthModal() {
+function showAuthModal(message) {
+    const msgEl = document.getElementById('authModalMessage');
+    if (msgEl) {
+        msgEl.textContent = message || 'Please log in to save invoices, add items, and make changes.';
+    }
     document.getElementById('authModal').style.display = 'block';
     const usernameInput = document.getElementById('adminUsername');
     const passwordInput = document.getElementById('adminPassword');
@@ -6189,15 +6197,19 @@ async function logout() {
 }
 
 async function requireAuth(tabName) {
-    // Require auth for completed items, sales, reports, and data management
     const protectedTabs = ['completed', 'sales', 'reports', 'data'];
     
     if (protectedTabs.includes(tabName)) {
         const isAuth = await checkAuthentication();
         if (!isAuth) {
             sessionStorage.setItem('requestedTab', tabName);
-            showNotification(`You must be logged in to access ${tabName}`, 'error');
-            showAuthModal();
+            const tabMessages = {
+                completed: 'Log in to access Completed Items, create invoices, and save them for later.',
+                sales: 'Log in to access Sales.',
+                reports: 'Log in to access Reports.',
+                data: 'Log in to access Data Management.'
+            };
+            promptLoginRequired(tabMessages[tabName], `access ${tabName}`);
             return false;
         }
     }
@@ -6293,7 +6305,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.110';
+        const currentVersion = '1.0.111';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }

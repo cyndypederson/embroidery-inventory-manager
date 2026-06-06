@@ -16,7 +16,7 @@
         }
     </script>
     <meta name="version" content="1.0.104">
-    <title>CyndyP StitchCraft Inventory - v1.0.110 - CACHE BUST</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.111 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -44,7 +44,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.110&t=202606061851&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.111&t=202606061853&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -312,6 +312,9 @@
                     </a>
                 </div>
                 <div class="header-right">
+                    <button class="btn btn-sm btn-primary" id="loginPromptBtn" style="display: none; margin-left: 0.5rem; padding: 0.25rem 0.75rem;" type="button">
+                        <i class="fas fa-sign-in-alt"></i> Log in
+                    </button>
                     <div class="auth-status" id="authStatusContainer" style="display: none;">
                         <span id="authStatus" class="status-indicator">
                             <i class="fas fa-user"></i> <span id="authUsername"></span>
@@ -335,6 +338,13 @@
                         </span>
                     </div>
                 </div>
+            </div>
+            <div id="loginRequiredBanner" class="login-required-banner" style="display: none;" role="status">
+                <i class="fas fa-lock" aria-hidden="true"></i>
+                <span id="loginRequiredBannerText">You are not logged in. Invoices and changes will not save until you log in.</span>
+                <button type="button" class="btn btn-sm btn-primary" id="loginBannerBtn">
+                    <i class="fas fa-sign-in-alt"></i> Log in
+                </button>
             </div>
             <nav>
                 <button class="nav-btn active" data-tab="projects">
@@ -1066,7 +1076,7 @@
         <div class="modal-content">
             <span class="close" id="closeAuthModal">&times;</span>
             <h2><i class="fas fa-lock"></i> Authentication Required</h2>
-            <p>Please login to add/edit/delete items:</p>
+            <p id="authModalMessage">Please log in to save invoices, add items, and make changes.</p>
             <form id="authForm" novalidate>
                 <div class="form-group">
                     <label for="adminUsername">Username:</label>
@@ -2636,6 +2646,6 @@
             console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.104 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.110&t=202606061851&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.111&t=202606061853&cb=9&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>
