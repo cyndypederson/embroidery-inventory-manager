@@ -314,7 +314,8 @@ const filterState = {
     sales: {},
     wip: {},
     gallery: {},
-    ideas: {}
+    ideas: {},
+    completed: {}
 };
 
 function saveCurrentFilters(tabName) {
@@ -2099,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.115'
+                appVersion: '1.0.116'
             }
         };
         
@@ -4008,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.115'; // Current app version
+                const currentVersion = '1.0.116'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5588,8 +5589,10 @@ function initInvoicesTableActions() {
         if (!invoiceId || !action) return;
 
         if (action === 'view') {
+            closeModal('invoicesListModal');
             viewInvoice(invoiceId);
         } else if (action === 'print') {
+            closeModal('invoicesListModal');
             printInvoiceById(invoiceId);
         } else if (action === 'delete') {
             await deleteInvoiceFromHistory(invoiceId);
@@ -6313,7 +6316,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.115';
+        const currentVersion = '1.0.116';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -16647,10 +16650,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 let selectedCompletedItems = new Set();
 
 // Filter completed items (debounced)
+const debouncedLoadCompletedItems = PerformanceManager.debounce(() => {
+    loadCompletedItemsTable();
+}, 300);
+
 function filterCompletedItems() {
-    return PerformanceManager.debounce(() => {
-        loadCompletedItemsTable();
-    }, 300)();
+    debouncedLoadCompletedItems();
 }
 
 // Clear completed items filters
@@ -16725,15 +16730,54 @@ function populateCompletedCustomerFilter() {
     }
 }
 
+function getCompletedItemFilterDate(item) {
+    const raw = item.dateCompleted || item.invoicedDate || item.dateAdded;
+    if (!raw) return null;
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function completedItemMatchesDateFilter(itemDate, dateFilter) {
+    const now = new Date();
+    switch (dateFilter) {
+        case 'today':
+            return itemDate.toDateString() === now.toDateString();
+        case 'week': {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return itemDate >= weekAgo;
+        }
+        case 'month': {
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return itemDate >= monthAgo;
+        }
+        case 'quarter': {
+            const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            return itemDate >= quarterAgo;
+        }
+        case 'year': {
+            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            return itemDate >= yearAgo;
+        }
+        default:
+            return true;
+    }
+}
+
 // Completed tab: shared filter logic (desktop grid + mobile cards)
 function getFilteredCompletedProjects() {
     const completedProjects = inventory.filter(item => {
         if (item.status !== 'completed') return false;
         
         const searchElement = document.getElementById('completedSearchItems');
-        const searchTerm = searchElement?.value?.toLowerCase() || '';
-        if (searchTerm && !item.description?.toLowerCase().includes(searchTerm)) {
-            return false;
+        const searchTerm = searchElement?.value?.toLowerCase().trim() || '';
+        if (searchTerm) {
+            const haystack = [
+                item.description,
+                item.name,
+                item.customer,
+                item.notes
+            ].filter(Boolean).join(' ').toLowerCase();
+            if (!haystack.includes(searchTerm)) return false;
         }
         
         const customerFilter = document.getElementById('completedCustomerFilter')?.value || '';
@@ -16742,34 +16786,10 @@ function getFilteredCompletedProjects() {
         }
         
         const dateFilter = document.getElementById('completedDateFilter')?.value || '';
-        if (dateFilter && item.invoicedDate) {
-            const itemDate = new Date(item.invoicedDate);
-            const now = new Date();
-            
-            switch (dateFilter) {
-                case 'today':
-                    if (itemDate.toDateString() !== now.toDateString()) return false;
-                    break;
-                case 'week': {
-                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    if (itemDate < weekAgo) return false;
-                    break;
-                }
-                case 'month': {
-                    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    if (itemDate < monthAgo) return false;
-                    break;
-                }
-                case 'quarter': {
-                    const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                    if (itemDate < quarterAgo) return false;
-                    break;
-                }
-                case 'year': {
-                    const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-                    if (itemDate < yearAgo) return false;
-                    break;
-                }
+        if (dateFilter) {
+            const itemDate = getCompletedItemFilterDate(item);
+            if (!itemDate || !completedItemMatchesDateFilter(itemDate, dateFilter)) {
+                return false;
             }
         }
         
