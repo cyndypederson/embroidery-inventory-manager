@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.120'
+                appVersion: '1.0.121'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.120'; // Current app version
+                const currentVersion = '1.0.121'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5137,17 +5137,9 @@ function generateInvoiceHTML(invoice) {
     const businessName = "CyndyP Stitchcraft";
     const businessEmail = "cyndypstitchcraft@gmail.com";
     
-    // Debug: Check for duplicate sales items
-    console.log('Invoice sales items:', invoice.sales);
-    if (invoice.sales) {
-        const uniqueSales = invoice.sales.filter((sale, index, self) => 
-            index === self.findIndex(s => s.itemName === sale.itemName && s.dateSold === sale.dateSold && s.salePrice === sale.salePrice)
-        );
-        if (uniqueSales.length !== invoice.sales.length) {
-            console.warn('Duplicate sales items detected, removing duplicates');
-            invoice.sales = uniqueSales;
-        }
-    }
+    // Keep every selected line item. Identical descriptions (e.g. 3 separate
+    // bookmark cards) are intentional — do not de-dupe by name/date/price.
+    console.log('Invoice sales items:', invoice.sales?.length, invoice.sales);
     
     // Get customer details
     const customer = customers.find(c => c.name === invoice.customer);
@@ -6300,7 +6292,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.120';
+        const currentVersion = '1.0.121';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
