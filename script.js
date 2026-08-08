@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.117'
+                appVersion: '1.0.118'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.117'; // Current app version
+                const currentVersion = '1.0.118'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6316,7 +6316,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.117';
+        const currentVersion = '1.0.118';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -7119,25 +7119,30 @@ async function handleAddCompletedItem(e) {
     
     // Store expanded customer groups before reload
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+
+    const quantity = Math.max(1, Math.min(50, parseInt(getElementValue('addCompletedItemQuantity'), 10) || 1));
+    const price = parseFloat(getElementValue('addCompletedItemPrice')) || 0;
     
-    // Create new completed item
+    // Create new completed item (quantity expands into individual cards)
     const newItem = {
-        _id: Date.now().toString(), // Simple ID generation
         description: description.trim(),
-        quantity: parseInt(getElementValue('addCompletedItemQuantity')) || 1,
-        price: parseFloat(getElementValue('addCompletedItemPrice')) || 0,
+        name: description.trim(),
+        quantity: 1,
+        price: price,
+        totalValue: price,
         customer: applyTenantCustomerDefault(getElementValue('addCompletedItemCustomer')),
         invoicedDate: getElementValue('addCompletedItemInvoicedDate'),
         status: 'completed',
         type: 'project',
         isGift: document.getElementById('addCompletedItemIsGift')?.checked === true,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        dateAdded: new Date().toISOString()
     };
+
+    const newItems = expandQuantityIntoIndividualRecords(newItem, quantity);
+    inventory.push(...newItems);
     
-    console.log('New completed item:', newItem);
-    
-    // Add to inventory
-    inventory.push(newItem);
+    console.log(`New completed item(s): ${newItems.length}`, newItems[0]);
     
     await saveData();
     loadCompletedItemsTable(); // Refresh completed items
@@ -7150,8 +7155,11 @@ async function handleAddCompletedItem(e) {
     // Close modal
     closeModal('addCompletedItemModal');
     
-    showNotification('Completed item added successfully', 'success');
-    console.log('Completed item added successfully');
+    const msg = quantity === 1
+        ? 'Completed item added successfully'
+        : `Created ${quantity} individual completed cards`;
+    showNotification(msg, 'success');
+    console.log('Completed item(s) added successfully');
 }
 
 async function handleEditItem(e) {
@@ -9447,6 +9455,85 @@ function copyFromLastInventory() {
 }
 
 // Handle Add Project Form
+/** Unique client id so multi-qty expands don't collide before Mongo assigns ObjectIds. */
+function newClientRecordId(index = 0) {
+    return `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/**
+ * Expand a project/completed add into N individual records (quantity 1 each).
+ * Inventory supplies should NOT use this — stock stays on one record.
+ */
+function expandQuantityIntoIndividualRecords(baseRecord, quantity) {
+    const count = Math.max(1, Math.min(50, parseInt(quantity, 10) || 1));
+    const unitPrice = parseFloat(baseRecord.price) || 0;
+    const records = [];
+    for (let i = 0; i < count; i++) {
+        records.push({
+            ...baseRecord,
+            _id: newClientRecordId(i),
+            quantity: 1,
+            totalValue: unitPrice
+        });
+    }
+    return records;
+}
+
+/** Split the project open in Edit Project (qty N) into N individual cards. */
+async function splitEditedProjectIntoIndividualCards() {
+    const index = parseInt(document.getElementById('editProjectIndex')?.value, 10);
+    if (Number.isNaN(index) || index < 0 || index >= inventory.length) {
+        showNotification('No project selected to split', 'error');
+        return;
+    }
+
+    const item = inventory[index];
+    if (!item || item.type === 'inventory') {
+        showNotification('Only projects can be split into cards', 'error');
+        return;
+    }
+
+    const qtyField = parseInt(document.getElementById('editProjectQuantity')?.value, 10);
+    const qty = Math.max(1, Math.min(50, qtyField || parseInt(item.quantity, 10) || 1));
+    if (qty <= 1) {
+        showNotification('Quantity is already 1 — nothing to split', 'info');
+        return;
+    }
+
+    if (!confirm(`Split “${item.description || item.name || 'this project'}” into ${qty} individual cards (qty 1 each)?`)) {
+        return;
+    }
+
+    showLoadingSpinner('Splitting into cards...', 'split-project');
+    try {
+        const unitPrice = parseFloat(document.getElementById('editProjectPrice')?.value) || parseFloat(item.price) || 0;
+        const { _id, saleId, ...rest } = item;
+        const base = {
+            ...rest,
+            name: document.getElementById('editProjectDescription')?.value?.trim() || item.name,
+            description: document.getElementById('editProjectDescription')?.value?.trim() || item.description,
+            price: unitPrice,
+            quantity: 1,
+            totalValue: unitPrice
+        };
+        const records = expandQuantityIntoIndividualRecords(base, qty);
+        inventory.splice(index, 1, ...records);
+        await saveData();
+        closeModal('editProjectModal');
+        loadInventoryTable();
+        if (typeof loadProjectsCards === 'function') loadProjectsCards();
+        if (typeof loadCompletedItemsTable === 'function') loadCompletedItemsTable();
+        if (typeof loadWIPTab === 'function') loadWIPTab();
+        updateDashboardStats();
+        showNotification(`Split into ${qty} individual project cards`, 'success');
+    } catch (err) {
+        console.error('Split failed:', err);
+        showNotification('Could not split project', 'error');
+    } finally {
+        hideLoadingSpinner('split-project');
+    }
+}
+
 async function handleAddProject(e) {
     e.preventDefault();
     console.log('🔘 Add Project button clicked!');
@@ -9454,7 +9541,7 @@ async function handleAddProject(e) {
     showLoadingSpinner('Adding project...', 'add-project');
     
     const description = document.getElementById('projectDescription').value.trim();
-    const quantity = parseInt(document.getElementById('projectQuantity').value) || 1;
+    const quantity = Math.max(1, Math.min(50, parseInt(document.getElementById('projectQuantity').value, 10) || 1));
     const price = parseFloat(document.getElementById('projectPrice').value) || 0;
     
     if (!description) {
@@ -9474,9 +9561,9 @@ async function handleAddProject(e) {
     const projectData = {
         name: description,
         description: description,
-        quantity: quantity,
+        quantity: 1,
         price: price,
-        totalValue: quantity * price,
+        totalValue: price,
         type: 'project',
         status: status,
         isGift: !!isGift,
@@ -9492,14 +9579,20 @@ async function handleAddProject(e) {
         photo: null
     };
     
-    // Projects don't need images - they're tracked through inventory, ideas, and gallery
-    
-    // Add to inventory array (projects are stored in the same array)
-    inventory.push(projectData);
-    const newIndex = inventory.length - 1;
+    // Quantity N → N individual project cards (each qty 1)
+    const newProjects = expandQuantityIntoIndividualRecords(projectData, quantity);
+    console.log(`📦 Expanding quantity ${quantity} into ${newProjects.length} project card(s)`, newProjects.map(p => ({ _id: p._id, quantity: p.quantity })));
+    if (newProjects.length !== quantity) {
+        console.error('❌ Quantity expand mismatch', { quantity, created: newProjects.length });
+    }
+    const startIndex = inventory.length;
+    inventory.push(...newProjects);
+
     const shouldCreateSale = status === 'sold';
     if (shouldCreateSale) {
-        createOrUpdateSaleFromProject(newIndex);
+        for (let i = 0; i < newProjects.length; i++) {
+            createOrUpdateSaleFromProject(startIndex + i);
+        }
     }
     
     // If adding to a customer, ensure that customer stays expanded
@@ -9543,6 +9636,12 @@ async function handleAddProject(e) {
     
     // Update UI
     loadInventoryTable();
+    if (typeof loadProjectsCards === 'function') {
+        loadProjectsCards();
+    }
+    if (status === 'completed' && typeof loadCompletedItemsTable === 'function') {
+        loadCompletedItemsTable();
+    }
     updateDashboardStats();
     if (shouldCreateSale) {
         refreshSalesViews();
@@ -9554,7 +9653,10 @@ async function handleAddProject(e) {
     closeModal('addProjectModal');
     
     // Show success message
-    showNotification('Success', 'Project added successfully!');
+    const msg = quantity === 1
+        ? 'Project added successfully!'
+        : `Created ${quantity} individual project cards.`;
+    showNotification('Success', msg);
 }
 
 // Copy from last project
@@ -9737,7 +9839,12 @@ async function handleAddItem(e) {
 async function saveItemWithPhoto(item) {
     console.log('💾 Saving item:', item);
     if (item) {
-        inventory.push(item);
+        // Projects: qty N → N cards. Inventory supplies keep a single stock quantity.
+        const toAdd = (item.type === 'project' && (parseInt(item.quantity, 10) || 1) > 1)
+            ? expandQuantityIntoIndividualRecords(item, item.quantity)
+            : [item._id ? item : { ...item, _id: newClientRecordId(0) }];
+
+        inventory.push(...toAdd);
         await saveData();
         loadInventoryTable(); // Projects table
         loadInventoryItemsTable(); // Inventory items table
@@ -9761,11 +9868,11 @@ async function saveItemWithPhoto(item) {
         // Add small delay for mobile modal closing
         setTimeout(() => {
             closeModal('addItemModal');
-            
-            // Force close on mobile if needed
-            // Modal closed successfully
-            
-            showNotification('Item added successfully!', 'success');
+            const count = toAdd.length;
+            const msg = (item.type === 'project' && count > 1)
+                ? `Created ${count} individual project cards`
+                : 'Item added successfully!';
+            showNotification(msg, 'success');
             console.log('✅ Item added and modal should be closed');
         }, 100);
     }

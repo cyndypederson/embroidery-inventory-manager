@@ -16,7 +16,7 @@
         }
     </script>
     <meta name="version" content="1.0.116">
-    <title>CyndyP StitchCraft Inventory - v1.0.117 - CACHE BUST</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.118 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -44,7 +44,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
     <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.117&t=202608081515&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.118&t=202608081549&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -1414,7 +1414,9 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="projectQuantity">Quantity</label>
-                    <input type="number" id="projectQuantity" min="1" value="1">
+                    <input type="number" id="projectQuantity" min="1" max="50" value="1"
+                           title="Creates one project card per unit (e.g. 3 → three cards)">
+                    <small>Creates one card per unit (e.g. 3 floral bookmarks → 3 cards)</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="projectStatus">Status</label>
@@ -1917,6 +1919,7 @@
                 <div class="form-group half-width">
                     <label for="editProjectQuantity">Quantity</label>
                     <input type="number" id="editProjectQuantity" min="1" value="1" oninput="calculateEditTotalValue()">
+                    <small>To turn a batch into separate cards, use Split below.</small>
                 </div>
                 
                 <div class="form-group half-width">
@@ -1996,6 +1999,9 @@
                 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editProjectModal')">Cancel</button>
+                    <button type="button" class="btn btn-outline" onclick="splitEditedProjectIntoIndividualCards()" title="Replace this batch with one card per unit">
+                        <i class="fas fa-clone"></i> Split into cards
+                    </button>
                     <button type="button" class="btn btn-info" onclick="copyCurrentProject()" title="Create a copy of this project">
                         <i class="fas fa-copy"></i> Copy Project
                     </button>
@@ -2082,7 +2088,10 @@
                 
                 <div class="form-group half-width">
                     <label for="addCompletedItemQuantity">Quantity</label>
-                    <input type="number" id="addCompletedItemQuantity" min="1" value="1" oninput="calculateAddCompletedItemTotal()">
+                    <input type="number" id="addCompletedItemQuantity" min="1" max="50" value="1"
+                           oninput="calculateAddCompletedItemTotal()"
+                           title="Creates one completed card per unit (e.g. 3 → three cards)">
+                    <small>Creates one card per unit</small>
                 </div>
                 
                 <div class="form-group half-width">
@@ -2586,7 +2595,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.116 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.118 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2626,7 +2635,7 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.116') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.118') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
@@ -2643,9 +2652,9 @@
                 }, 2000);
             }
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.116 - IMMEDIATE MOBILE RELOAD');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.118 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.117&t=202608081515&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.118&t=202608081549&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>
