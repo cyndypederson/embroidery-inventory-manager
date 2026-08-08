@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.120'
+                appVersion: '1.0.122'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.120'; // Current app version
+                const currentVersion = '1.0.122'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6292,7 +6292,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.120';
+        const currentVersion = '1.0.122';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -10592,6 +10592,17 @@ document.addEventListener('DOMContentLoaded', function() {
             window.__printTitleBackup = document.title;
             const ltp = document.getElementById('logoTagPreview');
             const ptp = document.getElementById('priceTagPreview');
+
+            // Clear screen-only inline styles that force extra page breaks when printing
+            // (padding: 2rem !important on the preview overflows a Letter sheet).
+            [ptp, ltp].forEach((el) => {
+                if (!el) return;
+                el.style.removeProperty('padding');
+                el.style.removeProperty('min-height');
+                el.style.removeProperty('width');
+                el.style.removeProperty('margin');
+            });
+
             const logoVisible = ltp && window.getComputedStyle(ltp).display !== 'none' && (ltp.innerHTML || '').trim().length > 0;
             const priceVisible = ptp && window.getComputedStyle(ptp).display !== 'none' && (ptp.innerHTML || '').trim().length > 0;
             const printingLogos = document.body.classList.contains('printing-logo-tags');
@@ -11173,14 +11184,15 @@ async function generatePriceTags(previewOnly = false) {
     // Set the HTML
     preview.innerHTML = priceTagsHTML;
     
-    // Force display with important styles
-    preview.style.setProperty('display', 'block', 'important');
-    preview.style.setProperty('visibility', 'visible', 'important');
-    preview.style.setProperty('opacity', '1', 'important');
-    preview.style.setProperty('min-height', '200px', 'important');
-    preview.style.setProperty('width', '100%', 'important');
-    preview.style.setProperty('padding', '2rem', 'important');
-    preview.style.setProperty('background', 'white', 'important');
+    // Screen preview styling (print clears these in beforeprint / @media print)
+    preview.style.display = 'block';
+    preview.style.visibility = 'visible';
+    preview.style.opacity = '1';
+    preview.style.minHeight = '200px';
+    preview.style.width = '100%';
+    preview.style.padding = '2rem';
+    preview.style.background = 'white';
+    preview.classList.add('price-tag-preview-visible');
     
     // Make sure parent containers are visible
     let parent = preview.parentElement;
@@ -17660,6 +17672,7 @@ function generateInvoiceForItems(items, customer, shouldDisplay = false) {
         date: new Date().toISOString(),
         customer: customerName,
         items: items.map(item => ({
+            _id: item._id,
             description: item.description || item.name,
             quantity: item.quantity || 1,
             price: item.price || 0,

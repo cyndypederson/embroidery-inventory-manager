@@ -7612,11 +7612,14 @@ body {
         display: block !important;
         visibility: visible !important;
         position: static !important;
-        width: 8.5in;
-        margin: 0;
-        padding: 0;
+        width: 8.5in !important;
+        max-width: 8.5in !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
         background: white !important;
-        box-sizing: border-box;
+        box-sizing: border-box !important;
     }
 
     body:not(.printing-logo-tags) #priceTagPreview *,
@@ -7629,6 +7632,7 @@ body {
         display: block !important;
         margin: 0 !important;
         padding: 0 !important;
+        min-height: 0 !important;
         max-width: none !important;
         background: white !important;
     }
@@ -7642,11 +7646,12 @@ body {
         box-sizing: border-box;
     }
 
-    /* One Letter sheet per chunk: 8.5×11 with equal margins around the 6.5×8.75 grid. */
+    /* One Letter sheet per chunk. Size comes from padding + 8.75in grid (= 11in);
+       avoid a hard height:11in — with any parent padding that overflows onto page 2. */
     .price-tags-page {
         width: 8.5in;
-        height: 11in;
-        max-height: 11in;
+        height: auto;
+        max-height: none;
         padding: 1.125in 1in;
         margin: 0;
         box-sizing: border-box;
@@ -7658,8 +7663,8 @@ body {
     }
 
     .price-tags-page:last-child {
-        break-after: auto;
-        page-break-after: auto;
+        break-after: avoid;
+        page-break-after: avoid;
     }
 
     /* 3×4 of 2in tags, 0.25in gaps → 6.5in × 8.75in */
