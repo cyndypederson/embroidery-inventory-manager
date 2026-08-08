@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.119'
+                appVersion: '1.0.120'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.119'; // Current app version
+                const currentVersion = '1.0.120'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -5936,16 +5936,6 @@ function isLocalDevelopmentHost() {
 async function checkAuthStatus() {
     console.log('🔍 checkAuthStatus called');
     
-    if (isLocalDevelopmentHost()) {
-        console.log('🔓 Localhost detected in checkAuthStatus - bypassing auth');
-        isAuthenticated = true;
-        authEnabled = false;
-        currentUsername = 'localhost';
-        currentUserIsDbUser = false;
-        updateAuthUI();
-        return { authenticated: true, authEnabled: false };
-    }
-    
     try {
         const response = await fetch('/api/auth/status', {
             credentials: 'include'
@@ -6033,9 +6023,6 @@ function promptLoginRequired(message, operationName) {
 
 // Check if user is authenticated (for operations)
 async function checkAuthentication() {
-    if (isLocalDevelopmentHost()) {
-        return true;
-    }
     if (isAuthenticated && authLastConfirmedAt && (Date.now() - authLastConfirmedAt) < AUTH_CONFIRM_TTL_MS) {
         return true;
     }
@@ -6049,10 +6036,6 @@ async function checkAuthentication() {
 // Require authentication for protected operations
 // Returns true if authenticated, false if not (and shows login modal)
 async function requireAuthentication(operationName = 'this action') {
-    if (isLocalDevelopmentHost()) {
-        return true;
-    }
-    
     const isAuth = await checkAuthentication();
     if (!isAuth) {
         const invoiceOps = ['create an invoice', 'generate an invoice', 'view past invoices'];
@@ -6317,7 +6300,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.119';
+        const currentVersion = '1.0.120';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -7955,8 +7938,8 @@ async function saveData() {
 }
 
 /**
- * Merge items that exist only in this browser's localStorage into MongoDB/cloud.
- * Recovers projects added while logged out (offline/local save).
+ * Merge items that exist only in this browser (memory and/or localStorage)
+ * into MongoDB/cloud. Recovers projects added while not truly logged in.
  */
 async function syncLocalOnlyInventoryToCloud() {
     let stored = [];
@@ -7964,9 +7947,32 @@ async function syncLocalOnlyInventoryToCloud() {
         stored = JSON.parse(localStorage.getItem('embroideryInventory') || '[]');
     } catch (e) {
         console.warn('Could not read local inventory for sync', e);
-        return 0;
+        stored = [];
     }
-    if (!Array.isArray(stored) || stored.length === 0) {
+    if (!Array.isArray(stored)) stored = [];
+
+    // Include in-memory items too — localhost auth-bypass used to leave new
+    // cards only in memory after a failed cloud save.
+    const memory = [
+        ...(Array.isArray(inventory) ? inventory : []),
+        ...(Array.isArray(window.inventory) ? window.inventory : [])
+    ];
+
+    const byKey = new Map();
+    const addCandidate = (item) => {
+        if (!item || typeof item !== 'object') return;
+        const id = String(item._id || '');
+        const name = ((item.description || item.name || '') + '').trim().toLowerCase();
+        const when = item.dateAdded || item.createdAt || '';
+        const key = id || `${name}|${when}|${item.quantity || 1}|${item.status || ''}|${item.customer || ''}`;
+        if (!key || key === '|||1||') return;
+        if (!byKey.has(key)) byKey.set(key, item);
+    };
+    stored.forEach(addCandidate);
+    memory.forEach(addCandidate);
+    const candidates = [...byKey.values()];
+
+    if (candidates.length === 0) {
         return 0;
     }
 
@@ -7987,13 +7993,13 @@ async function syncLocalOnlyInventoryToCloud() {
             return `${name}|${when}|${i.quantity || 1}|${i.status || ''}|${i.customer || ''}`;
         }));
 
-        const missing = stored.filter(i => {
+        const missing = candidates.filter(i => {
             const id = String(i._id || '');
             if (id && cloudIds.has(id)) return false;
             const name = ((i.description || i.name || '') + '').trim().toLowerCase();
             const when = i.dateAdded || i.createdAt || '';
             const fp = `${name}|${when}|${i.quantity || 1}|${i.status || ''}|${i.customer || ''}`;
-            return !cloudFingerprints.has(fp);
+            return name && !cloudFingerprints.has(fp);
         });
 
         if (missing.length === 0) {
@@ -8022,7 +8028,16 @@ async function syncLocalOnlyInventoryToCloud() {
         return missing.length;
     } catch (err) {
         console.error('Local→cloud inventory sync failed:', err);
-        showNotification('Could not sync local-only items — stay logged in and try Data Management → Push local-only items', 'warning');
+        const needsLogin = /401|403|Auth/i.test(err.message || '');
+        showNotification(
+            needsLogin
+                ? 'Log in first, then use Push local-only items to cloud'
+                : 'Could not sync local-only items — try again after logging in',
+            'warning'
+        );
+        if (needsLogin) {
+            promptLoginRequired('Log in to sync local items to the cloud', 'sync local items');
+        }
         window.isSaving = false;
         window.isModifying = false;
         return 0;
@@ -8030,6 +8045,9 @@ async function syncLocalOnlyInventoryToCloud() {
 }
 
 async function pushLocalOnlyItemsToCloudFromUI() {
+    const ok = await requireAuthentication('sync local items to the cloud');
+    if (!ok) return;
+
     showLoadingSpinner('Checking for local-only items...', 'local-sync');
     try {
         const n = await syncLocalOnlyInventoryToCloud();
