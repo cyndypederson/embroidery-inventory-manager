@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.121'
+                appVersion: '1.0.120'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.121'; // Current app version
+                const currentVersion = '1.0.120'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6292,7 +6292,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.121';
+        const currentVersion = '1.0.120';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -17683,10 +17683,13 @@ function displayInvoice(invoice) {
         date: new Date(invoice.date).toLocaleDateString(),
         status: 'completed',
         customer: invoice.customer,
-        sales: invoice.items.map(item => ({
+        sales: invoice.items.map((item, index) => ({
             itemName: item.description,
             dateSold: new Date().toLocaleDateString(),
-            salePrice: item.total
+            salePrice: item.total,
+            // Preserve identity so identical products stay as separate lines
+            lineId: item._id || `${invoice.id}-line-${index}`,
+            quantity: item.quantity || 1
         })),
         total: invoice.total,
         notes: `Generated from ${invoice.items.length} completed item(s)`
