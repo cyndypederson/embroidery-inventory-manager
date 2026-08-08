@@ -1,6 +1,6 @@
 {
   "name": "embroidery-inventory-manager",
-  "version": "1.0.116",
+  "version": "1.0.117",
   "description": "A web-based inventory management system for embroidery businesses",
   "main": "server.js",
   "scripts": {

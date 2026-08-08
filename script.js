@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.116'
+                appVersion: '1.0.117'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.116'; // Current app version
+                const currentVersion = '1.0.117'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6316,7 +6316,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.116';
+        const currentVersion = '1.0.117';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -10386,7 +10386,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.title = 'StitchCraft-Logo-Hang-Tags';
             } else if (priceVisible) {
                 document.body.classList.remove('printing-logo-tags');
-                document.title = 'StitchCraft-Price-Tags';
+                const mixed = ptp && ptp.querySelector('.logo-hang-tag') && ptp.querySelector('.price-tag:not(.logo-hang-tag)');
+                document.title = mixed ? 'StitchCraft-Mixed-Tags' : 'StitchCraft-Price-Tags';
             }
         });
     }
@@ -10467,14 +10468,9 @@ async function resolveLogoForLogoTags() {
     return '/logos/stitchcraft-logo.svg';
 }
 
-function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
-    const logoUrl = logoPath.startsWith('http') || logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
-    const sep = logoUrl.includes('?') ? '&' : '?';
-    const logoCached = `${logoUrl}${sep}t=${Date.now()}`;
-    const qrSep = qrPath.includes('?') ? '&' : '?';
-    const qrCached = `${qrPath}${qrSep}t=${Date.now()}`;
-
-    const oneTag = (n) => `
+/** Build one logo hang tag cell (shared by logo-only and mixed sheets). */
+function buildLogoHangTagHTML(n, logoCached, qrCached) {
+    return `
             <div class="price-tag logo-hang-tag" role="group" aria-label="Logo hang tag ${n}">
                 <div class="logo-hang-tag-brand-row">
                     <img src="${SecurityManager.escapeHtml(logoCached)}" alt="Your brand logo" class="logo-hang-tag-brand-img">
@@ -10484,16 +10480,27 @@ function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
                     <span class="price-tag-social">Find us on Facebook</span>
                 </div>
             </div>`;
+}
+
+function collectLogoHangTagFragments(count, logoPath, qrPath) {
+    const logoUrl = logoPath.startsWith('http') || logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+    const sep = logoUrl.includes('?') ? '&' : '?';
+    const logoCached = `${logoUrl}${sep}t=${Date.now()}`;
+    const qrSep = qrPath.includes('?') ? '&' : '?';
+    const qrCached = `${qrPath}${qrSep}t=${Date.now()}`;
 
     const tagFragments = [];
     for (let i = 0; i < count; i++) {
-        tagFragments.push(oneTag(i + 1));
+        tagFragments.push(buildLogoHangTagHTML(i + 1, logoCached, qrCached));
     }
+    return tagFragments;
+}
 
-    const TAGS_PER_PAGE = TAGS_PER_LETTER_SHEET;
+/** Chunk any mix of tag HTML fragments into Letter sheets (12 per page). */
+function chunkTagFragmentsIntoPages(tagFragments) {
     const pages = [];
-    for (let i = 0; i < tagFragments.length; i += TAGS_PER_PAGE) {
-        const pageTags = tagFragments.slice(i, i + TAGS_PER_PAGE).join('');
+    for (let i = 0; i < tagFragments.length; i += TAGS_PER_LETTER_SHEET) {
+        const pageTags = tagFragments.slice(i, i + TAGS_PER_LETTER_SHEET).join('');
         pages.push(`
             <div class="price-tags-page">
                 <div class="price-tags-grid">
@@ -10501,6 +10508,12 @@ function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
                 </div>
             </div>`);
     }
+    return pages.join('');
+}
+
+function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
+    const tagFragments = collectLogoHangTagFragments(count, logoPath, qrPath);
+    const pagesHTML = chunkTagFragmentsIntoPages(tagFragments);
 
     return `
         <div class="logo-tags-container">
@@ -10515,7 +10528,7 @@ function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
                     </button>
                 </div>
             </div>
-            ${pages.join('')}
+            ${pagesHTML}
         </div>`;
 }
 
@@ -10907,10 +10920,25 @@ async function generatePriceTags(previewOnly = false) {
     
     // Log final logo status
     console.log('📋 Final logo status:', { vendorLogo, myLogo, vendorLogoMap });
+
+    const logoHangRaw = parseInt(formData.get('logoHangCount'), 10);
+    const logoHangCount = Math.min(120, Math.max(0, Number.isNaN(logoHangRaw) ? 0 : logoHangRaw));
+    let logoHangPath = null;
+    if (logoHangCount > 0) {
+        logoHangPath = await resolveLogoForLogoTags();
+    }
         
     // Generate price tags HTML with logos (pass vendorLogoMap for item-specific logos)
-    // Generate price tags HTML - vendor number will be retrieved per-item from customer records
-    const priceTagsHTML = generatePriceTagsHTML(selectedItemsForTags, vendorName, null, vendorLogo, myLogo, vendorLogoMap);
+    // Optional logo hang tags are merged onto the same Letter sheets (12 per page).
+    const priceTagsHTML = generatePriceTagsHTML(
+        selectedItemsForTags,
+        vendorName,
+        null,
+        vendorLogo,
+        myLogo,
+        vendorLogoMap,
+        { logoHangCount, logoHangPath, logoHangQrPath: LOGO_TAG_QR_PATH }
+    );
     
     // Get preview element before closing modal
     const preview = document.getElementById('priceTagPreview');
@@ -10996,8 +11024,8 @@ async function generatePriceTags(previewOnly = false) {
         }
 }
 
-function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo, vendorLogoMap = {}) {
-    console.log('🎨 Generating price tags HTML with logos:', { vendorLogo, myLogo, vendorLogoMap });
+function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLogo, vendorLogoMap = {}, extras = {}) {
+    console.log('🎨 Generating price tags HTML with logos:', { vendorLogo, myLogo, vendorLogoMap, extras });
     
     // Helper function to get vendor logo for an item
     const getVendorLogoForItem = (item) => {
@@ -11088,26 +11116,27 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
             `);
         }
     });
-    
-    // Chunk tags into pages of 9 (3x3 grid per page)
-    // 3 columns × 4 rows = 12 tags per page with 2in tags on letter paper
-    const TAGS_PER_PAGE = TAGS_PER_LETTER_SHEET;
-    const pages = [];
-    for (let i = 0; i < tagFragments.length; i += TAGS_PER_PAGE) {
-        const pageTags = tagFragments.slice(i, i + TAGS_PER_PAGE).join('');
-        pages.push(`
-            <div class="price-tags-page">
-                <div class="price-tags-grid">
-                    ${pageTags}
-                </div>
-            </div>
-        `);
+
+    const logoHangCount = Math.max(0, extras.logoHangCount || 0);
+    if (logoHangCount > 0 && extras.logoHangPath) {
+        const hangFragments = collectLogoHangTagFragments(
+            logoHangCount,
+            extras.logoHangPath,
+            extras.logoHangQrPath || LOGO_TAG_QR_PATH
+        );
+        // Price tags first (easy to spot), then logo hang fillers on the same sheets
+        tagFragments.push(...hangFragments);
     }
     
-    const pagesHTML = pages.join('');
+    const pagesHTML = chunkTagFragmentsIntoPages(tagFragments);
+    const priceCount = tagFragments.length - logoHangCount;
+    const sheetCount = Math.max(1, Math.ceil(tagFragments.length / TAGS_PER_LETTER_SHEET));
     
     // Determine header title - use vendor name if provided, otherwise show "Multiple Vendors"
-    const headerTitle = vendorName || (items.length > 0 && items[0].customer ? `${items.length} Items - Multiple Vendors` : 'Price Tags');
+    let headerTitle = vendorName || (items.length > 0 && items[0].customer ? `${items.length} Items - Multiple Vendors` : 'Price Tags');
+    if (logoHangCount > 0) {
+        headerTitle = `${priceCount} price + ${logoHangCount} logo hang · ${sheetCount} sheet${sheetCount === 1 ? '' : 's'}`;
+    }
     
     return `
         <div class="price-tags-container">
