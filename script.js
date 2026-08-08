@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.118'
+                appVersion: '1.0.119'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.118'; // Current app version
+                const currentVersion = '1.0.119'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6154,6 +6154,7 @@ async function handleAuthSubmit(event) {
             updateAuthUI();
             showNotification('Login successful!', 'success');
             await syncInvoicesAfterLogin();
+            await syncLocalOnlyInventoryToCloud();
             
             // Switch to the requested tab if any
             const requestedTab = sessionStorage.getItem('requestedTab');
@@ -6316,7 +6317,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.118';
+        const currentVersion = '1.0.119';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -7914,20 +7915,32 @@ async function saveData() {
     try {
         // Try API first, fallback to localStorage
         await saveDataToAPI();
+        // Keep browser copy aligned with what we just pushed
+        try { await saveDataToLocalStorage(); } catch (_) { /* non-fatal */ }
         console.log('✅ Data saved to API successfully');
         hideLoadingSpinner('save');
         showNotification('Data saved successfully!', 'success');
     } catch (error) {
         console.error('❌ API save failed, falling back to localStorage:', error);
         try {
-        await saveDataToLocalStorage();
+            await saveDataToLocalStorage();
             hideLoadingSpinner('save');
-            showNotification('Data saved locally (offline mode)', 'info');
+            const authHint = (error.message || '').match(/401|403|Auth/i)
+                ? 'Log in, then use Data Management → Push local-only items to cloud.'
+                : 'Check your connection, then push from Data Management when back online.';
+            showNotification(`Saved on this device only — not on live yet. ${authHint}`, 'warning');
+            // Do NOT reload from the cloud here — that would hide local-only items from the UI.
+            window.isSaving = false;
+            window.isModifying = false;
+            return;
         } catch (localError) {
             hideLoadingSpinner('save');
             showError('Failed to save data', localError, () => {
                 saveData();
             });
+            window.isSaving = false;
+            window.isModifying = false;
+            return;
         }
     }
     
@@ -7939,6 +7952,93 @@ async function saveData() {
         // Trigger synchronization for both desktop and mobile views
         synchronizeViews();
     }, 1000); // Reduced delay to 1 second
+}
+
+/**
+ * Merge items that exist only in this browser's localStorage into MongoDB/cloud.
+ * Recovers projects added while logged out (offline/local save).
+ */
+async function syncLocalOnlyInventoryToCloud() {
+    let stored = [];
+    try {
+        stored = JSON.parse(localStorage.getItem('embroideryInventory') || '[]');
+    } catch (e) {
+        console.warn('Could not read local inventory for sync', e);
+        return 0;
+    }
+    if (!Array.isArray(stored) || stored.length === 0) {
+        return 0;
+    }
+
+    try {
+        const res = await fetch('/api/inventory', { credentials: 'include' });
+        if (!res.ok) {
+            throw new Error(`Failed to load cloud inventory: ${res.status}`);
+        }
+        const cloud = await res.json();
+        if (!Array.isArray(cloud)) {
+            throw new Error('Cloud inventory was not an array');
+        }
+
+        const cloudIds = new Set(cloud.map(i => String(i._id || '')));
+        const cloudFingerprints = new Set(cloud.map(i => {
+            const name = ((i.description || i.name || '') + '').trim().toLowerCase();
+            const when = i.dateAdded || i.createdAt || '';
+            return `${name}|${when}|${i.quantity || 1}|${i.status || ''}|${i.customer || ''}`;
+        }));
+
+        const missing = stored.filter(i => {
+            const id = String(i._id || '');
+            if (id && cloudIds.has(id)) return false;
+            const name = ((i.description || i.name || '') + '').trim().toLowerCase();
+            const when = i.dateAdded || i.createdAt || '';
+            const fp = `${name}|${when}|${i.quantity || 1}|${i.status || ''}|${i.customer || ''}`;
+            return !cloudFingerprints.has(fp);
+        });
+
+        if (missing.length === 0) {
+            console.log('☁️ No local-only inventory items to sync');
+            return 0;
+        }
+
+        console.log(`☁️ Syncing ${missing.length} local-only item(s) to cloud`, missing.map(i => i.description || i.name));
+        inventory = [...cloud, ...missing];
+        window.inventory = inventory;
+
+        // Use direct API save to avoid synchronizeViews wiping state mid-sync
+        window.isSaving = true;
+        window.isModifying = true;
+        await saveDataToAPI();
+        await saveDataToLocalStorage();
+        window.isSaving = false;
+        window.isModifying = false;
+
+        if (typeof loadProjectsCards === 'function') loadProjectsCards();
+        if (typeof loadCompletedItemsTable === 'function') loadCompletedItemsTable();
+        if (typeof loadWIPTab === 'function') loadWIPTab();
+        if (typeof updateDashboardStats === 'function') updateDashboardStats();
+
+        showNotification(`Synced ${missing.length} local-only item(s) to the cloud (visible on live after refresh)`, 'success');
+        return missing.length;
+    } catch (err) {
+        console.error('Local→cloud inventory sync failed:', err);
+        showNotification('Could not sync local-only items — stay logged in and try Data Management → Push local-only items', 'warning');
+        window.isSaving = false;
+        window.isModifying = false;
+        return 0;
+    }
+}
+
+async function pushLocalOnlyItemsToCloudFromUI() {
+    showLoadingSpinner('Checking for local-only items...', 'local-sync');
+    try {
+        const n = await syncLocalOnlyInventoryToCloud();
+        if (n === 0) {
+            showNotification('Nothing local-only to push — browser and cloud already match', 'info');
+        }
+    } finally {
+        hideLoadingSpinner('local-sync');
+    }
 }
 
 function validateDataIntegrity() {
