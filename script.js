@@ -2100,7 +2100,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.122'
+                appVersion: '1.0.123'
             }
         };
         
@@ -4009,7 +4009,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.122'; // Current app version
+                const currentVersion = '1.0.123'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6292,7 +6292,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.122';
+        const currentVersion = '1.0.123';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -10176,7 +10176,6 @@ async function handleAddCustomer(e) {
     // Refresh customer dropdowns in modals and forms
     const selectsToUpdate = [
         'itemCustomer',
-        'editItemCustomer',
         'projectCustomer',
         'editProjectCustomer',
         'addCompletedItemCustomer',
@@ -10250,79 +10249,83 @@ async function handleEditCustomer(e) {
     
     showLoadingSpinner('Updating customer...', 'edit-customer');
     
-    const form = e.target;
-    const customerIndex = parseInt(form.dataset.customerIndex);
-    
-    if (isNaN(customerIndex) || customerIndex < 0 || customerIndex >= customers.length) {
-        hideLoadingSpinner('edit-customer');
-        showNotification('Error: Invalid customer selected', 'error');
-        return;
-    }
-    
-    const customer = customers[customerIndex];
-    const oldName = customer.name;
-    
-    // Update customer data
-    const requiresVendorNumber = document.getElementById('editCustomerRequiresVendorNumber').checked || false;
-    const vendorNumber = document.getElementById('editCustomerVendorNumber').value.trim();
-    
-    if (requiresVendorNumber && !vendorNumber) {
-        hideLoadingSpinner('edit-customer');
-        showNotification('Please enter a vendor number for vendors that require it', 'error');
-        return;
-    }
-    
-    customer.name = document.getElementById('editCustomerName').value;
-    customer.contact = document.getElementById('editCustomerContact').value;
-    customer.location = document.getElementById('editCustomerLocation').value;
-    customer.status = document.getElementById('editCustomerStatus').value;
-    customer.requiresVendorNumber = requiresVendorNumber;
-    customer.vendorNumber = requiresVendorNumber ? vendorNumber : '';
-    
-    // If customer name changed, update all references in inventory and sales
-    if (oldName !== customer.name) {
-        inventory.forEach(item => {
-            if (item.customer === oldName) {
-                item.customer = customer.name;
+    try {
+        const form = e.target;
+        const customerIndex = parseInt(form.dataset.customerIndex);
+        
+        if (isNaN(customerIndex) || customerIndex < 0 || customerIndex >= customers.length) {
+            showNotification('Error: Invalid customer selected', 'error');
+            return;
+        }
+        
+        const customer = customers[customerIndex];
+        const oldName = customer.name;
+        
+        // Update customer data
+        const requiresVendorNumber = document.getElementById('editCustomerRequiresVendorNumber').checked || false;
+        const vendorNumber = document.getElementById('editCustomerVendorNumber').value.trim();
+        
+        if (requiresVendorNumber && !vendorNumber) {
+            showNotification('Please enter a vendor number for vendors that require it', 'error');
+            return;
+        }
+        
+        customer.name = document.getElementById('editCustomerName').value;
+        customer.contact = document.getElementById('editCustomerContact').value;
+        customer.location = document.getElementById('editCustomerLocation').value;
+        customer.status = document.getElementById('editCustomerStatus').value;
+        customer.requiresVendorNumber = requiresVendorNumber;
+        customer.vendorNumber = requiresVendorNumber ? vendorNumber : '';
+        
+        // If customer name changed, update all references in inventory and sales
+        if (oldName !== customer.name) {
+            inventory.forEach(item => {
+                if (item.customer === oldName) {
+                    item.customer = customer.name;
+                }
+            });
+            
+            sales.forEach(sale => {
+                if (sale.customer === oldName) {
+                    sale.customer = customer.name;
+                }
+            });
+        }
+        
+        await saveData();
+        
+        // Close modal before refreshing UI to ensure it disappears immediately
+        closeModal('editCustomerModal');
+        
+        loadCustomersTable();
+        loadInventoryTable();
+        loadSalesTable();
+        updateLocationFilters();
+        updateCustomerFilters();
+        
+        const selectsToUpdate = [
+            'itemCustomer',
+            'projectCustomer',
+            'editProjectCustomer',
+            'addCompletedItemCustomer',
+            'editCompletedItemCustomer'
+        ];
+        
+        selectsToUpdate.forEach(selectId => {
+            try {
+                populateCustomerSelect(selectId);
+            } catch (err) {
+                console.warn(`Unable to populate customer select "${selectId}":`, err);
             }
         });
         
-        sales.forEach(sale => {
-            if (sale.customer === oldName) {
-                sale.customer = customer.name;
-            }
-        });
+        showNotification('Customer updated successfully!', 'success');
+    } catch (error) {
+        console.error('Failed to update customer:', error);
+        showNotification('Failed to update customer. Please try again.', 'error');
+    } finally {
+        hideLoadingSpinner('edit-customer');
     }
-    
-    await saveData();
-    
-    // Close modal before refreshing UI to ensure it disappears immediately
-    closeModal('editCustomerModal');
-    
-    loadCustomersTable();
-    loadInventoryTable();
-    loadSalesTable();
-    updateLocationFilters();
-    updateCustomerFilters();
-    
-    const selectsToUpdate = [
-        'itemCustomer',
-        'editItemCustomer',
-        'projectCustomer',
-        'editProjectCustomer',
-        'addCompletedItemCustomer',
-        'editCompletedItemCustomer'
-    ];
-    
-    selectsToUpdate.forEach(selectId => {
-        try {
-            populateCustomerSelect(selectId);
-        } catch (err) {
-            console.warn(`Unable to populate customer select "${selectId}":`, err);
-        }
-    });
-    
-    showNotification('Customer updated successfully!', 'success');
 }
 
 // Print Invoice Functions
