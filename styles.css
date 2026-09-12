@@ -113,6 +113,8 @@ header {
     width: auto;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    object-fit: contain;
+    background: #fff;
 }
 
 .branding i {
@@ -1596,7 +1598,7 @@ tr:nth-child(even) {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 20000;
     left: 0;
     top: 0;
     width: 100%;
@@ -1720,6 +1722,23 @@ tr:nth-child(even) {
 .form-group textarea:hover {
     border-color: #4A90A4;
     background: white;
+}
+
+.form-group input[readonly] {
+    background: #eef1f3;
+    color: #495057;
+    cursor: not-allowed;
+}
+
+#editProjectPrice,
+#editCompletedItemPrice,
+#addCompletedItemPrice,
+#projectPrice,
+#editInventoryPrice,
+#inventoryPrice,
+#itemPrice {
+    pointer-events: auto;
+    cursor: text;
 }
 
 /* Modal form styles are now handled by inline CSS for consistency */
@@ -2200,6 +2219,94 @@ tr:nth-child(even) {
 .inventory-summary p {
     margin: 0.5rem 0;
     font-weight: 500;
+}
+
+.shop-statement-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem 1rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.shop-statement-controls label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #2C5F7C;
+    margin-bottom: 0.25rem;
+}
+
+.shop-statement-controls select,
+.shop-statement-controls input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.shop-statement-month {
+    border: 1px solid #e6e6fa;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    background: white;
+}
+
+.shop-statement-month h3 {
+    margin: 0 0 0.75rem 0;
+    color: #2C5F7C;
+    font-size: 1.1rem;
+}
+
+.shop-statement-lines {
+    width: 100%;
+    max-width: 420px;
+}
+
+.shop-statement-lines tr td {
+    padding: 0.3rem 0;
+    font-size: 1.05rem;
+}
+
+.shop-statement-lines tr td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.shop-statement-commission-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: inherit;
+    margin: 0;
+}
+
+.shop-report-month-commission {
+    width: 4.5rem;
+    padding: 0.2rem 0.35rem;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 1rem;
+    text-align: right;
+}
+
+.shop-statement-lines .statement-total td {
+    border-top: 2px solid #2C5F7C;
+    padding-top: 0.5rem;
+    font-weight: 700;
+}
+
+.shop-statement-negative {
+    color: #c0392b;
+}
+
+.shop-statement-positive {
+    color: #1e7e34;
 }
 
 /* Responsive adjustments for reports */
@@ -5397,6 +5504,18 @@ body {
     font-weight: 600;
 }
 
+.mark-sold-modal .confirm-header {
+    background: linear-gradient(135deg, #2C5F7C 0%, #4A90A4 100%);
+}
+
+.mark-sold-modal #markAsSoldDate {
+    width: 100%;
+    padding: 0.6rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
 .confirm-body {
     padding: 0 1rem 1rem 1rem;
 }
@@ -7320,23 +7439,32 @@ body {
     gap: 30px;
 }
 
-/* Price Tag Styles */
-.price-tag-preview {
-    padding: 2rem;
-    background: white;
-    margin: 2rem auto;
-    max-width: 1200px;
-}
-
-/* Logo hang tags preview — same sheet width idea as price tags */
-.logo-tag-preview {
-    padding: 2rem;
-    background: white;
-    margin: 2rem auto;
-    max-width: 1200px;
-}
-
+/* Price / hang tags — 3×3 of 2.5in squares on US Letter.
+   Screen preview is a real 8.5×11in sheet so print matches what you see. */
+.price-tag-preview,
+.logo-tag-preview,
+.price-tags-container,
 .logo-tags-container {
+    --tag-size: 2.5in;
+    --tag-gap: 0.125in;
+    --tag-grid: 7.75in; /* 3×2.5 + 2×0.125 */
+    --tag-page-pad-x: 0.375in;
+    --tag-page-pad-y: 1.625in; /* (11 − 7.75) / 2 */
+    --tag-cut-1: 2.5in;
+    --tag-cut-2: 5.125in; /* 2.5 + 0.125 + 2.5 */
+}
+
+.price-tag-preview,
+.logo-tag-preview {
+    padding: 1.5rem 1rem 2rem;
+    background: #e8e8e8;
+    margin: 1.5rem auto;
+    max-width: none;
+    overflow-x: auto;
+}
+
+.logo-tags-container,
+.price-tags-container {
     width: 100%;
 }
 
@@ -7346,9 +7474,10 @@ body {
     align-items: flex-start;
     flex-wrap: wrap;
     gap: 0.75rem;
-    margin-bottom: 2rem;
+    margin: 0 auto 1.25rem;
     padding-bottom: 1rem;
     border-bottom: 2px solid #2C5F7C;
+    max-width: 8.5in;
 }
 
 .logo-tags-toolbar h2 {
@@ -7357,9 +7486,18 @@ body {
     color: #2C5F7C;
 }
 
-/* Reuse .price-tags-grid / .price-tag; logo-only variant with a larger brand mark */
+.logo-tags-toolbar .sheet-hint,
+.price-tags-header .sheet-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #666;
+}
+
 .price-tag.logo-hang-tag {
     justify-content: space-between;
+    padding: 0.08in 0.1in;
 }
 
 .logo-hang-tag-brand-row {
@@ -7369,28 +7507,28 @@ body {
     justify-content: center;
     min-height: 0;
     width: 100%;
+    overflow: hidden;
 }
 
 .logo-hang-tag .logo-hang-tag-brand-img {
+    width: 2.2in;
+    height: 1.65in;
     max-width: 100%;
-    max-height: 148px;
-    width: auto;
-    height: auto;
+    max-height: 100%;
     object-fit: contain;
     display: block;
-}
-
-.price-tags-container {
-    width: 100%;
 }
 
 .price-tags-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0 auto 1.25rem;
     padding-bottom: 1rem;
     border-bottom: 2px solid #2C5F7C;
+    max-width: 8.5in;
 }
 
 .price-tags-header h2 {
@@ -7402,23 +7540,57 @@ body {
     margin-left: 0.5rem;
 }
 
+.price-tags-page {
+    --tag-size: 2.5in;
+    --tag-gap: 0.125in;
+    --tag-grid: 7.75in;
+    --tag-page-pad-x: 0.375in;
+    --tag-page-pad-y: 1.625in;
+    --tag-cut-1: 2.5in;
+    --tag-cut-2: 5.125in;
+    width: 8.5in;
+    height: 11in;
+    padding: var(--tag-page-pad-y) var(--tag-page-pad-x);
+    margin: 0 auto 1.5rem;
+    background: white;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+    border: 1px solid #d0d0d0;
+    box-sizing: border-box;
+}
+
+.price-tags-page:last-child {
+    margin-bottom: 0;
+}
+
 .price-tags-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.25in;
-    margin-top: 1rem;
-    max-width: 8in;
-    margin-left: auto;
-    margin-right: auto;
+    grid-template-columns: repeat(3, var(--tag-size));
+    grid-template-rows: repeat(3, var(--tag-size));
+    gap: var(--tag-gap);
+    width: var(--tag-grid);
+    height: var(--tag-grid);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-image:
+        linear-gradient(to right, transparent var(--tag-cut-1), rgba(0,0,0,0.4) var(--tag-cut-1), rgba(0,0,0,0.4) calc(var(--tag-cut-1) + 1px), transparent calc(var(--tag-cut-1) + 1px)),
+        linear-gradient(to right, transparent var(--tag-cut-2), rgba(0,0,0,0.4) var(--tag-cut-2), rgba(0,0,0,0.4) calc(var(--tag-cut-2) + 1px), transparent calc(var(--tag-cut-2) + 1px)),
+        linear-gradient(to bottom, transparent var(--tag-cut-1), rgba(0,0,0,0.4) var(--tag-cut-1), rgba(0,0,0,0.4) calc(var(--tag-cut-1) + 1px), transparent calc(var(--tag-cut-1) + 1px)),
+        linear-gradient(to bottom, transparent var(--tag-cut-2), rgba(0,0,0,0.4) var(--tag-cut-2), rgba(0,0,0,0.4) calc(var(--tag-cut-2) + 1px), transparent calc(var(--tag-cut-2) + 1px));
 }
 
 .price-tag {
-    border: 2px solid #2C5F7C;
-    border-radius: 8px;
-    padding: 1rem;
+    border: 1.5px solid #2C5F7C;
+    border-radius: 0;
+    padding: 0.1in 0.12in;
     background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    min-height: 200px;
+    box-shadow: none;
+    width: var(--tag-size);
+    height: var(--tag-size);
+    min-height: var(--tag-size);
+    max-height: var(--tag-size);
+    box-sizing: border-box;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -7440,8 +7612,8 @@ body {
 
 .price-tag-vendor-logo,
 .price-tag-my-logo {
-    max-width: 100px;
-    max-height: 70px;
+    max-width: 1in;
+    max-height: 0.7in;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -7456,22 +7628,28 @@ body {
     flex-direction: column;
     justify-content: center;
     text-align: center;
+    min-height: 0;
 }
 
 .price-tag-item-name {
-    font-size: 0.9rem;
+    font-size: 10pt;
     font-weight: bold;
     color: #2C5F7C;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.15rem;
     word-wrap: break-word;
+    overflow-wrap: break-word;
     line-height: 1.2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .price-tag-price {
-    font-size: 1.4rem;
+    font-size: 16pt;
     font-weight: bold;
     color: #d32f2f;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.1rem;
 }
 
 .price-tag-vendor-number {
@@ -7491,17 +7669,27 @@ body {
 }
 
 .price-tag-qr {
-    width: 36px;
-    height: 36px;
+    width: 0.48in;
+    height: 0.48in;
     display: block;
     flex-shrink: 0;
 }
 
 .price-tag-social {
-    font-size: 0.6rem;
+    font-size: 6.5pt;
     color: #555;
-    line-height: 1.2;
+    line-height: 1.15;
     text-align: right;
+}
+
+.price-tag.logo-hang-tag .price-tag-footer {
+    justify-content: center;
+    gap: 0.08in;
+}
+
+.price-tag.logo-hang-tag .price-tag-qr {
+    width: 0.5in;
+    height: 0.5in;
 }
 
 .price-tag-item-entry {
@@ -7531,11 +7719,9 @@ body {
     padding: 0.5rem;
 }
 
-/* Print styles for price tags & logo hang tags — 2"×2", 12 per Letter sheet.
-   Each .price-tags-page is exactly one Letter sheet so multi-page runs paginate cleanly. */
+/* Print: same 3×3 / 2.5in Letter sheet as the on-screen preview.
+   Each .price-tags-page is exactly 8.5×11 so Chrome does not scale or shift the grid. */
 @media print {
-    /* Margins live on each sheet (padding), not @page — so page 2+ get the same
-       inset and Chrome “Default” margins can’t push a sheet taller than 11in. */
     @page {
         size: letter portrait;
         margin: 0;
@@ -7550,7 +7736,6 @@ body {
         background: white !important;
     }
 
-    /* Previews live inside <main> (normally margin-top: 140px for the fixed header). */
     .container,
     main {
         display: block !important;
@@ -7571,7 +7756,6 @@ body {
         -webkit-print-color-adjust: exact;
     }
 
-    /* Collapse non-tag UI so it doesn’t consume page height (visibility:hidden still would). */
     header,
     .top-bar,
     .nav-container,
@@ -7599,7 +7783,15 @@ body {
         display: none !important;
     }
 
-    body.printing-logo-tags #priceTagPreview {
+    body.printing-invoice #priceTagPreview,
+    body.printing-invoice #logoTagPreview {
+        display: none !important;
+    }
+
+    body.printing-logo-tags #priceTagPreview,
+    body.printing-price-tags #logoTagPreview,
+    body.printing-logo-tags #printInvoicePreview,
+    body.printing-price-tags #printInvoicePreview {
         display: none !important;
     }
 
@@ -7607,8 +7799,13 @@ body {
         display: none !important;
     }
 
-    body:not(.printing-logo-tags) #priceTagPreview,
-    body.printing-logo-tags #logoTagPreview {
+    body.printing-logo-tags #priceTagPreview {
+        display: none !important;
+    }
+
+    body.printing-price-tags #priceTagPreview,
+    body.printing-logo-tags #logoTagPreview,
+    body:not(.printing-logo-tags):not(.printing-invoice) #priceTagPreview {
         display: block !important;
         visibility: visible !important;
         position: static !important;
@@ -7622,9 +7819,9 @@ body {
         box-sizing: border-box !important;
     }
 
-    body:not(.printing-logo-tags) #priceTagPreview *,
-    body.printing-logo-tags #logoTagPreview * {
-        visibility: visible;
+    body.printing-logo-tags #logoTagPreview,
+    body.printing-price-tags #priceTagPreview {
+        display: block !important;
     }
 
     .price-tag-preview,
@@ -7635,6 +7832,7 @@ body {
         min-height: 0 !important;
         max-width: none !important;
         background: white !important;
+        overflow: visible !important;
     }
 
     .price-tags-container,
@@ -7646,14 +7844,14 @@ body {
         box-sizing: border-box;
     }
 
-    /* One Letter sheet per chunk. Size comes from padding + 8.75in grid (= 11in);
-       avoid a hard height:11in — with any parent padding that overflows onto page 2. */
     .price-tags-page {
         width: 8.5in;
-        height: auto;
-        max-height: none;
-        padding: 1.125in 1in;
+        height: 11in;
+        padding: var(--tag-page-pad-y) var(--tag-page-pad-x);
         margin: 0;
+        border: none;
+        box-shadow: none;
+        background: white;
         box-sizing: border-box;
         overflow: hidden;
         break-after: page;
@@ -7667,184 +7865,22 @@ body {
         page-break-after: avoid;
     }
 
-    /* 3×4 of 2in tags, 0.25in gaps → 6.5in × 8.75in */
-    .price-tags-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 2in);
-        grid-template-rows: repeat(4, 2in);
-        gap: 0.25in;
-        margin: 0;
-        padding: 0;
-        width: 6.5in;
-        height: 8.75in;
-        box-sizing: border-box;
-        position: relative;
-        /* Cut guides in the gaps between tags */
-        background-image:
-            linear-gradient(to right,  transparent 2in,    rgba(0,0,0,0.5) 2in,    rgba(0,0,0,0.5) calc(2in + 1px),    transparent calc(2in + 1px)),
-            linear-gradient(to right,  transparent 4.25in, rgba(0,0,0,0.5) 4.25in, rgba(0,0,0,0.5) calc(4.25in + 1px), transparent calc(4.25in + 1px)),
-            linear-gradient(to bottom, transparent 2in,    rgba(0,0,0,0.5) 2in,    rgba(0,0,0,0.5) calc(2in + 1px),    transparent calc(2in + 1px)),
-            linear-gradient(to bottom, transparent 4.25in, rgba(0,0,0,0.5) 4.25in, rgba(0,0,0,0.5) calc(4.25in + 1px), transparent calc(4.25in + 1px)),
-            linear-gradient(to bottom, transparent 6.5in,  rgba(0,0,0,0.5) 6.5in,  rgba(0,0,0,0.5) calc(6.5in + 1px),  transparent calc(6.5in + 1px));
-    }
-
-    /* Logo hang tags: fill the 2in cell — logo centered, QR footer pinned to bottom. */
-    .price-tag.logo-hang-tag {
-        padding: 0.06in 0.08in;
-    }
-
-    .price-tag.logo-hang-tag .logo-hang-tag-brand-row {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 0;
-        width: 100%;
-        padding: 0.02in;
-        box-sizing: border-box;
-        overflow: hidden;
-    }
-
     .price-tag.logo-hang-tag .logo-hang-tag-brand-img {
-        max-height: 1.15in;
-        max-width: 1.76in;
-        width: auto;
-        height: auto;
-        object-fit: contain;
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
-    }
-
-    .price-tag.logo-hang-tag .price-tag-footer {
-        padding-top: 0.03in;
-        margin-top: 0;
-        gap: 0.05in;
-        justify-content: center;
-    }
-
-    .price-tag.logo-hang-tag .price-tag-qr {
-        width: 0.42in !important;
-        height: 0.42in !important;
-    }
-
-    .price-tag.logo-hang-tag .price-tag-social {
-        font-size: 5pt;
-        line-height: 1.1;
-    }
-
-    .price-tag {
-        width: 2in;
-        height: 2in;
-        min-height: 2in;
-        max-height: 2in;
-        border: 1.5px solid #2C5F7C;
-        border-radius: 0;
-        padding: 0.1in 0.12in;
-        box-shadow: none;
-        margin: 0;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        display: flex;
-        flex-direction: column;
-        box-sizing: border-box;
-        background: white;
-        justify-content: space-between;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .price-tag-header {
-        margin-bottom: 0.04in;
-        padding-bottom: 0.04in;
-        flex-shrink: 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .price-tag-header.no-vendor-logo {
-        justify-content: center;
-        align-items: center;
-        height: 0.75in;
-        border-bottom: 1px solid #e0e0e0;
     }
 
     .price-tag-vendor-logo,
-    .price-tag-my-logo {
-        max-width: 0.85in;
-        max-height: 0.65in;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-
-    .price-tag-body {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        text-align: center;
-        min-height: 0;
-        padding: 0.03in 0;
-    }
-
-    .price-tag-item-name {
-        font-size: 7pt;
-        line-height: 1.15;
-        margin: 0.02in 0 0.03in 0;
-        word-wrap: break-word;
-        overflow: hidden;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .price-tag-price {
-        font-size: 15pt;
-        font-weight: bold;
-        margin: 0.03in 0;
-        color: #d32f2f;
-        line-height: 1;
-    }
-
-    .price-tag-vendor-number {
-        font-size: 6pt;
-        margin-top: 0.02in;
-        font-weight: 500;
-        flex-shrink: 0;
-    }
-
-    .price-tag-footer {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 0.05in;
-        padding-top: 0.04in;
-        border-top: 0.5px solid #e0e0e0;
-        flex-shrink: 0;
-        margin-top: 0;
-    }
-
+    .price-tag-my-logo,
     .price-tag-qr {
-        width: 0.45in;
-        height: 0.45in;
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
-        flex-shrink: 0;
     }
 
-    .price-tag-social {
-        font-size: 5pt;
-        color: #555;
-        line-height: 1.2;
-        text-align: right;
-        word-break: break-all;
+    .price-tag-header.no-vendor-logo {
+        height: 0.7in;
     }
 }
 
@@ -7892,13 +7928,18 @@ body {
         display: none !important;
     }
     
-    #printInvoicePreview {
+    body.printing-invoice #printInvoicePreview {
         display: block !important;
         margin: 0 !important;
         padding: 0.6in !important;
         box-shadow: none !important;
         border: none !important;
         border-radius: 0 !important;
+    }
+
+    body.printing-logo-tags #printInvoicePreview,
+    body.printing-price-tags #printInvoicePreview {
+        display: none !important;
     }
     
     .print-invoice-header {

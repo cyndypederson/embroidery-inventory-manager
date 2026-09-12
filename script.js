@@ -367,6 +367,10 @@ function saveCurrentFilters(tabName) {
     if (tabName === 'sales') {
         const yearFilter = document.getElementById('salesYearFilter');
         if (yearFilter) filters.year = yearFilter.value;
+        const quarterFilter = document.getElementById('salesQuarterFilter');
+        if (quarterFilter) filters.quarter = quarterFilter.value;
+        const monthFilter = document.getElementById('salesMonthFilter');
+        if (monthFilter) filters.month = monthFilter.value;
     }
     
     filterState[tabName] = filters;
@@ -429,9 +433,19 @@ function restoreFilters(tabName) {
         if (dateFilter) dateFilter.value = filters.date;
     }
     
-    if (tabName === 'sales' && filters.year !== undefined) {
-        const yearFilter = document.getElementById('salesYearFilter');
-        if (yearFilter) yearFilter.value = filters.year;
+    if (tabName === 'sales') {
+        if (filters.year !== undefined) {
+            const yearFilter = document.getElementById('salesYearFilter');
+            if (yearFilter) yearFilter.value = filters.year;
+        }
+        if (filters.quarter !== undefined) {
+            const quarterFilter = document.getElementById('salesQuarterFilter');
+            if (quarterFilter) quarterFilter.value = filters.quarter;
+        }
+        if (filters.month !== undefined) {
+            const monthFilter = document.getElementById('salesMonthFilter');
+            if (monthFilter) monthFilter.value = filters.month;
+        }
     }
 }
 
@@ -974,12 +988,26 @@ function loadCustomersCards() {
     });
 }
 
-// Sales tab: calendar year from dateSold (YYYY-MM-DD or similar)
-function getSaleCalendarYear(dateSold) {
+// Sales tab: local calendar parts from dateSold (YYYY-MM-DD or similar)
+function getSaleDateParts(dateSold) {
     if (!dateSold) return null;
-    const d = new Date(dateSold);
-    const y = d.getFullYear();
-    return Number.isNaN(y) ? null : y;
+    const raw = String(dateSold).trim();
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (iso) {
+        const year = Number(iso[1]);
+        const month = Number(iso[2]);
+        if (!year || month < 1 || month > 12) return null;
+        return { year, month, quarter: Math.ceil(month / 3) };
+    }
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return null;
+    const month = d.getMonth() + 1;
+    return { year: d.getFullYear(), month, quarter: Math.ceil(month / 3) };
+}
+
+function getSaleCalendarYear(dateSold) {
+    const parts = getSaleDateParts(dateSold);
+    return parts ? parts.year : null;
 }
 
 /** Rebuild year dropdown from current sales; keep selection when still valid. */
@@ -1004,15 +1032,20 @@ function saleMatchesSalesTabFilters(sale) {
     const searchTerm = document.getElementById('salesSearch')?.value?.toLowerCase() || '';
     const customerFilter = document.getElementById('salesCustomerFilter')?.value || '';
     const yearFilter = document.getElementById('salesYearFilter')?.value || '';
+    const quarterFilter = document.getElementById('salesQuarterFilter')?.value || '';
+    const monthFilter = document.getElementById('salesMonthFilter')?.value || '';
     if (searchTerm && !(sale.itemName?.toLowerCase().includes(searchTerm) || sale.customer?.toLowerCase().includes(searchTerm))) {
         return false;
     }
     if (customerFilter && sale.customer !== customerFilter) {
         return false;
     }
-    if (yearFilter) {
-        const y = getSaleCalendarYear(sale.dateSold);
-        if (y === null || String(y) !== yearFilter) return false;
+    if (yearFilter || quarterFilter || monthFilter) {
+        const parts = getSaleDateParts(sale.dateSold);
+        if (!parts) return false;
+        if (yearFilter && String(parts.year) !== yearFilter) return false;
+        if (quarterFilter && String(parts.quarter) !== quarterFilter) return false;
+        if (monthFilter && String(parts.month) !== monthFilter) return false;
     }
     return true;
 }
@@ -2100,7 +2133,7 @@ class DataManager {
                 totalItems: inventory.length + customers.length + sales.length + gallery.length + invoices.length + ideas.length,
                 lastModified: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                appVersion: '1.0.123'
+                appVersion: '1.0.126'
             }
         };
         
@@ -3591,8 +3624,8 @@ class DesktopManager {
     showNotification(title, options = {}) {
         if (this.notificationPermission === 'granted') {
             const notification = new Notification(title, {
-                icon: options.icon || '/logo.png',
-                badge: '/logo.png',
+                icon: options.icon || '/logos/my-logo.png',
+                badge: '/logos/my-logo.png',
                 body: options.body || '',
                 tag: options.tag || 'embroidery-app',
                 requireInteraction: options.requireInteraction || false,
@@ -3806,7 +3839,7 @@ class DesktopManager {
         
         this.showNotification('Auto-start enabled', {
             body: 'App will start automatically with your system',
-            icon: '/logo.png'
+            icon: '/logos/my-logo.png'
         });
     }
     
@@ -3819,7 +3852,7 @@ class DesktopManager {
         
         this.showNotification('Auto-start disabled', {
             body: 'App will not start automatically with your system',
-            icon: '/logo.png'
+            icon: '/logos/my-logo.png'
         });
     }
     
@@ -3827,7 +3860,7 @@ class DesktopManager {
         if (this.isElectron && this.electronAPI) {
             this.electronAPI.invoke('setup-tray', {
                 title: 'Embroidery Inventory',
-                icon: '/logo.png',
+                icon: '/logos/my-logo.png',
                 menu: [
                     { label: 'Show App', click: () => this.showApp() },
                     { label: 'Hide App', click: () => this.hideApp() },
@@ -4009,7 +4042,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.123'; // Current app version
+                const currentVersion = '1.0.126'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -4094,7 +4127,9 @@ class FormManager {
         });
         
         this.validationRules.set('price', {
-            pattern: /^\d+(\.\d{1,2})?$/,
+            // Allow empty and in-progress typing (e.g. "25.") so live
+            // validation does not lock the Save button while editing prices.
+            pattern: /^\d*(\.\d{0,2})?$/,
             message: 'Please enter a valid price (e.g., 25.99)'
         });
         
@@ -4205,6 +4240,14 @@ class FormManager {
         const fieldValue = field.value;
         const fieldType = field.type;
         
+        // Empty optional fields (due date, invoiced date, price) must not
+        // count as errors — that previously disabled Update on every tab.
+        if ((fieldValue === '' || fieldValue == null) && !field.required) {
+            this.updateFieldValidation(field, []);
+            this.updateFormValidation(form);
+            return true;
+        }
+        
         // Get validation rules for this field
         const rules = this.getFieldValidationRules(field);
         const errors = [];
@@ -4241,7 +4284,8 @@ class FormManager {
         } else if (fieldType === 'tel') {
             rules.push(this.validationRules.get('phone'));
         } else if (fieldType === 'number') {
-            if (fieldName.includes('price') || fieldName.includes('Price')) {
+            const nameOrId = `${fieldName || ''} ${field.id || ''}`;
+            if (/price|Price/.test(nameOrId) && !/Total/i.test(nameOrId)) {
                 rules.push(this.validationRules.get('price'));
             }
         } else if (fieldType === 'date') {
@@ -4304,10 +4348,11 @@ class FormManager {
         // Update form validation state
         form.classList.toggle('has-errors', hasErrors);
         
-        // Update submit button state
+        // Keep Update clickable. Optional date/price live-validation used to
+        // disable submit with no message, which blocked price edits on every tab.
         const submitButton = form.querySelector('button[type="submit"]');
         if (submitButton) {
-            submitButton.disabled = hasErrors;
+            submitButton.disabled = false;
         }
     }
     
@@ -5154,7 +5199,7 @@ function generateInvoiceHTML(invoice) {
             <div class="invoice-header-section">
                 <div class="business-info">
                     <div class="business-logo">
-                        <img src="logo.png" alt="${businessName} Logo" class="invoice-logo">
+                        ${brandLogoImgTag('invoice-logo', businessName + ' Logo')}
                     </div>
                     <h1>${businessName}</h1>
                     <p>Email: ${businessEmail}</p>
@@ -5432,7 +5477,7 @@ function generateCleanInvoiceHTML(invoiceData) {
             <div class="invoice-header-section">
                 <div class="business-info">
                     <div class="business-logo">
-                        <img src="logo.png" alt="${invoiceData.businessName} Logo" class="invoice-logo">
+                        ${brandLogoImgTag('invoice-logo', invoiceData.businessName + ' Logo')}
                     </div>
                     <h1>${invoiceData.businessName}</h1>
                     <p>Email: ${invoiceData.businessEmail}</p>
@@ -6292,7 +6337,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.123';
+        const currentVersion = '1.0.126';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -6505,23 +6550,38 @@ function initializeApp() {
 function checkLogo() {
     const logo = document.getElementById('logo');
     const fallbackIcon = document.getElementById('fallback-icon');
-    
+    const brandSrc = typeof BRAND_LOGO_PATH !== 'undefined' ? BRAND_LOGO_PATH : '/logos/my-logo.png';
+    const fallbackSrc = typeof BRAND_LOGO_FALLBACK !== 'undefined' ? BRAND_LOGO_FALLBACK : '/logos/stitchcraft-logo.svg';
+
+    const applyFavicon = (src) => {
+        document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+            link.href = src;
+        });
+    };
+
     if (logo) {
         logo.onload = function() {
             this.style.display = 'block';
             if (fallbackIcon) {
                 fallbackIcon.style.display = 'none';
             }
+            applyFavicon(this.src.split('?')[0]);
         };
         logo.onerror = function() {
+            if (!this.dataset.triedFallback) {
+                this.dataset.triedFallback = '1';
+                this.src = fallbackSrc;
+                return;
+            }
             this.style.display = 'none';
             if (fallbackIcon) {
                 fallbackIcon.style.display = 'inline';
             }
         };
-        
-        // Try to load the logo
-        logo.src = 'logo.png';
+        logo.src = brandSrc;
+        applyFavicon(brandSrc);
+    } else {
+        applyFavicon(brandSrc);
     }
 }
 
@@ -6600,6 +6660,32 @@ function calculateEditProjectTotalValue() {
     }
 }
 
+function toEditablePrice(value) {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function enablePriceField(fieldId) {
+    const priceField = document.getElementById(fieldId);
+    if (!priceField) return;
+    priceField.disabled = false;
+    priceField.readOnly = false;
+    priceField.removeAttribute('disabled');
+    priceField.removeAttribute('readonly');
+    priceField.style.pointerEvents = 'auto';
+    priceField.style.opacity = '1';
+    priceField.style.cursor = 'text';
+}
+
+function setPriceFieldValue(fieldId, value) {
+    const priceField = document.getElementById(fieldId);
+    if (!priceField) return;
+    enablePriceField(fieldId);
+    priceField.value = toEditablePrice(value);
+}
+
 async function editItem(itemIdOrIndex) {
     // Require authentication
     if (!await requireAuthentication('edit this item')) {
@@ -6652,7 +6738,7 @@ async function editItem(itemIdOrIndex) {
     setElementValue(`${fieldPrefix}Description`, item.description || item.name || '');
     setElementValue(`${fieldPrefix}Location`, item.location || '');
     setElementValue(`${fieldPrefix}Quantity`, item.quantity || 1);
-    setElementValue(`${fieldPrefix}Price`, item.price || 0);
+    setPriceFieldValue(`${fieldPrefix}Price`, item.price);
     setElementValue(`${fieldPrefix}Type`, item.type || 'project');
     setElementValue(`${fieldPrefix}Status`, item.status || 'completed');
     // setElementValue(`${fieldPrefix}Category`, item.category || ''); // Field removed
@@ -6804,7 +6890,7 @@ function editInventoryItem(index) {
     document.getElementById('editInventoryDescription').value = item.description || item.name || '';
     document.getElementById('editInventoryQuantity').value = item.quantity || 1;
     // Category and location fields removed - skip them
-    document.getElementById('editInventoryPrice').value = item.price || 0;
+    setPriceFieldValue('editInventoryPrice', item.price);
     document.getElementById('editInventorySupplier').value = item.supplier || '';
     document.getElementById('editInventoryReorderPoint').value = item.reorderPoint || 0;
     document.getElementById('editInventoryStatus').value = item.status || 'available';
@@ -6829,6 +6915,12 @@ function editProject(index) {
     document.getElementById('editProjectIndex').value = index;
     document.getElementById('editProjectDescription').value = item.description || item.name || '';
     document.getElementById('editProjectQuantity').value = item.quantity || 1;
+    setPriceFieldValue('editProjectPrice', item.price);
+    const locationField = document.getElementById('editProjectLocation');
+    if (locationField) {
+        locationField.value = item.location || '';
+    }
+    calculateEditProjectTotalValue();
     // document.getElementById('editProjectCategory').value = item.category || ''; // Field removed
     document.getElementById('editProjectStatus').value = item.status || 'pending';
     const editGift = document.getElementById('editProjectIsGift');
@@ -6836,6 +6928,13 @@ function editProject(index) {
         editGift.checked = !!item.isGift;
         applyGiftRestrictionsToProjectStatusSelect('editProjectStatus', editGift.checked);
     }
+    const editSaleDateInput = document.getElementById('editProjectSaleDate');
+    if (editSaleDateInput) {
+        const existingSale = item.saleId ? sales.find(s => s.id === item.saleId) : null;
+        const existingDate = existingSale?.dateSold || item.dateSold || '';
+        editSaleDateInput.value = existingDate || getLocalISODate();
+    }
+    toggleProjectSaleDateField('editProject');
     document.getElementById('editProjectDueDate').value = item.dueDate || '';
     document.getElementById('editProjectPriority').value = item.priority || 'medium';
     document.getElementById('editProjectTags').value = item.tags || '';
@@ -6862,6 +6961,7 @@ function editProject(index) {
     // Projects don't need images - they're tracked through inventory, ideas, and gallery
     
     // Show the project modal
+    enablePriceField('editProjectPrice');
     document.getElementById('editProjectModal').style.display = 'block';
     console.log('Edit project modal should be visible now');
 }
@@ -6878,77 +6978,80 @@ async function handleEditProject(e) {
         return element ? element.value : '';
     };
     
-    // Basic validation
-    const description = getElementValue('editProjectDescription').trim();
-    
-    if (!description) {
+    try {
+        // Basic validation
+        const description = getElementValue('editProjectDescription').trim();
+        
+        if (!description) {
+            alert('Please enter a description for the project.');
+            return;
+        }
+        
+        const index = parseInt(getElementValue('editProjectIndex'));
+        if (isNaN(index)) {
+            console.error('Invalid project index');
+            return;
+        }
+        
+        const newStatus = getElementValue('editProjectStatus');
+        const isGift = document.getElementById('editProjectIsGift')?.checked || false;
+        if (isGift && newStatus === 'sold') {
+            showNotification('Gift projects cannot be marked as sold.', 'error');
+            return;
+        }
+        const shouldCreateSale = newStatus === 'sold';
+        
+        // Update the project
+        inventory[index] = {
+            ...inventory[index],
+            description: description,
+            quantity: parseInt(getElementValue('editProjectQuantity')) || 1,
+            price: toEditablePrice(getElementValue('editProjectPrice')),
+            category: '', // Field removed
+            status: newStatus,
+            isGift: !!isGift,
+            customer: applyTenantCustomerDefault(getElementValue('editProjectCustomer')),
+            location: getElementValue('editProjectLocation'),
+            dueDate: getElementValue('editProjectDueDate'),
+            priority: getElementValue('editProjectPriority'),
+            tags: getElementValue('editProjectTags'),
+            patternLink: getElementValue('editProjectPatternLink'),
+            notes: getElementValue('editProjectNotes'),
+            type: 'project'
+        };
+        
+        if (shouldCreateSale) {
+            createOrUpdateSaleFromProject(index, getElementValue('editProjectSaleDate'));
+        }
+        
+        // Save current filters before refresh
+        saveCurrentFilters('projects');
+        
+        // Save data
+        await saveData();
+        
+        // Restore filters before refresh so loadProjectsCards uses them
+        restoreFilters('projects');
+        
+        // Refresh displays
+        loadInventoryTable();
+        if (typeof loadProjectsCards === 'function') {
+            loadProjectsCards();
+        }
+        if (shouldCreateSale) {
+            refreshSalesViews();
+        }
+        
+        // Close modal
+        closeModal('editProjectModal');
+        
+        console.log('Project updated successfully');
+    } catch (error) {
+        console.error('Failed to update project:', error);
+        showNotification('Could not update the project. Please try again.', 'error');
+    } finally {
         hideLoadingSpinner('edit-project');
-        alert('Please enter a description for the project.');
-        return;
     }
-    
-    const index = parseInt(getElementValue('editProjectIndex'));
-    if (isNaN(index)) {
-        console.error('Invalid project index');
-        return;
-    }
-    
-    const newStatus = getElementValue('editProjectStatus');
-    const isGift = document.getElementById('editProjectIsGift')?.checked || false;
-    if (isGift && newStatus === 'sold') {
-        hideLoadingSpinner('edit-project');
-        showNotification('Gift projects cannot be marked as sold.', 'error');
-        return;
-    }
-    const shouldCreateSale = newStatus === 'sold';
-    
-    // Update the project
-    inventory[index] = {
-        ...inventory[index],
-        description: description,
-        quantity: parseInt(getElementValue('editProjectQuantity')) || 1,
-        price: parseFloat(getElementValue('editProjectPrice')) || 0,
-        category: '', // Field removed
-        status: newStatus,
-        isGift: !!isGift,
-        customer: applyTenantCustomerDefault(getElementValue('editProjectCustomer')),
-        location: getElementValue('editProjectLocation'),
-        dueDate: getElementValue('editProjectDueDate'),
-        priority: getElementValue('editProjectPriority'),
-        tags: getElementValue('editProjectTags'),
-        patternLink: getElementValue('editProjectPatternLink'),
-        notes: getElementValue('editProjectNotes'),
-        type: 'project'
-    };
-    
-    if (shouldCreateSale) {
-        createOrUpdateSaleFromProject(index);
-    }
-    
-    // Save current filters before refresh
-    saveCurrentFilters('projects');
-    
-    // Save data
-    await saveData();
-    
-    // Restore filters before refresh so loadProjectsCards uses them
-    restoreFilters('projects');
-    
-    // Refresh displays
-    loadInventoryTable();
-    if (typeof loadProjectsCards === 'function') {
-        loadProjectsCards();
-    }
-    if (shouldCreateSale) {
-        refreshSalesViews();
-    }
-    
-    hideLoadingSpinner('edit-project');
-    
-    // Close modal
-    closeModal('editProjectModal');
-    
-    console.log('Project updated successfully');
 }
 
 async function handleEditInventory(e) {
@@ -7049,7 +7152,7 @@ async function handleEditCompletedItem(e) {
         ...inventory[index],
         description: description.trim(),
         quantity: parseInt(getElementValue('editCompletedItemQuantity')) || 1,
-        price: parseFloat(getElementValue('editCompletedItemPrice')) || 0,
+        price: toEditablePrice(getElementValue('editCompletedItemPrice')),
         customer: applyTenantCustomerDefault(getElementValue('editCompletedItemCustomer')),
         invoicedDate: getElementValue('editCompletedItemInvoicedDate'),
         status: 'completed', // Always set to completed
@@ -9120,7 +9223,7 @@ function loadMobileSalesCards() {
                 <div class="empty-state">
                     <i class="fas fa-filter"></i>
                     <h3>No Matching Sales</h3>
-                    <p>Try changing search, customer, or year filters.</p>
+                    <p>Try changing search, customer, year, quarter, or month filters.</p>
                 </div>
             </div>
         `;
@@ -9419,7 +9522,11 @@ async function openAddProjectModal(prefilledData = null) {
                 applyGiftRestrictionsToProjectStatusSelect('projectStatus', false);
             }
         }
+        
+        toggleProjectSaleDateField('project');
     }
+    
+    enablePriceField('projectPrice');
     
     populateCustomerSelect('projectCustomer');
     const defaultShop = getDefaultShopCustomer();
@@ -9700,8 +9807,9 @@ async function handleAddProject(e) {
 
     const shouldCreateSale = status === 'sold';
     if (shouldCreateSale) {
+        const saleDate = document.getElementById('projectSaleDate')?.value || getLocalISODate();
         for (let i = 0; i < newProjects.length; i++) {
-            createOrUpdateSaleFromProject(startIndex + i);
+            createOrUpdateSaleFromProject(startIndex + i, saleDate);
         }
     }
     
@@ -9783,6 +9891,7 @@ function copyFromLastProject() {
     document.getElementById('projectDescription').value = lastProject.description || lastProject.name || '';
     document.getElementById('projectQuantity').value = lastProject.quantity || 1;
     document.getElementById('projectStatus').value = lastProject.status || 'pending';
+    toggleProjectSaleDateField('project');
     document.getElementById('projectCustomer').value = lastProject.customer || '';
     document.getElementById('projectDueDate').value = lastProject.dueDate || '';
     document.getElementById('projectPriority').value = lastProject.priority || 'medium';
@@ -10551,6 +10660,8 @@ function printCustomInvoice() {
     
     // Wait a moment for the preview to render, then print
     setTimeout(() => {
+        document.body.classList.add('printing-invoice');
+        document.body.classList.remove('printing-logo-tags', 'printing-price-tags');
         window.print();
     }, 500);
 }
@@ -10585,7 +10696,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!window.__afterPrintLogoTagHook) {
         window.__afterPrintLogoTagHook = true;
         window.addEventListener('afterprint', () => {
-            document.body.classList.remove('printing-logo-tags');
+            document.body.classList.remove('printing-logo-tags', 'printing-price-tags', 'printing-invoice');
             if (window.__printTitleBackup !== undefined) {
                 document.title = window.__printTitleBackup;
                 delete window.__printTitleBackup;
@@ -10595,30 +10706,33 @@ document.addEventListener('DOMContentLoaded', function() {
             window.__printTitleBackup = document.title;
             const ltp = document.getElementById('logoTagPreview');
             const ptp = document.getElementById('priceTagPreview');
+            const inv = document.getElementById('printInvoicePreview');
 
-            // Clear screen-only inline styles that force extra page breaks when printing
-            // (padding: 2rem !important on the preview overflows a Letter sheet).
             [ptp, ltp].forEach((el) => {
                 if (!el) return;
                 el.style.removeProperty('padding');
                 el.style.removeProperty('min-height');
                 el.style.removeProperty('width');
                 el.style.removeProperty('margin');
+                el.style.removeProperty('background');
             });
 
             const logoVisible = ltp && window.getComputedStyle(ltp).display !== 'none' && (ltp.innerHTML || '').trim().length > 0;
             const priceVisible = ptp && window.getComputedStyle(ptp).display !== 'none' && (ptp.innerHTML || '').trim().length > 0;
+            const invoiceVisible = inv && window.getComputedStyle(inv).display !== 'none' && (inv.innerHTML || '').trim().length > 0;
             const printingLogos = document.body.classList.contains('printing-logo-tags');
 
+            document.body.classList.remove('printing-logo-tags', 'printing-price-tags', 'printing-invoice');
+
             if (printingLogos || (logoVisible && !priceVisible)) {
-                if (logoVisible && !priceVisible) {
-                    document.body.classList.add('printing-logo-tags');
-                }
+                document.body.classList.add('printing-logo-tags');
                 document.title = 'StitchCraft-Logo-Hang-Tags';
             } else if (priceVisible) {
-                document.body.classList.remove('printing-logo-tags');
+                document.body.classList.add('printing-price-tags');
                 const mixed = ptp && ptp.querySelector('.logo-hang-tag') && ptp.querySelector('.price-tag:not(.logo-hang-tag)');
                 document.title = mixed ? 'StitchCraft-Mixed-Tags' : 'StitchCraft-Price-Tags';
+            } else if (invoiceVisible) {
+                document.body.classList.add('printing-invoice');
             }
         });
     }
@@ -10690,13 +10804,22 @@ function openLogoTagModalFromUI() {
 const LOGO_TAG_QR_PATH = '/logos/qr-facebook.png';
 /** Shown on price tag footer next to shop QR — change in one place for reprints. */
 const PRICE_TAG_SOCIAL_HANDLE = '@cyndypstitchcraft';
-/** 3×4 grid of 2in tags on US Letter — used for price tags and logo hang tags pagination. */
-const TAGS_PER_LETTER_SHEET = 12;
+/** Drop replacement brand art here — hang tags, price tags, invoices, header, favicon. */
+const BRAND_LOGO_PATH = '/logos/my-logo.png';
+const BRAND_LOGO_FALLBACK = '/logos/stitchcraft-logo.svg';
+/** 3×3 grid of 2.5in tags on US Letter. */
+const TAGS_PER_LETTER_SHEET = 9;
+
+function brandLogoImgTag(className, altText) {
+    const alt = SecurityManager.escapeHtml(altText || 'Cyndy P Stitch Craft');
+    const cls = SecurityManager.escapeHtml(className || '');
+    return `<img src="${BRAND_LOGO_PATH}" alt="${alt}" class="${cls}" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK}'">`;
+}
 
 async function resolveLogoForLogoTags() {
     const found = await findMyLogo();
     if (found) return found;
-    return '/logos/stitchcraft-logo.svg';
+    return BRAND_LOGO_FALLBACK;
 }
 
 /** Build one logo hang tag cell (shared by logo-only and mixed sheets). */
@@ -10727,7 +10850,7 @@ function collectLogoHangTagFragments(count, logoPath, qrPath) {
     return tagFragments;
 }
 
-/** Chunk any mix of tag HTML fragments into Letter sheets (12 per page). */
+/** Chunk any mix of tag HTML fragments into Letter sheets (9 per page). */
 function chunkTagFragmentsIntoPages(tagFragments) {
     const pages = [];
     for (let i = 0; i < tagFragments.length; i += TAGS_PER_LETTER_SHEET) {
@@ -10751,10 +10874,11 @@ function buildLogoTagsSheetHTML(count, logoPath, qrPath) {
             <div class="logo-tags-toolbar no-print">
                 <div>
                     <h2>Logo hang tags</h2>
+                    <span class="sheet-hint">3×3 of 2.5in tags · 9 per US Letter sheet</span>
                 </div>
                 <div>
                     <button type="button" class="btn btn-outline" onclick="closeLogoTagPreview()">Close preview</button>
-                    <button type="button" class="btn btn-primary" onclick="document.body.classList.add('printing-logo-tags'); window.print();">
+                    <button type="button" class="btn btn-primary" onclick="document.body.classList.add('printing-logo-tags'); document.body.classList.remove('printing-price-tags','printing-invoice'); window.print();">
                         <i class="fas fa-print"></i> Print
                     </button>
                 </div>
@@ -10769,7 +10893,7 @@ function closeLogoTagPreview() {
         el.style.display = 'none';
         el.innerHTML = '';
     }
-    document.body.classList.remove('printing-logo-tags');
+    document.body.classList.remove('printing-logo-tags', 'printing-price-tags');
 }
 
 async function previewLogoTags(alsoPrint) {
@@ -10800,6 +10924,7 @@ async function previewLogoTags(alsoPrint) {
         if (alsoPrint) {
             setTimeout(() => {
                 document.body.classList.add('printing-logo-tags');
+                document.body.classList.remove('printing-price-tags', 'printing-invoice');
                 window.print();
             }, 400);
         }
@@ -11063,7 +11188,7 @@ async function generatePriceTags(previewOnly = false) {
         return;
     }
     
-    document.body.classList.remove('printing-logo-tags');
+    document.body.classList.remove('printing-logo-tags', 'printing-price-tags', 'printing-invoice');
     const logoTagPrev = document.getElementById('logoTagPreview');
     if (logoTagPrev) {
         logoTagPrev.style.display = 'none';
@@ -11136,10 +11261,8 @@ async function generatePriceTags(previewOnly = false) {
     // Check my logo
     if (!myLogo) {
         console.log('🔍 Checking my logo');
-        const myLogoPath = '/logos/my-logo.png';
-        const logoExists = await checkFileExists(myLogoPath);
-        if (logoExists) {
-            myLogo = myLogoPath;
+        myLogo = await findMyLogo();
+        if (myLogo) {
             console.log('✅ Found my logo');
         } else {
             console.log('⚠️ My logo not found');
@@ -11160,7 +11283,7 @@ async function generatePriceTags(previewOnly = false) {
     }
         
     // Generate price tags HTML with logos (pass vendorLogoMap for item-specific logos)
-    // Optional logo hang tags are merged onto the same Letter sheets (12 per page).
+    // Optional logo hang tags are merged onto the same Letter sheets (9 per page).
     const priceTagsHTML = generatePriceTagsHTML(
         selectedItemsForTags,
         vendorName,
@@ -11186,15 +11309,9 @@ async function generatePriceTags(previewOnly = false) {
     
     // Set the HTML
     preview.innerHTML = priceTagsHTML;
-    
-    // Screen preview styling (print clears these in beforeprint / @media print)
     preview.style.display = 'block';
     preview.style.visibility = 'visible';
     preview.style.opacity = '1';
-    preview.style.minHeight = '200px';
-    preview.style.width = '100%';
-    preview.style.padding = '2rem';
-    preview.style.background = 'white';
     preview.classList.add('price-tag-preview-visible');
     
     // Make sure parent containers are visible
@@ -11251,6 +11368,8 @@ async function generatePriceTags(previewOnly = false) {
         // If not preview only, print after a short delay
         if (!previewOnly) {
             setTimeout(() => {
+                document.body.classList.add('printing-price-tags');
+                document.body.classList.remove('printing-logo-tags', 'printing-invoice');
                 window.print();
             }, 500);
         }
@@ -11373,13 +11492,18 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
     return `
         <div class="price-tags-container">
             <div class="price-tags-header">
-                <h2>${SecurityManager.escapeHtml(headerTitle)}</h2>
+                <div>
+                    <h2>${SecurityManager.escapeHtml(headerTitle)}</h2>
+                    <span class="sheet-hint">3×3 of 2.5in tags · 9 per US Letter sheet</span>
+                </div>
+                <div>
                 <button class="btn btn-outline" onclick="document.getElementById('priceTagPreview').style.display='none'">
                     <i class="fas fa-times"></i> Close
                 </button>
-                <button class="btn btn-primary" onclick="window.print()">
+                <button class="btn btn-primary" onclick="document.body.classList.add('printing-price-tags'); document.body.classList.remove('printing-logo-tags','printing-invoice'); window.print()">
                     <i class="fas fa-print"></i> Print
                 </button>
+                </div>
             </div>
             ${pagesHTML}
         </div>
@@ -11560,7 +11684,7 @@ async function openAddSaleModal(prefill = null) {
         form.reset();
         const saleDateInput = document.getElementById('saleDate');
         if (saleDateInput) {
-            saleDateInput.value = new Date().toISOString().split('T')[0];
+            saleDateInput.value = getLocalISODate();
         }
         const saleSourceIndexField = document.getElementById('saleSourceIndex');
         if (saleSourceIndexField) saleSourceIndexField.value = '';
@@ -12329,6 +12453,16 @@ function clearSalesFilters() {
     if (yearFilter) {
         yearFilter.value = '';
     }
+
+    const quarterFilter = document.getElementById('salesQuarterFilter');
+    if (quarterFilter) {
+        quarterFilter.value = '';
+    }
+
+    const monthFilter = document.getElementById('salesMonthFilter');
+    if (monthFilter) {
+        monthFilter.value = '';
+    }
     
     // Re-apply filters by reloading sales cards
     loadSalesCards();
@@ -12562,7 +12696,26 @@ function wireProjectGiftCheckboxes() {
     });
 }
 
-function createOrUpdateSaleFromProject(index) {
+function getLocalISODate(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function toggleProjectSaleDateField(prefix) {
+    const statusEl = document.getElementById(`${prefix}Status`);
+    const group = document.getElementById(`${prefix}SaleDateGroup`);
+    const input = document.getElementById(`${prefix}SaleDate`);
+    if (!statusEl || !group) return;
+    const isSold = statusEl.value === 'sold';
+    group.style.display = isSold ? 'block' : 'none';
+    if (isSold && input && !input.value) {
+        input.value = getLocalISODate();
+    }
+}
+
+function createOrUpdateSaleFromProject(index, dateSold) {
     const item = inventory[index];
     if (!item) return;
     if (item.type === 'project' && item.isGift) return;
@@ -12586,7 +12739,7 @@ function createOrUpdateSaleFromProject(index) {
     const amountPaid = commissionBase;
     const discountValue = listedPrice - (netAmount + commissionAmount);
     const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
-    const saleDate = new Date().toISOString().split('T')[0];
+    const saleDate = dateSold || saleRecord?.dateSold || getLocalISODate();
     const customerName = (item.customer || '').toLowerCase();
     const isShopSale = customerName.includes('shop') || customerName.includes('flippin') || customerName.includes('vendor') || customerName.includes('first avenue');
     
@@ -12623,7 +12776,7 @@ function createOrUpdateSaleFromProject(index) {
         saleRecord.saleSource = 'project';
         saleRecord.saleType = saleRecord.saleType || 'inventory';
         saleRecord.saleChannel = saleData.saleChannel;
-        saleRecord.dateSold = saleRecord.dateSold || saleData.dateSold;
+        saleRecord.dateSold = dateSold || saleRecord.dateSold || saleData.dateSold;
         saleRecord.salePrice = saleData.salePrice;
         saleRecord.netAmount = saleData.netAmount;
         saleRecord.amountPaid = saleData.amountPaid;
@@ -12641,6 +12794,7 @@ function createOrUpdateSaleFromProject(index) {
     }
     
     item.saleId = saleId;
+    item.dateSold = saleDate;
 }
 
 function refreshSalesViews() {
@@ -12668,8 +12822,8 @@ async function quickStatusChange(index, newStatus) {
         'sold': 'Sold'
     };
     
-    if (newStatus === 'sold' && item && item.type === 'project' && item.isGift) {
-        showNotification('Gift projects cannot be marked as sold.', 'error');
+    if (newStatus === 'sold') {
+        openMarkAsSoldModal(index);
         return;
     }
     
@@ -12677,9 +12831,6 @@ async function quickStatusChange(index, newStatus) {
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
     inventory[index].status = newStatus;
-    if (newStatus === 'sold') {
-        createOrUpdateSaleFromProject(index);
-    }
     await saveData();
     loadInventoryTable();
     if (typeof loadProjectsCards === 'function') {
@@ -12712,6 +12863,12 @@ function markAsCompleted(index) {
 }
 
 async function markAsSold(index) {
+    openMarkAsSoldModal(index);
+}
+
+let pendingMarkAsSoldIndex = null;
+
+function openMarkAsSoldModal(index) {
     const item = inventory[index];
     if (!item) {
         showNotification('Item not found', 'error');
@@ -12721,27 +12878,66 @@ async function markAsSold(index) {
         showNotification('Gift projects cannot be marked as sold.', 'error');
         return;
     }
-    if (!confirm('Mark this item as sold?')) {
+
+    pendingMarkAsSoldIndex = index;
+    const nameEl = document.getElementById('markAsSoldItemName');
+    if (nameEl) {
+        const label = item.description || item.name || 'this item';
+        nameEl.textContent = `Record the sale date for “${label}”.`;
+    }
+    const dateInput = document.getElementById('markAsSoldDate');
+    if (dateInput) {
+        dateInput.value = getLocalISODate();
+    }
+    const modal = document.getElementById('markAsSoldModal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.classList.add('modal-open');
+    }
+}
+
+async function confirmMarkAsSold() {
+    const index = pendingMarkAsSoldIndex;
+    const dateSold = document.getElementById('markAsSoldDate')?.value;
+    if (index === null || index === undefined) {
+        closeModal('markAsSoldModal');
         return;
     }
-    
-    // Store expanded customer groups before updating
+    if (!dateSold) {
+        showNotification('Please enter the sale date', 'error');
+        return;
+    }
+    pendingMarkAsSoldIndex = null;
+    closeModal('markAsSoldModal');
+    await completeMarkAsSold(index, dateSold);
+}
+
+async function completeMarkAsSold(index, dateSold) {
+    const item = inventory[index];
+    if (!item) {
+        showNotification('Item not found', 'error');
+        return;
+    }
+    if (item.type === 'project' && item.isGift) {
+        showNotification('Gift projects cannot be marked as sold.', 'error');
+        return;
+    }
+
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
-    
+
     inventory[index].status = 'sold';
-    createOrUpdateSaleFromProject(index);
+    createOrUpdateSaleFromProject(index, dateSold);
     await saveData();
     loadInventoryTable();
     if (typeof loadProjectsCards === 'function') {
         loadProjectsCards();
     }
-    loadCompletedItemsTable(); // Ensure completed tab reflects change
+    loadCompletedItemsTable();
     refreshSalesViews();
     updateInvoiceSelection();
-    
-    // Restore expanded customer groups after reload
+
     restoreExpandedCustomerGroups(expandedCustomers);
-    
+
     showNotification('Item marked as sold!', 'success');
 }
 
@@ -13783,6 +13979,242 @@ function generateFinancialReport() {
                     ${generateRevenueByStatus(filteredData.items)}
                 </tbody>
             </table>
+        </div>
+    `;
+}
+
+function formatSignedMoney(amount) {
+    const n = Number(amount) || 0;
+    const formatted = `$${Math.abs(n).toFixed(2)}`;
+    return n < 0 ? `(${formatted})` : formatted;
+}
+
+function getSaleGrossAmount(sale) {
+    const listed = parseFloat(sale.listedPrice);
+    if (!Number.isNaN(listed) && listed > 0) return listed;
+    const paid = parseFloat(sale.amountPaid);
+    if (!Number.isNaN(paid) && paid > 0) return paid;
+    return parseFloat(sale.salePrice || sale.netAmount || sale.price || 0) || 0;
+}
+
+function getMonthlyShopReportVendorFee() {
+    const storedFee = parseFloat(localStorage.getItem('monthlyShopReportVendorFee'));
+    return Number.isFinite(storedFee) ? storedFee : 75;
+}
+
+function shopReportCommissionKey(year, month) {
+    return `${year}-${month}`;
+}
+
+function getDefaultShopCommissionPercent(year, month) {
+    // First Avenue / Flippin' Happy used 20% in May–July 2026; other months default to 30%.
+    if (Number(year) === 2026 && (month === 5 || month === 6 || month === 7)) {
+        return 20;
+    }
+    return SHOP_VENDOR_AUTO_COMMISSION_PERCENT;
+}
+
+function getStoredShopCommissionRates() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem('monthlyShopReportCommissionByMonth') || '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function collectShopReportCommissionRates() {
+    const rates = { ...getStoredShopCommissionRates() };
+    document.querySelectorAll('.shop-report-month-commission').forEach(el => {
+        const year = el.dataset.year;
+        const month = el.dataset.month;
+        const value = parseFloat(el.value);
+        if (year && month && Number.isFinite(value)) {
+            rates[shopReportCommissionKey(year, month)] = value;
+        }
+    });
+    return rates;
+}
+
+function getShopReportCommissionPercent(rates, year, month) {
+    const stored = parseFloat(rates[shopReportCommissionKey(year, month)]);
+    if (Number.isFinite(stored)) return stored;
+    return getDefaultShopCommissionPercent(year, month);
+}
+
+function generateMonthlyShopReport() {
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) return;
+
+    const now = new Date();
+    const yearEl = document.getElementById('shopReportYear');
+    const monthEl = document.getElementById('shopReportMonth');
+    const customerEl = document.getElementById('shopReportCustomer');
+    const vendorFeeEl = document.getElementById('shopReportVendorFee');
+    const commissionRates = collectShopReportCommissionRates();
+
+    const selectedYear = yearEl?.value || String(now.getFullYear());
+    const selectedMonth = monthEl?.value || '';
+    const selectedCustomer = customerEl?.value || '';
+    const vendorFee = vendorFeeEl
+        ? (parseFloat(vendorFeeEl.value) || 0)
+        : getMonthlyShopReportVendorFee();
+
+    const years = [...new Set((sales || []).map(s => getSaleCalendarYear(s.dateSold)).filter(y => y != null))]
+        .sort((a, b) => b - a);
+    if (!years.includes(Number(selectedYear))) {
+        years.unshift(Number(selectedYear));
+    }
+    const customers = [...new Set((sales || []).map(s => s.customer).filter(c => c && c !== 'No Customer'))]
+        .sort((a, b) => a.localeCompare(b));
+
+    const monthsToShow = selectedMonth
+        ? [Number(selectedMonth)]
+        : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    const monthRows = monthsToShow.map(monthNum => {
+        const monthSales = (sales || []).filter(sale => {
+            const parts = getSaleDateParts(sale.dateSold);
+            if (!parts || String(parts.year) !== String(selectedYear) || parts.month !== monthNum) {
+                return false;
+            }
+            if (selectedCustomer && sale.customer !== selectedCustomer) return false;
+            return true;
+        });
+        const commissionPercent = getShopReportCommissionPercent(commissionRates, selectedYear, monthNum);
+        const totalSales = monthSales.reduce((sum, sale) => sum + getSaleGrossAmount(sale), 0);
+        const commission = totalSales * (commissionPercent / 100);
+        const total = totalSales - commission - vendorFee;
+        commissionRates[shopReportCommissionKey(selectedYear, monthNum)] = commissionPercent;
+        return {
+            monthNum,
+            name: monthNames[monthNum - 1],
+            count: monthSales.length,
+            totalSales,
+            commissionPercent,
+            commission,
+            vendorFee,
+            total
+        };
+    }).filter(row => selectedMonth || row.count > 0);
+
+    try {
+        localStorage.setItem('monthlyShopReportCommissionByMonth', JSON.stringify(commissionRates));
+        localStorage.setItem('monthlyShopReportVendorFee', String(vendorFee));
+        localStorage.removeItem('monthlyShopReportCommission');
+    } catch (_) { /* ignore quota */ }
+
+    const yearTotals = monthRows.reduce((acc, row) => {
+        acc.totalSales += row.totalSales;
+        acc.commission += row.commission;
+        acc.vendorFee += row.vendorFee;
+        acc.total += row.total;
+        acc.count += row.count;
+        return acc;
+    }, { totalSales: 0, commission: 0, vendorFee: 0, total: 0, count: 0 });
+    const uniqueRates = [...new Set(monthRows.map(row => row.commissionPercent))];
+    const yearCommissionLabel = uniqueRates.length === 1
+        ? `Commission ${uniqueRates[0]}%:`
+        : 'Commission:';
+
+    const yearOptions = years.map(y =>
+        `<option value="${y}" ${String(y) === String(selectedYear) ? 'selected' : ''}>${y}</option>`
+    ).join('');
+    const monthOptions = ['<option value="">All months</option>'].concat(
+        monthNames.map((name, i) => {
+            const val = String(i + 1);
+            return `<option value="${val}" ${selectedMonth === val ? 'selected' : ''}>${name}</option>`;
+        })
+    ).join('');
+    const customerOptions = ['<option value="">All shops / customers</option>'].concat(
+        customers.map(name => {
+            const attr = String(name).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            const label = SecurityManager.escapeHtml(name);
+            return `<option value="${attr}" ${selectedCustomer === name ? 'selected' : ''}>${label}</option>`;
+        })
+    ).join('');
+
+    const statementBlocks = monthRows.length === 0
+        ? `<p>No sales in this period. Pick another month or shop, or record a sale first.</p>`
+        : monthRows.map(row => `
+        <div class="shop-statement-month">
+            <h3>${row.name} ${selectedYear}${row.count ? ` · ${row.count} sale${row.count === 1 ? '' : 's'}` : ''}</h3>
+            <table class="shop-statement-lines">
+                <tr>
+                    <td>Total sales:</td>
+                    <td>${formatSignedMoney(row.totalSales)}</td>
+                </tr>
+                <tr>
+                    <td>
+                        <label class="shop-statement-commission-label" for="shopReportCommission-${selectedYear}-${row.monthNum}">
+                            Commission
+                            <input type="number" class="shop-report-month-commission" id="shopReportCommission-${selectedYear}-${row.monthNum}" data-year="${selectedYear}" data-month="${row.monthNum}" min="0" max="100" step="0.1" value="${row.commissionPercent}" onchange="generateMonthlyShopReport()">
+                            %:
+                        </label>
+                    </td>
+                    <td>${formatSignedMoney(row.commission)}</td>
+                </tr>
+                <tr>
+                    <td>Vendor fee:</td>
+                    <td>${formatSignedMoney(row.vendorFee)}</td>
+                </tr>
+                <tr class="statement-total">
+                    <td>Total:</td>
+                    <td class="${row.total < 0 ? 'shop-statement-negative' : 'shop-statement-positive'}">${formatSignedMoney(row.total)}</td>
+                </tr>
+            </table>
+        </div>
+    `).join('');
+
+    const yearSummary = (!selectedMonth && monthRows.length > 0) ? `
+        <div class="shop-statement-month">
+            <h3>${selectedYear} totals</h3>
+            <table class="shop-statement-lines">
+                <tr>
+                    <td>Total sales:</td>
+                    <td>${formatSignedMoney(yearTotals.totalSales)}</td>
+                </tr>
+                <tr>
+                    <td>${yearCommissionLabel}</td>
+                    <td>${formatSignedMoney(yearTotals.commission)}</td>
+                </tr>
+                <tr>
+                    <td>Vendor fee:</td>
+                    <td>${formatSignedMoney(yearTotals.vendorFee)}</td>
+                </tr>
+                <tr class="statement-total">
+                    <td>Total:</td>
+                    <td class="${yearTotals.total < 0 ? 'shop-statement-negative' : 'shop-statement-positive'}">${formatSignedMoney(yearTotals.total)}</td>
+                </tr>
+            </table>
+        </div>
+    ` : '';
+
+    reportContent.innerHTML = `
+        <div class="financial-report monthly-shop-report">
+            <h2>Monthly Shop Statement</h2>
+            <p>Total sales minus shop commission and the monthly vendor fee. Each month has its own commission percent — change it if the shop used a different rate. Negative totals show in parentheses.</p>
+            <div class="shop-statement-controls no-print">
+                <div>
+                    <label for="shopReportYear">Year</label>
+                    <select id="shopReportYear" onchange="generateMonthlyShopReport()">${yearOptions}</select>
+                </div>
+                <div>
+                    <label for="shopReportMonth">Month</label>
+                    <select id="shopReportMonth" onchange="generateMonthlyShopReport()">${monthOptions}</select>
+                </div>
+                <div>
+                    <label for="shopReportCustomer">Shop / customer</label>
+                    <select id="shopReportCustomer" onchange="generateMonthlyShopReport()">${customerOptions}</select>
+                </div>
+                <div>
+                    <label for="shopReportVendorFee">Vendor fee $</label>
+                    <input type="number" id="shopReportVendorFee" min="0" step="0.01" value="${vendorFee}" onchange="generateMonthlyShopReport()">
+                </div>
+            </div>
+            ${statementBlocks}
+            ${yearSummary}
         </div>
     `;
 }
@@ -17274,17 +17706,8 @@ async function editCompletedItem(index) {
     // Set all the field values
     setElementValue('editCompletedItemDescription', item.description || item.name || '');
     setElementValue('editCompletedItemQuantity', item.quantity || 1);
-    setElementValue('editCompletedItemPrice', item.price || 0);
+    setPriceFieldValue('editCompletedItemPrice', item.price);
     setElementValue('editCompletedItemInvoicedDate', item.invoicedDate || '');
-    
-    // Ensure price field is enabled and editable for completed items
-    const priceField = document.getElementById('editCompletedItemPrice');
-    if (priceField) {
-        priceField.disabled = false;
-        priceField.readOnly = false;
-        priceField.style.pointerEvents = 'auto';
-        priceField.style.opacity = '1';
-    }
     
     // Populate customer dropdown
     populateCustomerSelect('editCompletedItemCustomer');
@@ -17362,6 +17785,8 @@ async function addCompletedItem() {
     if (addGift) {
         addGift.checked = false;
     }
+    
+    enablePriceField('addCompletedItemPrice');
     
     // Show the modal
     const modal = document.getElementById('addCompletedItemModal');

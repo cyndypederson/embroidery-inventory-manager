@@ -16,7 +16,7 @@
         }
     </script>
     <meta name="version" content="1.0.116">
-    <title>CyndyP StitchCraft Inventory - v1.0.123 - CACHE BUST</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.126 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -35,16 +35,15 @@
     <!-- <link rel="manifest" href="manifest.json"> -->
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="logo.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="logo.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="logo.png">
+    <link rel="apple-touch-icon" href="/logos/my-logo.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/logos/my-logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/logos/my-logo.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/logos/my-logo.png">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
+    <link rel="icon" type="image/png" href="/logos/my-logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.123&t=202608081642&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.126&t=202608081642&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -303,6 +302,7 @@
         <header>
             <div class="top-bar">
                 <div class="branding">
+                    <img id="logo" class="logo" alt="Cyndy P Stitch Craft" style="display:none">
                     <h1 id="appTitle">CyndyP StitchCraft Inventory Management</h1>
                     <a id="knittingSiteLink" href="#" class="site-link" style="display: none;" target="_blank" rel="noopener">
                         <i class="fas fa-external-link-alt"></i> Knitting inventory
@@ -678,12 +678,34 @@
 
                 <!-- Sales Filters -->
                 <div class="filters" style="margin-bottom: 1rem;">
-                    <input type="text" id="salesSearch" placeholder="Search sales..." onkeyup="loadSalesCards(); if (typeof loadSalesTable === 'function') loadSalesTable(); if (typeof loadMobileSalesCards === 'function') loadMobileSalesCards();">
-                    <select id="salesCustomerFilter" onchange="loadSalesCards(); if (typeof loadSalesTable === 'function') loadSalesTable(); if (typeof loadMobileSalesCards === 'function') loadMobileSalesCards();" aria-label="Filter sales by customer">
+                    <input type="text" id="salesSearch" placeholder="Search sales..." onkeyup="refreshSalesViews()">
+                    <select id="salesCustomerFilter" onchange="refreshSalesViews()" aria-label="Filter sales by customer">
                         <option value="">All Customers</option>
                     </select>
-                    <select id="salesYearFilter" onchange="loadSalesCards(); if (typeof loadSalesTable === 'function') loadSalesTable(); if (typeof loadMobileSalesCards === 'function') loadMobileSalesCards();" aria-label="Filter sales by year" title="Filter by sale date year">
+                    <select id="salesYearFilter" onchange="refreshSalesViews()" aria-label="Filter sales by year" title="Filter by sale date year">
                         <option value="">All years</option>
+                    </select>
+                    <select id="salesQuarterFilter" onchange="refreshSalesViews()" aria-label="Filter sales by quarter" title="Filter by sale date quarter">
+                        <option value="">All quarters</option>
+                        <option value="1">Q1 (Jan–Mar)</option>
+                        <option value="2">Q2 (Apr–Jun)</option>
+                        <option value="3">Q3 (Jul–Sep)</option>
+                        <option value="4">Q4 (Oct–Dec)</option>
+                    </select>
+                    <select id="salesMonthFilter" onchange="refreshSalesViews()" aria-label="Filter sales by month" title="Filter by sale date month">
+                        <option value="">All months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
                     </select>
                     <button class="btn btn-outline" onclick="clearSalesFilters()" title="Clear all filters">
                         <i class="fas fa-times"></i> Clear Filters
@@ -731,7 +753,7 @@
                         <button class="btn btn-primary" onclick="openPriceTagModal()">
                             <i class="fas fa-tags"></i> Generate Price Tags
                         </button>
-                        <button type="button" class="btn btn-outline" id="btnOpenLogoTags" onclick="openLogoTagModalFromUI(); return false;" title="Same size as price tags: your logo + Facebook QR">
+                        <button type="button" class="btn btn-outline" id="btnOpenLogoTags" onclick="openLogoTagModalFromUI(); return false;" title="Same size as price tags: your logo + Facebook QR, 9 per Letter page">
                             <i class="fas fa-qrcode"></i> Logo hang tags
                         </button>
                     </div>
@@ -905,6 +927,9 @@
                         <div class="report-buttons">
                             <button class="btn btn-outline" onclick="generateFinancialReport()">
                                 <i class="fas fa-dollar-sign"></i> Financial Summary
+                            </button>
+                            <button class="btn btn-outline" onclick="generateMonthlyShopReport()">
+                                <i class="fas fa-store"></i> Monthly Shop Statement
                             </button>
                             <button class="btn btn-outline" onclick="generateCustomerReport()">
                                 <i class="fas fa-users"></i> Customer Analytics
@@ -1423,12 +1448,17 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="projectStatus">Status</label>
-                    <select id="projectStatus">
+                    <select id="projectStatus" onchange="toggleProjectSaleDateField('project')">
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="sold">Sold</option>
                     </select>
+                </div>
+                <div class="form-group half-width" id="projectSaleDateGroup" style="display: none;">
+                    <label for="projectSaleDate">Sale Date</label>
+                    <input type="date" id="projectSaleDate">
+                    <small class="form-help">Date this item sold</small>
                 </div>
                 <div class="form-group full-width">
                     <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -1931,7 +1961,7 @@
                 </div>
                 
                 <div class="form-group half-width">
-                    <label for="editProjectTotalPrice">Total Price</label>
+                    <label for="editProjectTotalPrice">Total Price (calculated)</label>
                     <input type="number" id="editProjectTotalPrice" step="0.01" min="0" readonly placeholder="0.00">
                 </div>
                 
@@ -1955,12 +1985,17 @@
                 
                 <div class="form-group half-width">
                     <label for="editProjectStatus">Status</label>
-                    <select id="editProjectStatus" onchange="updateEditStatusOptions()">
+                    <select id="editProjectStatus" onchange="updateEditStatusOptions(); toggleProjectSaleDateField('editProject')">
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="sold">Sold</option>
                     </select>
+                </div>
+                <div class="form-group half-width" id="editProjectSaleDateGroup" style="display: none;">
+                    <label for="editProjectSaleDate">Sale Date</label>
+                    <input type="date" id="editProjectSaleDate">
+                    <small class="form-help">Date this item sold</small>
                 </div>
                 
                 <div class="form-group full-width">
@@ -2038,7 +2073,7 @@
                 </div>
                 
                 <div class="form-group half-width">
-                    <label for="editCompletedItemTotal">Total Price</label>
+                    <label for="editCompletedItemTotal">Total Price (calculated)</label>
                     <input type="number" id="editCompletedItemTotal" step="0.01" min="0" readonly placeholder="0.00">
                 </div>
                 
@@ -2103,7 +2138,7 @@
                 </div>
                 
                 <div class="form-group half-width">
-                    <label for="addCompletedItemTotal">Total Price</label>
+                    <label for="addCompletedItemTotal">Total Price (calculated)</label>
                     <input type="number" id="addCompletedItemTotal" step="0.01" min="0" readonly placeholder="0.00">
                 </div>
                 
@@ -2357,6 +2392,26 @@
         </div>
     </div>
 
+    <!-- Mark as Sold: collect sale date -->
+    <div id="markAsSoldModal" class="modal">
+        <div class="modal-content confirm-modal mark-sold-modal">
+            <div class="confirm-header">
+                <h3>Mark as Sold</h3>
+            </div>
+            <div class="confirm-body">
+                <p id="markAsSoldItemName">Record the date this item sold.</p>
+                <div class="form-group" style="text-align: left; margin-top: 1rem;">
+                    <label for="markAsSoldDate">Sale Date</label>
+                    <input type="date" id="markAsSoldDate" required>
+                </div>
+            </div>
+            <div class="confirm-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('markAsSoldModal')">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmMarkAsSold()">Mark as Sold</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Advanced Search Modal -->
     <div id="advancedSearchModal" class="modal">
         <div class="modal-content">
@@ -2549,8 +2604,8 @@
                 <div class="form-group half-width">
                     <label for="priceTagLogoHangCount">Also include logo hang tags</label>
                     <input type="number" id="priceTagLogoHangCount" name="logoHangCount" min="0" max="120" value="0"
-                           title="Extra logo-only hang tags on the same sheets (12 tags per Letter page)">
-                    <small>Optional. Example: 1 price tag + 19 logo tags = 20 tags (2 pages). Leave 0 for price tags only.</small>
+                           title="Extra logo-only hang tags on the same sheets (9 tags per Letter page)">
+                    <small>Optional. Example: 1 price tag + 8 logo tags = 9 tags (1 page). Leave 0 for price tags only.</small>
                 </div>
                 
                 <div class="form-actions">
@@ -2575,8 +2630,8 @@
             <h2><i class="fas fa-qrcode"></i> Logo hang tags</h2>
             <form id="logoTagForm" class="modal-form" novalidate>
                 <div class="form-group half-width">
-                    <label for="logoTagCount">Number of tags (12 = one US Letter sheet)</label>
-                    <input type="number" id="logoTagCount" name="count" min="1" max="120" value="12" required title="3×4 grid of 2in tags = 12 per page">
+                    <label for="logoTagCount">Number of tags (9 = one US Letter sheet)</label>
+                    <input type="number" id="logoTagCount" name="count" min="1" max="120" value="9" required title="3×3 grid of 2.5in tags = 9 per page">
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-outline" onclick="closeModal('logoTagModal')">Cancel</button>
@@ -2658,6 +2713,6 @@
             console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.118 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.123&t=202608081642&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.126&t=202608081642&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>
