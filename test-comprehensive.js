@@ -36,9 +36,7 @@ class ComprehensiveTester {
                 'button[data-tab="inventory"]', 
                 'button[data-tab="customers"]',
                 'button[data-tab="wip"]',
-                'button[data-tab="gallery"]',
-                'button[data-tab="sales"]',
-                'button[data-tab="ideas"]'
+                'button[data-tab="sales"]'
             ];
             
             for (const selector of mainElements) {

@@ -23,7 +23,8 @@ That is the only brand-logo file you need to update. Hang tags, price tags, invo
 public/logos/
 ├── vendors/              # Vendor/Shop logos (vendor-dependent)
 │   └── [vendor-name].png
-├── my-logo.png           # YOUR brand logo — drop replacements here
+├── my-logo.png           # YOUR brand logo — drop replacements here (app uses this)
+├── my-logo.svg           # Vector copy of the same lockup (print, Canva, scaling)
 ├── stitchcraft-logo.svg  # Fallback if my-logo.png is missing
 └── qr-facebook.png       # QR image for Facebook (logo tags + price tag footer)
 ```

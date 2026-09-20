@@ -1,6 +1,6 @@
 {
   "name": "embroidery-inventory-manager",
-  "version": "1.0.124",
+  "version": "1.0.128",
   "description": "A web-based inventory management system for embroidery businesses",
   "main": "server.js",
   "scripts": {
@@ -24,6 +24,8 @@
     "test:all": "npm run test:smoke && npm run test:modals && npm run test:comprehensive",
     "test:cleanup": "node test-cleanup.js",
     "test:watch": "nodemon test-smoke.js",
+    "test:keera-parser": "node scripts/test-keera-parser.js",
+    "trial:keera-sales": "node scripts/trial-keera-sales.js",
     "pre-deploy": "node pre-deploy.js",
     "deploy:safe": "npm run pre-deploy && npm run deploy"
   },
@@ -42,7 +44,11 @@
     "dotenv": "^17.2.2",
     "express": "^4.18.2",
     "express-session": "^1.18.2",
-    "mongodb": "^6.19.0"
+    "imapflow": "^1.7.8",
+    "mailparser": "^3.9.20",
+    "mongodb": "^6.19.0",
+    "pdf-parse": "^2.4.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@axe-core/puppeteer": "^4.10.2",

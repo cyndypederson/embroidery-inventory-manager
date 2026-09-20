@@ -18,7 +18,9 @@
     "name": "Flippin' Happy",
     "contact": "",
     "location": "Grand Forks",
-    "dateAdded": "2025-09-11T01:21:45.432Z"
+    "dateAdded": "2025-09-11T01:21:45.432Z",
+    "requiresVendorNumber": true,
+    "vendorNumber": "73"
   },
   {
     "_id": "690e543b3385ccfc24228dcd",

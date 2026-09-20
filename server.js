@@ -27,7 +27,7 @@ const MULTI_USER_ENABLED = TENANT_ID === 'knitting';
 const IS_KNITTING_TENANT = MULTI_USER_ENABLED || DB_NAME === 'knitting_inventory';
 let db;
 
-const ALL_TABS = ['projects', 'inventory', 'customers', 'wip', 'completed', 'ideas', 'gallery', 'sales', 'reports', 'data'];
+const ALL_TABS = ['projects', 'inventory', 'customers', 'wip', 'completed', 'sales', 'reports', 'data'];
 
 function getTenantConfig() {
     const enabledTabsRaw = process.env.ENABLED_TABS;
@@ -743,6 +743,69 @@ app.post('/api/invoices', requireSessionAuth, async (req, res) => {
     }
 });
 
+const { isDryRun, isImapConfigured, getImapConfig } = require('./lib/email-sales/config');
+const { pollKeeraSales } = require('./lib/email-sales/poll');
+
+app.get('/api/email-sales/status', requireSessionAuth, async (req, res) => {
+    const cfg = getImapConfig();
+    res.json({
+        configured: isImapConfigured(),
+        dryRun: isDryRun(),
+        mailbox: cfg.mailbox,
+        from: cfg.from,
+        pollMinutes: cfg.pollMinutes,
+        user: cfg.user
+    });
+});
+
+app.post('/api/email-sales/poll', requireSessionAuth, async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) return res.status(500).json({ error: 'Database not connected' });
+        const result = await pollKeeraSales(database, {
+            dryRun: isDryRun(),
+            mailbox: process.env.IMAP_MAILBOX || 'Sales',
+            limit: 40
+        });
+        res.json({
+            success: true,
+            dryRun: result.dryRun,
+            host: result.host,
+            mailbox: result.mailbox,
+            subjects: result.subjects,
+            summary: result.comparison?.summary || null,
+            applyResult: result.applyResult,
+            rows: result.comparison?.rows || []
+        });
+    } catch (error) {
+        console.error('Email sales poll failed:', error.message);
+        res.status(500).json({ error: 'Failed to poll Keera sales email' });
+    }
+});
+
+function startKeeraSalesPoller() {
+    if (!isImapConfigured()) {
+        console.log('Keera sales poller idle (IMAP not configured)');
+        return;
+    }
+    const minutes = getImapConfig().pollMinutes;
+    console.log(`Keera sales poller scheduled every ${minutes} minute(s), dry-run=${isDryRun()}`);
+    const run = async () => {
+        try {
+            const database = await connectToDatabase();
+            if (!database) return;
+            const result = await pollKeeraSales(database, { dryRun: isDryRun() });
+            if (!result.skipped) {
+                console.log(`Keera sales poll: mailbox=${result.mailbox} emails=${result.comparison.summary.emails} unique=${result.comparison.summary.unique_match} dryRun=${result.dryRun}`);
+            }
+        } catch (error) {
+            console.error('Keera sales poller error:', error.message);
+        }
+    };
+    setTimeout(run, 15000);
+    setInterval(run, Math.max(1, minutes) * 60 * 1000);
+}
+
 // Connect to database and start server
 connectToDatabase().then(() => {
     // Start server only if not in Vercel environment
@@ -752,6 +815,7 @@ connectToDatabase().then(() => {
             console.log(`   Local:   http://localhost:${PORT}`);
             console.log(`   Network: http://${getLocalIP()}:${PORT}`);
             console.log(`\n📱 Access from any device on your network using the Network URL`);
+            startKeeraSalesPoller();
         });
     }
 });

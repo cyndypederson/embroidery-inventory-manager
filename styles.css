@@ -909,6 +909,12 @@ tr:nth-child(even) {
     border: 2px solid #4A90A4;
 }
 
+.status-gift {
+    background: linear-gradient(135deg, #FCE7F3 0%, #F9A8D4 100%);
+    color: #9d174d;
+    border: 2px solid #ec4899;
+}
+
 /* Status icon removed */
 
 .status-sold {
@@ -3465,6 +3471,11 @@ tr:nth-child(even) {
 .inventory-row.status-completed {
     background-color: #d4edda;
     border-left: 4px solid #4A90A4;
+}
+
+.inventory-row.status-gift {
+    background-color: #fce7f3;
+    border-left: 4px solid #ec4899;
 }
 
 .inventory-row.status-sold {
@@ -6283,6 +6294,30 @@ body {
     gap: 1rem;
 }
 
+.backup-status {
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: #eef6f4;
+    color: #1d4f46;
+    font-weight: 500;
+}
+
+.backup-status.is-ok {
+    background: #e7f6ee;
+    color: #1e5a38;
+}
+
+.backup-status.is-warning {
+    background: #fff6db;
+    color: #5c4d00;
+}
+
+.backup-empty {
+    margin: 0;
+    color: #666;
+}
+
 .backup-settings {
     display: flex;
     align-items: center;
@@ -7601,8 +7636,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.3rem;
+    flex-shrink: 0;
+    margin-bottom: 0.06in;
+    padding-bottom: 0.06in;
     border-bottom: 1px solid #ddd;
 }
 
@@ -7612,8 +7648,8 @@ body {
 
 .price-tag-vendor-logo,
 .price-tag-my-logo {
-    max-width: 1in;
-    max-height: 0.7in;
+    max-width: 0.92in;
+    max-height: 0.52in;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -7627,17 +7663,20 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     text-align: center;
     min-height: 0;
+    gap: 0.04in;
 }
 
 .price-tag-item-name {
-    font-size: 10pt;
-    font-weight: bold;
+    font-size: 8.5pt;
+    font-weight: 600;
     color: #2C5F7C;
-    margin-bottom: 0.15rem;
+    margin: 0;
+    max-width: 100%;
     word-wrap: break-word;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
     line-height: 1.2;
     overflow: hidden;
     display: -webkit-box;
@@ -7646,26 +7685,31 @@ body {
 }
 
 .price-tag-price {
-    font-size: 16pt;
+    font-size: 13pt;
     font-weight: bold;
     color: #d32f2f;
-    margin-bottom: 0.1rem;
+    margin: 0;
+    line-height: 1.1;
+    flex-shrink: 0;
 }
 
 .price-tag-vendor-number {
-    font-size: 0.85rem;
-    color: #666;
-    margin-top: auto;
+    font-size: 8pt;
+    color: #555;
+    margin: 0;
+    line-height: 1.2;
+    flex-shrink: 0;
 }
 
 .price-tag-footer {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex-shrink: 0;
     gap: 4px;
-    padding-top: 4px;
+    padding-top: 0.05in;
     border-top: 1px solid #e0e0e0;
-    margin-top: auto;
+    margin-top: 0.04in;
 }
 
 .price-tag-qr {
@@ -7880,7 +7924,7 @@ body {
     }
 
     .price-tag-header.no-vendor-logo {
-        height: 0.7in;
+        height: 0.52in;
     }
 }
 
@@ -8215,6 +8259,11 @@ body {
 .project-card-status.completed {
     background-color: #d1fae5;
     color: #065f46;
+}
+
+.project-card-status.gift {
+    background-color: #fce7f3;
+    color: #9d174d;
 }
 
 .project-card-status.work-in-progress {

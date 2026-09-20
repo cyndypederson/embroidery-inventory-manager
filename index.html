@@ -16,7 +16,7 @@
         }
     </script>
     <meta name="version" content="1.0.116">
-    <title>CyndyP StitchCraft Inventory - v1.0.124 - CACHE BUST</title>
+    <title>CyndyP StitchCraft Inventory - v1.0.128 - CACHE BUST</title>
     
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="StitchCraft">
@@ -43,7 +43,7 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logos/my-logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.124&t=202609120028&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.128&t=202609120028&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -355,12 +355,6 @@
                 <button class="nav-btn" data-tab="completed">
                     <i class="fas fa-check-circle"></i> Completed Items
                 </button>
-                <button class="nav-btn" data-tab="ideas">
-                    <i class="fas fa-lightbulb"></i> Ideas
-                </button>
-                <button class="nav-btn" data-tab="gallery">
-                    <i class="fas fa-images"></i> Gallery
-                </button>
                 <button class="nav-btn" data-tab="sales">
                     <i class="fas fa-chart-line"></i> Sales
                 </button>
@@ -386,6 +380,7 @@
                         <option value="pending">Pending</option>
                         <option value="in-progress">In Progress</option>
                         <option value="completed">Completed</option>
+                        <option value="gift">Gift</option>
                         <option value="sold">Sold</option>
                     </select>
                     <select id="customerFilter" onchange="filterItems()" aria-label="Filter by customer">
@@ -621,38 +616,6 @@
                 </div>
             </div>
 
-            <!-- Gallery Tab -->
-            <div id="gallery" class="tab-content">
-                <div class="section-header">
-                    <h2>Work Gallery</h2>
-                    <button class="btn btn-primary" onclick="openAddPhotoModal()">
-                        <i class="fas fa-plus"></i> Add Photo
-                    </button>
-                </div>
-
-                <div class="gallery-filters">
-                    <select id="galleryStatusFilter" onchange="filterGallery()" aria-label="Filter gallery by status">
-                        <option value="">All Items</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                        <option value="in-progress">In Progress</option>
-                    </select>
-                    <input type="text" id="gallerySearch" placeholder="Search gallery..." onkeyup="filterGallery()">
-                    <button class="btn btn-outline" onclick="clearGalleryFilters()" title="Clear all filters">
-                        <i class="fas fa-times"></i> Clear Filters
-                    </button>
-                </div>
-
-                <div id="galleryGrid" class="gallery-grid">
-                    <!-- Gallery items will be loaded here -->
-                </div>
-                
-                <!-- Mobile Cards Container for Gallery -->
-                <div class="mobile-cards-container">
-                    <div class="mobile-cards-grid" id="mobileGalleryCards"></div>
-                </div>
-            </div>
-
             <!-- Sales Tab -->
             <div id="sales" class="tab-content">
                 <div class="section-header">
@@ -824,54 +787,6 @@
                 </div>
             </div>
 
-            <!-- Ideas Tab -->
-            <div id="ideas" class="tab-content">
-                <div class="section-header">
-                    <h2>Inspiration & Ideas</h2>
-                    <div class="ideas-actions">
-                        <button class="btn btn-primary" onclick="openAddIdeaModal()">
-                            <i class="fas fa-plus"></i> Add New Idea
-                        </button>
-                        <button class="btn btn-secondary" onclick="exportIdeas()">
-                            <i class="fas fa-download"></i> Export Ideas
-                        </button>
-                    </div>
-                </div>
-
-                <div class="ideas-filters">
-                    <input type="text" id="ideasSearch" placeholder="Search ideas..." onkeyup="filterIdeas()">
-                    <select id="ideasCategoryFilter" onchange="filterIdeas()" aria-label="Filter ideas by category">
-                        <option value="">All Categories</option>
-                        <option value="web">Web Inspiration</option>
-                        <option value="book">Book/Pattern</option>
-                        <option value="custom">Custom Design</option>
-                        <option value="technique">Technique</option>
-                        <option value="color">Color Scheme</option>
-                        <option value="style">Style</option>
-                        <option value="other">Other</option>
-                    </select>
-                    <select id="ideasStatusFilter" onchange="filterIdeas()" aria-label="Filter ideas by status">
-                        <option value="">All Status</option>
-                        <option value="new">New Idea</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="archived">Archived</option>
-                    </select>
-                    <button class="btn btn-outline" onclick="clearIdeasFilters()" title="Clear all filters">
-                        <i class="fas fa-times"></i> Clear Filters
-                    </button>
-                </div>
-
-                <div id="ideasGrid" class="ideas-grid">
-                    <!-- Ideas will be loaded here -->
-                </div>
-                
-                <!-- Mobile Cards Container for Ideas -->
-                <div class="mobile-cards-container">
-                    <div class="mobile-cards-grid" id="mobileIdeasCards"></div>
-                </div>
-            </div>
-
             <!-- Reports Tab -->
             <div id="reports" class="tab-content">
                 <div class="section-header">
@@ -955,6 +870,7 @@
                                 <option value="pending">Pending</option>
                                 <option value="in-progress">In Progress</option>
                                 <option value="completed">Completed</option>
+                                <option value="gift">Gift</option>
                                 <option value="sold">Sold</option>
                             </select>
                             <select id="reportDateFilter">
@@ -1003,6 +919,7 @@
                         </button>
                     </div>
                 </div>
+                <p id="cloudBackupStatus" class="backup-status">Checking live backup status…</p>
 
                 <!-- Data Statistics -->
                 <div class="data-stats">
@@ -1016,7 +933,7 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="lastBackup">Never</div>
-                        <div class="stat-label">Last Backup</div>
+                        <div class="stat-label">Last Cloud Save</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="backupCount">0</div>
@@ -1303,10 +1220,11 @@
                 <div id="projectFields" style="display: none;">
                     <div class="form-group half-width">
                         <label for="itemProjectStatus">Status</label>
-                        <select id="itemProjectStatus">
+                        <select id="itemProjectStatus" onchange="syncGiftStatusFromSelect('itemProjectStatus', 'itemIsGift')">
                             <option value="pending">Pending</option>
                             <option value="in-progress">In Progress</option>
                             <option value="completed">Completed</option>
+                            <option value="gift">Gift</option>
                             <option value="sold">Sold</option>
                         </select>
                     </div>
@@ -1448,12 +1366,13 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="projectStatus">Status</label>
-                    <select id="projectStatus" onchange="toggleProjectSaleDateField('project')">
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                    </select>
+                        <select id="projectStatus" onchange="toggleProjectSaleDateField('project'); syncGiftStatusFromSelect('projectStatus', 'projectIsGift')">
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="gift">Gift</option>
+                            <option value="sold">Sold</option>
+                        </select>
                 </div>
                 <div class="form-group half-width" id="projectSaleDateGroup" style="display: none;">
                     <label for="projectSaleDate">Sale Date</label>
@@ -1810,130 +1729,6 @@
         </div>
     </div>
 
-    <div id="addPhotoModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('addPhotoModal')">&times;</span>
-            <h3>Add Photo to Gallery</h3>
-            <form id="addPhotoForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="photoTitle">Photo Title *</label>
-                    <input type="text" id="photoTitle" required maxlength="100" placeholder="e.g., Custom Embroidered T-Shirt">
-                </div>
-                <div class="form-group full-width">
-                    <label for="photoFile">Photo *</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="photoFile" accept="image/*" required>
-                        <button type="button" class="btn btn-outline" onclick="openCameraForGallery()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                    </div>
-                    <small>Upload a photo or take one with your camera.</small>
-                </div>
-                <div class="form-group full-width">
-                    <label for="photoDescription">Description</label>
-                    <textarea id="photoDescription" rows="3" maxlength="500" placeholder="Describe the work, techniques used, etc."></textarea>
-                </div>
-                <div class="form-group half-width">
-                    <label for="photoTags">Tags</label>
-                    <input type="text" id="photoTags" placeholder="e.g., t-shirt, custom, embroidery" maxlength="200">
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addPhotoModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Photo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="editPhotoModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('editPhotoModal')">&times;</span>
-            <h3>Edit Photo</h3>
-            <form id="editPhotoForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="editPhotoTitle">Photo Title *</label>
-                    <input type="text" id="editPhotoTitle" required maxlength="100" placeholder="e.g., Custom T-Shirt Design">
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPhotoDescription">Description</label>
-                    <textarea id="editPhotoDescription" rows="3" maxlength="500" placeholder="Describe the work, techniques used, etc."></textarea>
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPhotoImage">Update Image (optional)</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="editPhotoImage" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForEditPhoto()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group full-width">
-                    <label for="editPhotoNotes">Notes</label>
-                    <textarea id="editPhotoNotes" rows="2" maxlength="300" placeholder="Additional notes about this photo"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('editPhotoModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Photo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="addIdeaModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('addIdeaModal')">&times;</span>
-            <h3>Add New Idea</h3>
-            <form id="addIdeaForm" class="modal-form" novalidate>
-                <div class="form-group full-width">
-                    <label for="ideaTitle">Idea Title *</label>
-                    <input type="text" id="ideaTitle" required maxlength="100" placeholder="e.g., Floral Hoop Design, Geometric Pattern">
-                </div>
-                <div class="form-group full-width">
-                    <label for="ideaDescription">Description</label>
-                    <textarea id="ideaDescription" rows="3" maxlength="500" placeholder="Describe the idea, inspiration, techniques, etc."></textarea>
-                </div>
-                <div class="form-group half-width">
-                    <label for="ideaStatus">Status</label>
-                    <select id="ideaStatus">
-                        <option value="new">New Idea</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="archived">Archived</option>
-                    </select>
-                </div>
-                <div class="form-group full-width">
-                    <label for="ideaImage">Image</label>
-                    <div class="photo-input-container">
-                        <input type="file" id="ideaImage" accept="image/*">
-                        <button type="button" class="btn btn-outline" onclick="openCameraForIdeas()" title="Take Photo with Camera">
-                            <i class="fas fa-camera"></i> Take Photo
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group half-width">
-                    <label for="ideaSource">Source</label>
-                    <input type="text" id="ideaSource" placeholder="e.g., Pinterest, Instagram, Etsy, Book Title" maxlength="100">
-                </div>
-                <div class="form-group half-width">
-                    <label for="ideaPriority">Priority</label>
-                    <select id="ideaPriority">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                <div class="form-group full-width">
-                    <label for="ideaNotes">Notes</label>
-                    <textarea id="ideaNotes" rows="2" placeholder="Additional notes, materials needed, estimated time, etc." maxlength="1000"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addIdeaModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Idea</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Edit Project Modal -->
     <div id="editProjectModal" class="modal">
         <div class="modal-content">
@@ -1985,12 +1780,13 @@
                 
                 <div class="form-group half-width">
                     <label for="editProjectStatus">Status</label>
-                    <select id="editProjectStatus" onchange="updateEditStatusOptions(); toggleProjectSaleDateField('editProject')">
-                        <option value="pending">Pending</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="sold">Sold</option>
-                    </select>
+                        <select id="editProjectStatus" onchange="updateEditStatusOptions(); toggleProjectSaleDateField('editProject'); syncGiftStatusFromSelect('editProjectStatus', 'editProjectIsGift')">
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="gift">Gift</option>
+                            <option value="sold">Sold</option>
+                        </select>
                 </div>
                 <div class="form-group half-width" id="editProjectSaleDateGroup" style="display: none;">
                     <label for="editProjectSaleDate">Sale Date</label>
@@ -2365,9 +2161,6 @@
             <div class="photo-container">
                 <img id="photoFullImage" class="photo-full" src="" alt="Photo">
                 <div class="photo-actions">
-                    <button type="button" class="btn btn-danger" onclick="deletePhoto()">
-                        <i class="fas fa-trash"></i> Delete Photo
-                    </button>
                     <button type="button" class="btn btn-secondary" onclick="closeModal('photoViewModal')">
                         <i class="fas fa-times"></i> Close
                     </button>
@@ -2431,6 +2224,7 @@
                             <option value="pending">Pending</option>
                             <option value="in-progress">In Progress</option>
                             <option value="completed">Completed</option>
+                            <option value="gift">Gift</option>
                             <option value="sold">Sold</option>
                         </select>
                     </div>
@@ -2653,7 +2447,7 @@
             const random = Math.random().toString(36).substring(7);
             
             // Update page title with timestamp
-            document.title = 'CyndyP StitchCraft Inventory - v1.0.118 - ' + timestamp + ' - FORCE RELOAD';
+            document.title = 'CyndyP StitchCraft Inventory - v1.0.128 - ' + timestamp + ' - FORCE RELOAD';
             
             // Force reload CSS with cache bypass
             const cssLink = document.getElementById('css-cache-bust');
@@ -2693,7 +2487,7 @@
             
             // Force reload if version doesn't match
             setTimeout(() => {
-                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.118') {
+                if (typeof appVersion !== 'undefined' && appVersion !== '1.0.128') {
                     console.log('🔄 Version mismatch detected, forcing reload...');
                     window.location.reload(true);
                 }
@@ -2710,9 +2504,9 @@
                 }, 2000);
             }
             
-            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.118 - IMMEDIATE MOBILE RELOAD');
+            console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.128 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.124&t=202609120028&cb=10&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.128&t=202609191317&cb=11&r=immediate&force=clear&mobile=reload&bust=nuclear&now=yes" id="js-cache-bust"></script>
 </body>
 </html>
