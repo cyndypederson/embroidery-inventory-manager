@@ -31,15 +31,26 @@ let mongoClient;
 const ALL_TABS = ['projects', 'inventory', 'customers', 'wip', 'completed', 'sales', 'reports', 'data'];
 const SNAPSHOT_COLLECTIONS = ['inventory', 'customers', 'sales', 'invoices'];
 
-if (IS_PRODUCTION) {
-    if (!process.env.SESSION_SECRET) {
-        console.error('❌ CRITICAL: SESSION_SECRET is required in production');
-        process.exit(1);
+function resolveSessionSecret() {
+    if (process.env.SESSION_SECRET) {
+        return process.env.SESSION_SECRET;
     }
-    if (!process.env.ADMIN_PASSWORD) {
-        console.error('❌ CRITICAL: ADMIN_PASSWORD is required in production');
-        process.exit(1);
+    if (IS_PRODUCTION && MONGODB_URI) {
+        console.warn('⚠️ SESSION_SECRET unset; using stable derived secret. Set SESSION_SECRET in Vercel when you can.');
+        return crypto.createHmac('sha256', 'embroidery-session-v1').update(MONGODB_URI).digest('hex');
     }
+    return 'dev-only-insecure-session-secret';
+}
+
+const SESSION_SECRET = resolveSessionSecret();
+
+if (IS_PRODUCTION && !process.env.SESSION_SECRET && !MONGODB_URI) {
+    console.error('❌ CRITICAL: Set SESSION_SECRET or MONGODB_URI in production');
+    process.exit(1);
+}
+
+if (IS_PRODUCTION && !process.env.ADMIN_PASSWORD) {
+    console.warn('⚠️ ADMIN_PASSWORD unset — admin login disabled until set in Vercel env.');
 }
 
 function getTenantConfig() {
@@ -226,7 +237,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encod
 // Session middleware — MongoDB store so sessions survive Vercel serverless restarts
 const session = require('express-session');
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev-only-insecure-session-secret',
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     rolling: true,
