@@ -1,0 +1,67 @@
+
+> embroidery-inventory-manager@1.0.128 test:all
+> npm run test:smoke && npm run test:modals && npm run test:comprehensive
+
+
+> embroidery-inventory-manager@1.0.128 test:smoke
+> node test-smoke.js
+
+🚀 Running Smoke Tests...
+✅ App Loads
+✅ Projects Tab Works
+✅ Inventory Tab Works
+🚨 Project Edit Modal Opens - Error: Waiting failed: 10000ms exceeded
+⚠️ No inventory edit buttons found - skipping modal test
+✅ Inventory Edit Modal Opens
+✅ Mobile View Works
+
+📊 SMOKE TEST RESULTS:
+✅ Passed: 5
+❌ Failed: 1
+Success Rate: 83.3%
+
+🚨 SMOKE TESTS FAILED - DO NOT DEPLOY
+
+> embroidery-inventory-manager@1.0.128 test:modals
+> node test-modal-separation.js
+
+🧪 Starting Modal Separation Test Suite...
+
+🚀 Setting up browser for modal separation testing...
+Error: Waiting for selector `button[data-tab="projects"]` failed
+    at CSSQueryHandler.waitFor (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/common/QueryHandler.js:214:46)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at listOnTimeout (node:internal/timers:549:9)
+    at process.processTimers (node:internal/timers:523:7)
+    at async CdpFrame.waitForSelector (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Frame.js:548:21)
+    at async CdpPage.waitForSelector (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:1382:20)
+    at async ModalSeparationTester.setup (/Users/cyndyp/Desktop/Projects/Embroidery/test-modal-separation.js:27:9)
+    at async ModalSeparationTester.runAllTests (/Users/cyndyp/Desktop/Projects/Embroidery/test-modal-separation.js:522:9) {
+  cause: ProtocolError: Protocol error (DOM.resolveNode): Node with given id does not belong to the document
+      at <instance_members_initializer> (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/common/CallbackRegistry.js:102:14)
+      at new Callback (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/common/CallbackRegistry.js:106:16)
+      at CallbackRegistry.create (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/common/CallbackRegistry.js:24:26)
+      at Connection._rawSend (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Connection.js:99:26)
+      at CdpCDPSession.send (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/CdpSession.js:73:33)
+      at IsolatedWorld.adoptBackendNode (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/IsolatedWorld.js:110:46)
+      at IsolatedWorld.transferHandle (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/IsolatedWorld.js:140:39)
+      at async CSSQueryHandler.waitFor (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/common/QueryHandler.js:197:28)
+      at async CdpFrame.waitForSelector (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Frame.js:548:21)
+      at async CdpPage.waitForSelector (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:1382:20)
+}
+
+> embroidery-inventory-manager@1.0.128 test:comprehensive
+> node test-comprehensive.js
+
+🧪 Starting Comprehensive Test Suite...
+
+🚀 Setting up comprehensive testing environment...
+TimeoutError: Navigation timeout of 60000 ms exceeded
+    at new Deferred (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:60:34)
+    at Deferred.create (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:21:16)
+    at new LifecycleWatcher (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/LifecycleWatcher.js:73:60)
+    at CdpFrame.goto (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:149:29)
+    at CdpFrame.<anonymous> (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/util/decorators.js:109:27)
+    at CdpPage.goto (/Users/cyndyp/Desktop/Projects/Embroidery/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:574:43)
+    at ComprehensiveTester.setup (/Users/cyndyp/Desktop/Projects/Embroidery/test-comprehensive.js:22:25)
+    at async ComprehensiveTester.runAllTests (/Users/cyndyp/Desktop/Projects/Embroidery/test-comprehensive.js:457:9)

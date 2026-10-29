@@ -2,9 +2,7 @@
 let inventory = [];
 let customers = [];
 let sales = [];
-let gallery = [];
 let invoices = [];
-let ideas = [];
 
 // Tenant configuration (loaded from /api/config)
 let tenantConfig = {
@@ -2191,7 +2189,7 @@ class DataManager {
             metadata: {
                 totalItems: getAppDataItemCount(),
                 lastModified: timestamp,
-                appVersion: '1.0.128',
+                appVersion: '1.0.129',
                 slim: true,
                 cloudSaved: cloudOk
             }
@@ -2593,15 +2591,16 @@ class DataManager {
             
             doc.setFont(undefined, 'normal');
             doc.setFontSize(10);
-            const description = sale.description || sale.itemDescription || 'Embroidery Item';
+            const description = sale.itemName || sale.description || sale.itemDescription || 'Embroidery Item';
             const quantity = sale.quantity || 1;
-            const price = parseFloat(sale.price) || parseFloat(sale.salePrice) || 0;
-            const total = quantity * price;
+            const listedPrice = parseFloat(sale.listedPrice) || 0;
+            const lineTotal = listedPrice > 0 ? listedPrice : (parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0) || 0);
+            const unitPrice = quantity > 0 ? lineTotal / quantity : lineTotal;
             
             doc.text(description.substring(0, 50), 14, yPos);
             doc.text(String(quantity), 100, yPos);
-            doc.text(`$${price.toFixed(2)}`, 140, yPos);
-            doc.text(`$${total.toFixed(2)}`, 170, yPos);
+            doc.text(`$${unitPrice.toFixed(2)}`, 140, yPos);
+            doc.text(`$${lineTotal.toFixed(2)}`, 170, yPos);
             
             // Totals
             yPos += 15;
@@ -2610,7 +2609,7 @@ class DataManager {
             
             doc.setFont(undefined, 'bold');
             doc.text('Subtotal:', 140, yPos);
-            doc.text(`$${total.toFixed(2)}`, 170, yPos);
+            doc.text(`$${lineTotal.toFixed(2)}`, 170, yPos);
             
             const tax = parseFloat(sale.tax) || 0;
             if (tax > 0) {
@@ -2620,18 +2619,20 @@ class DataManager {
                 doc.text(`$${tax.toFixed(2)}`, 170, yPos);
             }
             
-            const commission = parseFloat(sale.commission) || 0;
-            if (commission > 0) {
+            const commissionAmount = parseFloat(sale.commissionAmount) || 0;
+            const commissionPercent = parseFloat(sale.commission) || 0;
+            if (commissionAmount > 0) {
                 yPos += 8;
-                doc.text('Commission:', 140, yPos);
-                doc.text(`$${commission.toFixed(2)}`, 170, yPos);
+                doc.text(`Commission (${commissionPercent}%):`, 140, yPos);
+                doc.text(`$${commissionAmount.toFixed(2)}`, 170, yPos);
             }
             
             yPos += 8;
             doc.line(140, yPos, 200, yPos);
             yPos += 8;
             
-            const grandTotal = total + tax;
+            const netTotal = parseFloat(sale.netAmount ?? sale.salePrice) || lineTotal;
+            const grandTotal = netTotal + tax;
             doc.setFont(undefined, 'bold');
             doc.setFontSize(12);
             doc.text('Total:', 140, yPos);
@@ -3400,7 +3401,10 @@ class AnalyticsManager {
     }
     
     calculateTotalRevenue() {
-        return sales.reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+        return sales.reduce((sum, sale) => {
+            const net = parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0) || 0;
+            return sum + net;
+        }, 0);
     }
     
     calculateAverageProjectValue() {
@@ -4219,7 +4223,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.128'; // Current app version
+                const currentVersion = '1.0.129'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6191,8 +6195,23 @@ async function checkAuthStatus() {
 }
 
 // Update auth UI elements
+function applyLoginGate() {
+    const loggedIn = !!(authEnabled && isAuthenticated);
+    document.body.classList.toggle('user-authenticated', loggedIn);
+    if (!loggedIn) {
+        inventory = [];
+        customers = [];
+        sales = [];
+        invoices = [];
+        window.inventory = inventory;
+        window.customers = customers;
+        window.sales = sales;
+    }
+}
+
 function updateAuthUI() {
     console.log('🔄 updateAuthUI called:', { authEnabled, isAuthenticated, currentUsername, currentUserIsDbUser });
+    applyLoginGate();
     const authContainer = document.getElementById('authStatusContainer');
     const authUsernameSpan = document.getElementById('authUsername');
     const changePasswordBtn = document.getElementById('changePasswordBtn');
@@ -6241,9 +6260,6 @@ async function checkAuthentication() {
         return true;
     }
     const status = await checkAuthStatus();
-    if (!status.authEnabled) {
-        return true;
-    }
     return status.authenticated;
 }
 
@@ -6350,8 +6366,8 @@ async function handleAuthSubmit(event) {
             hideAuthModal();
             updateAuthUI();
             showNotification('Login successful!', 'success');
+            await loadDataFromAPI();
             await syncInvoicesAfterLogin();
-            await syncLocalOnlyInventoryToCloud();
             await retryPendingCloudSave('login');
             
             // Switch to the requested tab if any
@@ -6395,6 +6411,7 @@ async function logout() {
             sessionStorage.removeItem('embroidery_auth');
             
             updateAuthUI();
+            showAuthModal('Please log in to continue.');
             showNotification('Logged out successfully', 'success');
             
             // Optionally reload to clear any cached data
@@ -6493,10 +6510,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateVersionDisplay();
     await checkAuthStatus();
     await checkPartnerAccountStatus();
-    loadDataFromAPI().then(() => {
-        // Update existing sales with commission fields after data is loaded (notifications disabled)
-        // updateExistingSalesWithCommission();
-    });
+    if (isAuthenticated) {
+        await loadDataFromAPI();
+    } else {
+        showAuthModal('Please log in to view and manage your inventory.');
+    }
     updateLocationFilters();
     updateCustomerFilters();
     
@@ -6514,7 +6532,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.128';
+        const currentVersion = '1.0.129';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -7510,7 +7528,7 @@ function initializeConnectionStatus() {
 async function checkConnectionStatus() {
     const statusElement = document.getElementById('connectionStatus');
     try {
-        const response = await fetch('/api/inventory');
+        const response = await fetch('/health');
         if (response.ok) {
             statusElement.innerHTML = '<i class="fas fa-circle"></i> Connected';
             statusElement.className = 'status-indicator connected';
@@ -7533,7 +7551,13 @@ let isLoadingAPI = false;
 
 async function loadDataFromAPI() {
     console.log('📡 loadDataFromAPI called - isLoadingAPI:', isLoadingAPI, 'lastAPILoad:', lastAPILoad, 'inventory.length:', inventory.length);
-    
+
+    const auth = await checkAuthStatus();
+    if (!auth.authenticated) {
+        applyLoginGate();
+        return;
+    }
+
     // Prevent multiple simultaneous API calls
     if (isLoadingAPI) {
         console.log('📡 API load already in progress, skipping...');
@@ -7556,35 +7580,18 @@ async function loadDataFromAPI() {
     
     try {
         console.log('📡 Loading data from API...');
-        const [inventoryRes, customersRes, salesRes, invoicesRes] = await Promise.all([
-            fetch('/api/inventory'),
-            fetch('/api/customers'),
-            fetch('/api/sales'),
-            fetch('/api/invoices')
-        ]);
+        const snapshotRes = await fetch('/api/snapshot', { credentials: 'include' });
 
-        // Check each response for errors
-        const responses = [
-            { name: 'inventory', response: inventoryRes },
-            { name: 'customers', response: customersRes },
-            { name: 'sales', response: salesRes },
-            { name: 'invoices', response: invoicesRes }
-        ];
-
-        for (const { name, response } of responses) {
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => response.statusText);
-                throw new Error(`Failed to load ${name}: ${response.status} ${errorText}`);
-            }
+        if (!snapshotRes.ok) {
+            const errorText = await snapshotRes.text().catch(() => snapshotRes.statusText);
+            throw new Error(`Failed to load snapshot: ${snapshotRes.status} ${errorText}`);
         }
 
-        // Parse JSON data
-        inventory = await inventoryRes.json();
-        customers = await customersRes.json();
-        sales = await salesRes.json();
-        gallery = [];
-        ideas = [];
-        invoices = await invoicesRes.json();
+        const snapshot = await snapshotRes.json();
+        inventory = snapshot.inventory || [];
+        customers = snapshot.customers || [];
+        sales = snapshot.sales || [];
+        invoices = snapshot.invoices || [];
         if (!Array.isArray(invoices)) invoices = [];
         const serverInvoices = [...invoices];
         const localInvoices = getInvoicesFromLocalStorage();
@@ -7596,9 +7603,6 @@ async function loadDataFromAPI() {
         window.inventory = inventory;
         window.customers = customers;
         window.sales = sales;
-        window.gallery = gallery;
-        window.ideas = ideas;
-        
         // Migrate old status values
         migrateWorkInProgressStatus();
         
@@ -7671,8 +7675,6 @@ function loadDataFromLocalStorage() {
     inventory = JSON.parse(localStorage.getItem('embroideryInventory')) || [];
     customers = JSON.parse(localStorage.getItem('embroideryCustomers')) || [];
     sales = JSON.parse(localStorage.getItem('embroiderySales')) || [];
-    gallery = [];
-    ideas = [];
     loadInvoicesFromLocalStorage();
     
     // Assign to window object for mobile cards
@@ -8112,57 +8114,41 @@ async function saveDataToAPI() {
     console.log('🌐 saveDataToAPI() called');
     console.log('🌐 isSaving:', window.isSaving, 'isModifying:', window.isModifying);
 
-    const collections = [
-        { name: 'inventory', data: inventory },
-        { name: 'customers', data: customers },
-        { name: 'sales', data: sales },
-        { name: 'invoices', data: invoices }
-    ];
+    const payload = {
+        inventory: Array.isArray(inventory) ? inventory : [],
+        customers: Array.isArray(customers) ? customers : [],
+        sales: Array.isArray(sales) ? sales : [],
+        invoices: Array.isArray(invoices) ? invoices : []
+    };
 
-    const results = await Promise.allSettled(collections.map(async ({ name, data }) => {
-        const payload = Array.isArray(data) ? data : [];
-        console.log(`🌐 Saving ${name}: ${payload.length} items`);
-        const response = await fetch(`/api/${name}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => response.statusText);
-            throw new Error(`Failed to save ${name}: ${response.status} ${errorText}`);
-        }
-        return name;
-    }));
+    const response = await fetch('/api/snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
 
-    const failed = results
-        .map((result, index) => result.status === 'rejected' ? {
-            name: collections[index].name,
-            message: result.reason && result.reason.message ? result.reason.message : String(result.reason)
-        } : null)
-        .filter(Boolean);
-
-    if (failed.length) {
-        const first = failed[0].message || '';
-        console.error('❌ API save failed:', failed);
-        if (failed.some(item => /401|403/.test(item.message))) {
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        const message = `Failed to save snapshot: ${response.status} ${errorText}`;
+        if (response.status === 401 || response.status === 403) {
             throw new Error('Authentication required - please log in again');
         }
-        if (failed.some(item => /413/.test(item.message))) {
+        if (response.status === 413) {
             throw new Error('Data is too large to upload in one request');
         }
-        if (failed.some(item => /500/.test(item.message))) {
-            throw new Error(`Server error while saving ${failed.map(item => item.name).join(', ')}`);
+        if (response.status >= 500) {
+            throw new Error('Server error while saving data');
         }
-        if (/Failed to fetch|NetworkError/i.test(first)) {
+        if (/Failed to fetch|NetworkError/i.test(errorText)) {
             throw new Error(navigator.onLine
-                ? `Could not reach the live site while saving ${failed.map(item => item.name).join(', ')}`
+                ? 'Could not reach the live site while saving'
                 : 'Network error - check your internet connection');
         }
-        throw new Error(`Failed to save ${failed.map(item => item.name).join(', ')}: ${first}`);
+        throw new Error(message);
     }
 
-    console.log('✅ Data saved to API successfully:', collections.map(item => item.name).join(', '));
+    console.log('✅ Data saved to API successfully (snapshot)');
 }
 
 async function saveDataToLocalStorage() {
@@ -8271,11 +8257,8 @@ async function saveData() {
     try {
         const status = await checkAuthStatus();
         if (!status.authenticated) {
-            promptLoginRequired('Log in to copy this save to the live site', 'save to the live site');
-            await saveDataToLocalStorage();
-            markCloudSavePending('not logged in');
             hideLoadingSpinner('save');
-            showNotification('Saved on this device. Log in to copy it to the live site.', 'warning');
+            promptLoginRequired('Log in to save changes.', 'save changes');
             window.isSaving = false;
             window.isModifying = false;
             return;
@@ -12784,8 +12767,8 @@ function getProjectTotalPrice(item) {
     return pricePerUnit * quantity;
 }
 
-/** Default shop commission when marking inventory sold (project-linked sale). */
-const SHOP_VENDOR_AUTO_COMMISSION_PERCENT = 30;
+/** Shop commission paid to Flippin' Happy (and First Avenue shop sales). */
+const SHOP_VENDOR_AUTO_COMMISSION_PERCENT = 10;
 
 function getAutoCommissionPercentForShopCustomer(customerRaw) {
     const n = (customerRaw || '').toLowerCase();
@@ -14191,10 +14174,6 @@ function shopReportCommissionKey(year, month) {
 }
 
 function getDefaultShopCommissionPercent(year, month) {
-    // First Avenue / Flippin' Happy used 20% in May–July 2026; other months default to 30%.
-    if (Number(year) === 2026 && (month === 5 || month === 6 || month === 7)) {
-        return 20;
-    }
     return SHOP_VENDOR_AUTO_COMMISSION_PERCENT;
 }
 
@@ -16437,7 +16416,9 @@ function setupOCRFunctionality() {
 // Initialize authentication and OCR when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     await checkAuthStatus();
-    await loadDataFromAPI();
+    if (isAuthenticated) {
+        await loadDataFromAPI();
+    }
 
     const authForm = document.getElementById('authForm');
     if (authForm) authForm.addEventListener('submit', handleAuthSubmit);

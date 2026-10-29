@@ -120,7 +120,7 @@ Run `npm start` and open http://localhost:3000
 ## Workflow reminder
 
 - Partner adds items → marks completed → prints invoice for the box → mails to you.
-- Sold items default to your shop (`Flippin' Happy`); commission auto-calculates at 30%.
+- Sold items default to your shop (`Flippin' Happy`); commission auto-calculates at 10%.
 - You log into the knitting site anytime with your admin password to mark sold and track inventory.
 
 ---

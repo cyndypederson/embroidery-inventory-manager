@@ -17,6 +17,15 @@ body {
     line-height: 1.6;
 }
 
+body:not(.user-authenticated) nav,
+body:not(.user-authenticated) main {
+    display: none !important;
+}
+
+body:not(.user-authenticated) .header-login-btn {
+    display: inline-flex !important;
+}
+
 .container {
     max-width: 1400px;
     margin: 0 auto;

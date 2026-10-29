@@ -26,8 +26,21 @@ const PARTNER_USERNAME = process.env.PARTNER_USERNAME || 'akeeler';
 const MULTI_USER_ENABLED = TENANT_ID === 'knitting';
 const IS_KNITTING_TENANT = MULTI_USER_ENABLED || DB_NAME === 'knitting_inventory';
 let db;
+let mongoClient;
 
 const ALL_TABS = ['projects', 'inventory', 'customers', 'wip', 'completed', 'sales', 'reports', 'data'];
+const SNAPSHOT_COLLECTIONS = ['inventory', 'customers', 'sales', 'invoices'];
+
+if (IS_PRODUCTION) {
+    if (!process.env.SESSION_SECRET) {
+        console.error('❌ CRITICAL: SESSION_SECRET is required in production');
+        process.exit(1);
+    }
+    if (!process.env.ADMIN_PASSWORD) {
+        console.error('❌ CRITICAL: ADMIN_PASSWORD is required in production');
+        process.exit(1);
+    }
+}
 
 function getTenantConfig() {
     const enabledTabsRaw = process.env.ENABLED_TABS;
@@ -50,7 +63,8 @@ function getTenantConfig() {
 
 function isAdminCredential(username, password) {
     const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
+    const adminPass = process.env.ADMIN_PASSWORD;
+    if (!adminPass) return false;
     return username === adminUser && password === adminPass;
 }
 
@@ -127,6 +141,7 @@ async function connectToDatabase() {
             connectTimeoutMS: 5000,
         });
         await client.connect();
+        mongoClient = client;
         db = client.db(DB_NAME);
         console.log('✅ Connected to MongoDB Atlas');
         
@@ -156,8 +171,6 @@ async function initializeCollections() {
             const inventoryPath = path.join(__dirname, 'data', 'inventory.json');
             const customersPath = path.join(__dirname, 'data', 'customers.json');
             const salesPath = path.join(__dirname, 'data', 'sales.json');
-            const galleryPath = path.join(__dirname, 'data', 'gallery.json');
-            
             if (fs.existsSync(inventoryPath)) {
                 const inventoryData = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
                 await db.collection('inventory').insertMany(inventoryData);
@@ -174,18 +187,6 @@ async function initializeCollections() {
                 const salesData = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
                 await db.collection('sales').insertMany(salesData);
                 console.log('💰 Loaded sales sample data');
-            }
-            
-            if (fs.existsSync(galleryPath)) {
-                const galleryData = JSON.parse(fs.readFileSync(galleryPath, 'utf8'));
-                await db.collection('gallery').insertMany(galleryData);
-                console.log('🖼️ Loaded gallery sample data');
-            }
-            
-            // Initialize ideas collection (empty by default)
-            const ideasCount = await db.collection('ideas').countDocuments();
-            if (ideasCount === 0) {
-                console.log('💡 Ideas collection initialized');
             }
             
         }
@@ -225,7 +226,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encod
 // Session middleware — MongoDB store so sessions survive Vercel serverless restarts
 const session = require('express-session');
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'embroidery-secret-key-change-in-production',
+    secret: process.env.SESSION_SECRET || 'dev-only-insecure-session-secret',
     resave: false,
     saveUninitialized: false,
     rolling: true,
@@ -563,8 +564,82 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
-// API endpoints for data persistence
-app.get('/api/inventory', async (req, res) => {
+async function replaceCollectionInTransaction(database, name, data, session) {
+    const col = database.collection(name);
+    await col.deleteMany({}, { session });
+    const rows = Array.isArray(data) ? data : [];
+    if (rows.length > 0) {
+        await col.insertMany(rows, { session });
+    }
+}
+
+async function saveSnapshotCollections(database, payload) {
+    const runSequential = async () => {
+        for (const name of SNAPSHOT_COLLECTIONS) {
+            const col = database.collection(name);
+            await col.deleteMany({});
+            const rows = Array.isArray(payload[name]) ? payload[name] : [];
+            if (rows.length > 0) {
+                await col.insertMany(rows);
+            }
+        }
+    };
+
+    if (!mongoClient) {
+        await runSequential();
+        return;
+    }
+
+    try {
+        const session = mongoClient.startSession();
+        try {
+            await session.withTransaction(async () => {
+                for (const name of SNAPSHOT_COLLECTIONS) {
+                    await replaceCollectionInTransaction(database, name, payload[name], session);
+                }
+            });
+        } finally {
+            await session.endSession();
+        }
+    } catch (error) {
+        console.warn('Snapshot transaction failed, falling back to sequential save:', error.message);
+        await runSequential();
+    }
+}
+
+app.get('/api/snapshot', requireSessionAuth, async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const [inventory, customers, sales, invoices] = await Promise.all(
+            SNAPSHOT_COLLECTIONS.map((name) => database.collection(name).find({}).toArray())
+        );
+        res.json({ inventory, customers, sales, invoices });
+    } catch (error) {
+        console.error('Error fetching snapshot:', error);
+        res.status(500).json({ error: 'Failed to fetch snapshot' });
+    }
+});
+
+app.post('/api/snapshot', requireSessionAuth, async (req, res) => {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            return res.status(500).json({ error: 'Database not connected' });
+        }
+        const payload = req.body || {};
+        await saveSnapshotCollections(database, payload);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving snapshot:', error);
+        res.status(500).json({ error: 'Failed to save snapshot' });
+    }
+});
+
+// API endpoints for data persistence (legacy per-collection; auth required on reads)
+app.get('/api/inventory', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -596,7 +671,7 @@ app.post('/api/inventory', requireSessionAuth, async (req, res) => {
 });
 
 
-app.get('/api/customers', async (req, res) => {
+app.get('/api/customers', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -627,7 +702,7 @@ app.post('/api/customers', requireSessionAuth, async (req, res) => {
     }
 });
 
-app.get('/api/sales', async (req, res) => {
+app.get('/api/sales', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) {
@@ -658,65 +733,7 @@ app.post('/api/sales', requireSessionAuth, async (req, res) => {
     }
 });
 
-app.get('/api/gallery', async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) {
-            return res.status(500).json({ error: 'Database not connected' });
-        }
-        const gallery = await database.collection('gallery').find({}).toArray();
-        res.json(gallery);
-    } catch (error) {
-        console.error('Error fetching gallery:', error);
-        res.status(500).json({ error: 'Failed to fetch gallery data' });
-    }
-});
-
-app.post('/api/gallery', requireSessionAuth, async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) {
-            return res.status(500).json({ error: 'Database not connected' });
-        }
-        await database.collection('gallery').deleteMany({});
-        if (req.body && req.body.length > 0) {
-            await database.collection('gallery').insertMany(req.body);
-        }
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error saving gallery:', error);
-        res.status(500).json({ error: 'Failed to save gallery data' });
-    }
-});
-
-app.get('/api/ideas', async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) return res.status(500).json({ error: 'Database not connected' });
-        const ideas = await database.collection('ideas').find({}).toArray();
-        res.json(ideas);
-    } catch (error) {
-        console.error('Error fetching ideas:', error);
-        res.status(500).json({ error: 'Failed to fetch ideas data' });
-    }
-});
-
-app.post('/api/ideas', requireSessionAuth, async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) return res.status(500).json({ error: 'Database not connected' });
-        await database.collection('ideas').deleteMany({});
-        if (req.body && req.body.length > 0) {
-            await database.collection('ideas').insertMany(req.body);
-        }
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error saving ideas:', error);
-        res.status(500).json({ error: 'Failed to save ideas data' });
-    }
-});
-
-app.get('/api/invoices', async (req, res) => {
+app.get('/api/invoices', requireSessionAuth, async (req, res) => {
     try {
         const database = await connectToDatabase();
         if (!database) return res.status(500).json({ error: 'Database not connected' });
@@ -743,69 +760,6 @@ app.post('/api/invoices', requireSessionAuth, async (req, res) => {
     }
 });
 
-const { isDryRun, isImapConfigured, getImapConfig } = require('./lib/email-sales/config');
-const { pollKeeraSales } = require('./lib/email-sales/poll');
-
-app.get('/api/email-sales/status', requireSessionAuth, async (req, res) => {
-    const cfg = getImapConfig();
-    res.json({
-        configured: isImapConfigured(),
-        dryRun: isDryRun(),
-        mailbox: cfg.mailbox,
-        from: cfg.from,
-        pollMinutes: cfg.pollMinutes,
-        user: cfg.user
-    });
-});
-
-app.post('/api/email-sales/poll', requireSessionAuth, async (req, res) => {
-    try {
-        const database = await connectToDatabase();
-        if (!database) return res.status(500).json({ error: 'Database not connected' });
-        const result = await pollKeeraSales(database, {
-            dryRun: isDryRun(),
-            mailbox: process.env.IMAP_MAILBOX || 'Sales',
-            limit: 40
-        });
-        res.json({
-            success: true,
-            dryRun: result.dryRun,
-            host: result.host,
-            mailbox: result.mailbox,
-            subjects: result.subjects,
-            summary: result.comparison?.summary || null,
-            applyResult: result.applyResult,
-            rows: result.comparison?.rows || []
-        });
-    } catch (error) {
-        console.error('Email sales poll failed:', error.message);
-        res.status(500).json({ error: 'Failed to poll Keera sales email' });
-    }
-});
-
-function startKeeraSalesPoller() {
-    if (!isImapConfigured()) {
-        console.log('Keera sales poller idle (IMAP not configured)');
-        return;
-    }
-    const minutes = getImapConfig().pollMinutes;
-    console.log(`Keera sales poller scheduled every ${minutes} minute(s), dry-run=${isDryRun()}`);
-    const run = async () => {
-        try {
-            const database = await connectToDatabase();
-            if (!database) return;
-            const result = await pollKeeraSales(database, { dryRun: isDryRun() });
-            if (!result.skipped) {
-                console.log(`Keera sales poll: mailbox=${result.mailbox} emails=${result.comparison.summary.emails} unique=${result.comparison.summary.unique_match} dryRun=${result.dryRun}`);
-            }
-        } catch (error) {
-            console.error('Keera sales poller error:', error.message);
-        }
-    };
-    setTimeout(run, 15000);
-    setInterval(run, Math.max(1, minutes) * 60 * 1000);
-}
-
 // Connect to database and start server
 connectToDatabase().then(() => {
     // Start server only if not in Vercel environment
@@ -815,7 +769,6 @@ connectToDatabase().then(() => {
             console.log(`   Local:   http://localhost:${PORT}`);
             console.log(`   Network: http://${getLocalIP()}:${PORT}`);
             console.log(`\n📱 Access from any device on your network using the Network URL`);
-            startKeeraSalesPoller();
         });
     }
 });
