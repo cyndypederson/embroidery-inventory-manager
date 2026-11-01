@@ -1078,7 +1078,9 @@ function loadSalesCards() {
         card.className = 'sale-card';
         
         const listPrice = parseFloat(sale.listedPrice || sale.price || sale.salePrice || 0) || 0;
-        const netPrice = parseFloat(sale.netAmount || sale.salePrice || sale.price || 0) || 0;
+        const shopSale = isShopConsignmentSale(sale);
+        const lineTotal = getSaleAmountTowardMonthlyTotal(sale);
+        const netPrice = shopSale ? lineTotal : (parseFloat(sale.netAmount || sale.salePrice || sale.price || 0) || 0);
         const commissionPercent = parseFloat(sale.commission || sale.commissionPercent || 0) || 0;
         const commissionAmount = parseFloat(sale.commissionAmount || (listPrice * commissionPercent / 100)) || 0;
         const vendorDiscountPercent = parseFloat(sale.vendorDiscount || 0) || 0;
@@ -1088,17 +1090,15 @@ function loadSalesCards() {
         const discountPercentNumeric = parseFloat(rawDiscountPercent) || 0;
         const vendorDisplay = (vendorDiscountPercent > 0 || vendorDiscountAmount > 0) ? `$${vendorDiscountAmount.toFixed(2)} (${vendorDiscountPercent.toFixed(1)}%)` : '-';
         const customerSavingsDisplay = discountValue > 0 ? `$${discountValue.toFixed(2)} (${discountPercentNumeric.toFixed(1)}%)` : '-';
-        
-        card.innerHTML = `
-            <div class="sale-card-header">
-                <h3 class="sale-card-item">${SecurityManager.escapeHtml(sale.itemName || 'Sale')}</h3>
-                <p class="sale-card-customer">${SecurityManager.escapeHtml(sale.customer || 'No customer')}</p>
-            </div>
-            <div class="sale-card-pricing">
+        const commissionBlock = shopSale ? `
                 <div class="sale-price-item">
-                    <span class="sale-price-label">List Price</span>
-                    <span class="sale-price-value">$${listPrice.toFixed(2)}</span>
+                    <span class="sale-price-label">Monthly total</span>
+                    <span class="sale-price-value">$${lineTotal.toFixed(2)}</span>
                 </div>
+                <div class="sale-price-item">
+                    <span class="sale-price-label">Shop commission</span>
+                    <span class="sale-price-value">Monthly statement</span>
+                </div>` : `
                 <div class="sale-price-item">
                     <span class="sale-price-label">Net Price</span>
                     <span class="sale-price-value">$${netPrice.toFixed(2)}</span>
@@ -1110,7 +1110,19 @@ function loadSalesCards() {
                 <div class="sale-price-item">
                     <span class="sale-price-label">Commission</span>
                     <span class="sale-price-value commission">$${commissionAmount.toFixed(2)}</span>
+                </div>`;
+        
+        card.innerHTML = `
+            <div class="sale-card-header">
+                <h3 class="sale-card-item">${SecurityManager.escapeHtml(sale.itemName || 'Sale')}</h3>
+                <p class="sale-card-customer">${SecurityManager.escapeHtml(sale.customer || 'No customer')}</p>
+            </div>
+            <div class="sale-card-pricing">
+                <div class="sale-price-item">
+                    <span class="sale-price-label">List Price</span>
+                    <span class="sale-price-value">$${listPrice.toFixed(2)}</span>
                 </div>
+                ${commissionBlock}
                 <div class="sale-price-item">
                     <span class="sale-price-label">Vendor Discount</span>
                     <span class="sale-price-value">${vendorDisplay}</span>
@@ -11664,9 +11676,9 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
 function updateExistingSalesWithCommission() {
     let updated = false;
     let updatedCount = 0;
+    let shopFixedCount = 0;
     
-    sales.forEach((sale, index) => {
-        // If commission fields are missing, add them with default values
+    sales.forEach((sale) => {
         if (sale.commission === undefined || sale.commissionAmount === undefined || sale.netAmount === undefined) {
             sale.commission = 0;
             sale.commissionAmount = 0;
@@ -11679,25 +11691,43 @@ function updateExistingSalesWithCommission() {
             updated = true;
             updatedCount++;
         }
+
+        if (isShopConsignmentSale(sale)) {
+            const lineTotal = getSaleAmountTowardMonthlyTotal(sale);
+            const hadLineCommission = (parseFloat(sale.commissionAmount) || 0) > 0
+                || (parseFloat(sale.commission) || 0) > 0;
+            const netMismatch = Math.abs((parseFloat(sale.netAmount ?? sale.salePrice) || 0) - lineTotal) > 0.02;
+            if (hadLineCommission || netMismatch) {
+                sale.commission = 0;
+                sale.commissionAmount = 0;
+                sale.amountPaid = lineTotal;
+                sale.netAmount = lineTotal;
+                sale.salePrice = lineTotal;
+                const listed = parseFloat(sale.listedPrice) || 0;
+                if (listed > 0 && sale.vendorDiscountAmount === undefined) {
+                    sale.vendorDiscountAmount = Math.max(0, listed - lineTotal);
+                }
+                updated = true;
+                shopFixedCount++;
+            }
+        }
     });
     
     if (updated) {
-        // Save updated sales data
         saveDataToAPI();
-        console.log(`Updated ${updatedCount} existing sales with commission fields`);
+        console.log(`Updated ${updatedCount} sales with commission fields; fixed ${shopFixedCount} shop sales for monthly commission model`);
         
-        // Only show notifications on localhost
         if (isLocalhost()) {
-            showNotification(`Updated ${updatedCount} sales with commission fields. You can now edit them to add commission percentages.`, 'success');
+            const msg = shopFixedCount > 0
+                ? `Updated ${updatedCount} sale(s). ${shopFixedCount} shop sale(s) now use monthly commission (line totals after vendor discount only).`
+                : `Updated ${updatedCount} sales with commission fields.`;
+            showNotification(msg, 'success');
         }
         
-        // Refresh the sales table to show updated data
         loadSalesTable();
-    } else {
-        // Only show notifications on localhost
-        if (isLocalhost()) {
-            showNotification('All sales already have commission data.', 'info');
-        }
+        if (typeof loadSalesCards === 'function') loadSalesCards();
+    } else if (isLocalhost()) {
+        showNotification('All sales already match the monthly shop commission model.', 'info');
     }
 }
 
@@ -11985,18 +12015,24 @@ function calculateSalePriceFromCommission() {
     const vendorDiscountPercent = parseFloat(document.getElementById('saleVendorDiscount').value) || 0;
     const salePriceField = document.getElementById('salePrice');
     const autoCalculateInfo = document.getElementById('autoCalculateInfo');
+    const shopSale = isShopSaleFormActive('add');
     
-    if (listedPrice > 0 && (commission > 0 || vendorDiscountPercent > 0)) {
+    if (listedPrice > 0 && (shopSale ? vendorDiscountPercent > 0 : (commission > 0 || vendorDiscountPercent > 0))) {
         const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
         const commissionBase = listedPrice - vendorDiscountAmount;
-        const commissionAmount = commissionBase * (commission / 100);
-        const netPrice = commissionBase - commissionAmount;
+        const netPrice = shopSale
+            ? commissionBase
+            : commissionBase - commissionBase * (commission / 100);
         salePriceField.value = netPrice.toFixed(2);
         
         // Show auto-calculate indicator
         autoCalculateInfo.style.display = 'block';
         
         // Trigger discount calculation
+        calculateDiscount();
+    } else if (listedPrice > 0 && shopSale) {
+        salePriceField.value = listedPrice.toFixed(2);
+        autoCalculateInfo.style.display = 'none';
         calculateDiscount();
     } else {
         // Hide auto-calculate indicator
@@ -12010,18 +12046,25 @@ function calculateEditSalePriceFromCommission() {
     const vendorDiscountPercent = parseFloat(document.getElementById('editSaleVendorDiscount').value) || 0;
     const salePriceField = document.getElementById('editSalePrice');
     const autoCalculateInfo = document.getElementById('editAutoCalculateInfo');
+    const shopSale = isShopSaleFormActive('edit');
     
-    if (listedPrice > 0 && (commission > 0 || vendorDiscountPercent > 0)) {
+    if (listedPrice > 0 && (shopSale ? vendorDiscountPercent > 0 : (commission > 0 || vendorDiscountPercent > 0))) {
         const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
         const commissionBase = listedPrice - vendorDiscountAmount;
-        const commissionAmount = commissionBase * (commission / 100);
-        const netPrice = commissionBase - commissionAmount;
+        const netPrice = shopSale
+            ? commissionBase
+            : commissionBase - commissionBase * (commission / 100);
         salePriceField.value = netPrice.toFixed(2);
         
         // Show auto-calculate indicator
         autoCalculateInfo.style.display = 'block';
         
         // Trigger discount and net amount calculations
+        calculateEditDiscount();
+        calculateEditNetAmount();
+    } else if (listedPrice > 0 && shopSale) {
+        salePriceField.value = listedPrice.toFixed(2);
+        autoCalculateInfo.style.display = 'none';
         calculateEditDiscount();
         calculateEditNetAmount();
     } else {
@@ -12164,22 +12207,30 @@ async function handleAddSale(e) {
     const notes = document.getElementById('saleNotes').value;
     const commission = parseFloat(document.getElementById('saleCommission').value) || 0;
     const vendorDiscountPercent = parseFloat(document.getElementById('saleVendorDiscount').value) || 0;
-    const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
-    const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
-    let commissionAmount = commissionBase * (commission / 100);
-    if (commissionAmount < 0) commissionAmount = 0;
+    const financials = computeSaleFinancials({
+        listedPrice,
+        vendorDiscountPercent,
+        commissionPercent: commission,
+        saleChannel,
+        customer,
+        salePriceInput: salePrice
+    });
     if (!salePrice && listedPrice > 0) {
-        salePrice = commissionBase - commissionAmount;
-        if (salePrice < 0) salePrice = 0;
+        salePrice = financials.salePrice;
         const salePriceField = document.getElementById('salePrice');
         if (salePriceField) salePriceField.value = salePrice.toFixed(2);
     }
-    const discountValue = listedPrice - (salePrice + commissionAmount);
-    const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
+    const {
+        vendorDiscountAmount,
+        amountPaid: commissionBase,
+        commissionAmount,
+        netAmount,
+        discountValue,
+        discountPercentValue
+    } = financials;
+    const commissionResolved = financials.commission;
     
     // All fields are now optional - no validation required
-    
-    const netAmount = salePrice;
     let newSale;
     
     let linkedItemIndex = null;
@@ -12208,7 +12259,7 @@ async function handleAddSale(e) {
             location: '',
             listedPrice: listedPrice,
                 salePrice: salePrice,
-            commission: commission,
+            commission: commissionResolved,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
                 discount: discountValue,
@@ -12233,7 +12284,7 @@ async function handleAddSale(e) {
                 location: linkedItem.location,
                 listedPrice: listedPrice,
                 salePrice: salePrice,
-                commission: commission,
+                commission: commissionResolved,
                 commissionAmount: commissionAmount,
                 netAmount: netAmount,
                 discount: discountValue,
@@ -12263,7 +12314,7 @@ async function handleAddSale(e) {
             location: '',
             listedPrice: listedPrice,
             salePrice: salePrice,
-            commission: commission,
+            commission: commissionResolved,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
             discount: discountValue,
@@ -12286,7 +12337,7 @@ async function handleAddSale(e) {
             location: '',
             listedPrice: listedPrice,
             salePrice: salePrice,
-            commission: commission,
+            commission: commissionResolved,
             commissionAmount: commissionAmount,
             netAmount: netAmount,
             discount: discountValue,
@@ -12767,12 +12818,110 @@ function getProjectTotalPrice(item) {
     return pricePerUnit * quantity;
 }
 
-/** Shop commission paid to Flippin' Happy (and First Avenue shop sales). */
+/** Default shop commission rate on Monthly Shop Statement (applied to month total, not per line). */
 const SHOP_VENDOR_AUTO_COMMISSION_PERCENT = 10;
 
-function getAutoCommissionPercentForShopCustomer(customerRaw) {
+function isShopConsignmentCustomer(customerRaw) {
     const n = (customerRaw || '').toLowerCase();
-    if (n.includes('flippin') || n.includes('first avenue')) {
+    return n.includes('flippin') || n.includes('first avenue');
+}
+
+function isShopConsignmentSale(sale) {
+    if (!sale) return false;
+    if (sale.saleChannel === 'shop') return true;
+    if (sale.saleChannel === 'individual') return false;
+    const n = (sale.customer || '').toLowerCase();
+    return n.includes('shop') || n.includes('flippin') || n.includes('vendor') || n.includes('first avenue');
+}
+
+/** Amount that counts toward monthly shop sales (listed price minus per-line vendor discount). */
+function getSaleAmountTowardMonthlyTotal(sale) {
+    const listed = parseFloat(sale?.listedPrice);
+    if (Number.isFinite(listed) && listed > 0) {
+        let vendorDiscountAmount = parseFloat(sale.vendorDiscountAmount);
+        if (!Number.isFinite(vendorDiscountAmount)) {
+            const vendorDiscountPercent = parseFloat(sale.vendorDiscount) || 0;
+            vendorDiscountAmount = listed * (vendorDiscountPercent / 100);
+        }
+        return Math.max(0, listed - vendorDiscountAmount);
+    }
+    const paid = parseFloat(sale?.amountPaid);
+    if (Number.isFinite(paid) && paid > 0) return paid;
+    return parseFloat(sale?.salePrice || sale?.netAmount || sale?.price || 0) || 0;
+}
+
+function isShopSaleFormActive(formPrefix) {
+    const isEdit = formPrefix === 'edit';
+    const channelEl = document.getElementById(isEdit ? 'editSaleChannel' : 'saleChannel');
+    const customerEl = document.getElementById(isEdit ? 'editSaleCustomer' : 'saleCustomer');
+    if (channelEl?.checked) return true;
+    return isShopConsignmentCustomer(customerEl?.value);
+}
+
+/**
+ * Shop consignment: store commission is monthly only; lines store amount after vendor discount.
+ * Other sales: optional per-line commission reduces net to seller.
+ */
+function computeSaleFinancials({
+    listedPrice,
+    vendorDiscountPercent,
+    commissionPercent,
+    saleChannel,
+    customer,
+    salePriceInput
+}) {
+    const vendorDiscountAmount = listedPrice * ((parseFloat(vendorDiscountPercent) || 0) / 100);
+    const amountAfterVendorDiscount = Math.max(0, listedPrice - vendorDiscountAmount);
+    const isShop = saleChannel === 'shop' || isShopConsignmentCustomer(customer);
+
+    if (isShop) {
+        let salePrice = parseFloat(salePriceInput);
+        if (!Number.isFinite(salePrice) || salePrice <= 0) {
+            salePrice = amountAfterVendorDiscount;
+        }
+        const discountValue = listedPrice - salePrice;
+        const discountPercentValue = listedPrice > 0
+            ? ((discountValue / listedPrice) * 100).toFixed(1)
+            : 0;
+        return {
+            vendorDiscountAmount,
+            amountPaid: amountAfterVendorDiscount,
+            salePrice,
+            netAmount: salePrice,
+            commission: 0,
+            commissionAmount: 0,
+            discountValue,
+            discountPercentValue
+        };
+    }
+
+    const commission = parseFloat(commissionPercent) || 0;
+    let commissionAmount = amountAfterVendorDiscount * (commission / 100);
+    if (commissionAmount < 0) commissionAmount = 0;
+    let salePrice = parseFloat(salePriceInput);
+    if ((!Number.isFinite(salePrice) || salePrice <= 0) && listedPrice > 0) {
+        salePrice = amountAfterVendorDiscount - commissionAmount;
+        if (salePrice < 0) salePrice = 0;
+    }
+    if (!Number.isFinite(salePrice)) salePrice = 0;
+    const discountValue = listedPrice - (salePrice + commissionAmount);
+    const discountPercentValue = listedPrice > 0
+        ? ((discountValue / listedPrice) * 100).toFixed(1)
+        : 0;
+    return {
+        vendorDiscountAmount,
+        amountPaid: amountAfterVendorDiscount,
+        salePrice,
+        netAmount: salePrice,
+        commission,
+        commissionAmount,
+        discountValue,
+        discountPercentValue
+    };
+}
+
+function getAutoCommissionPercentForShopCustomer(customerRaw) {
+    if (isShopConsignmentCustomer(customerRaw)) {
         return SHOP_VENDOR_AUTO_COMMISSION_PERCENT;
     }
     return 0;
@@ -12881,13 +13030,12 @@ function createOrUpdateSaleFromProject(index, dateSold) {
     const listedPrice = getProjectTotalPrice(item);
     const vendorDiscountPercent = 0;
     const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
-    const commissionPercent = getAutoCommissionPercentForShopCustomer(item.customer);
     const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
-    let commissionAmount = commissionBase * (commissionPercent / 100);
-    if (commissionAmount < 0) commissionAmount = 0;
-    const netAmount = Math.max(0, commissionBase - commissionAmount);
+    const netAmount = commissionBase;
     const amountPaid = commissionBase;
-    const discountValue = listedPrice - (netAmount + commissionAmount);
+    const commissionPercent = 0;
+    const commissionAmount = 0;
+    const discountValue = listedPrice - netAmount;
     const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
     const saleDate = dateSold || saleRecord?.dateSold || getLocalISODate();
     const customerName = (item.customer || '').toLowerCase();
@@ -12914,7 +13062,7 @@ function createOrUpdateSaleFromProject(index, dateSold) {
         amountPaid,
         saleChannel: isShopSale ? 'shop' : 'individual',
         dateSold: saleDate,
-        notes: 'Auto-generated from project sale. Edit to adjust commission or discounts.'
+        notes: 'Auto-generated from project sale. Edit to adjust vendor discount; shop commission is on the monthly statement.'
     };
     
     if (saleRecord) {
@@ -13777,19 +13925,27 @@ async function handleEditSale(e) {
     const notes = document.getElementById('editSaleNotes').value;
     const commission = parseFloat(document.getElementById('editSaleCommission').value) || 0;
     const vendorDiscountPercent = parseFloat(document.getElementById('editSaleVendorDiscount').value) || 0;
-    const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
-    const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
-    let commissionAmount = commissionBase * (commission / 100);
-    if (commissionAmount < 0) commissionAmount = 0;
+    const financials = computeSaleFinancials({
+        listedPrice,
+        vendorDiscountPercent,
+        commissionPercent: commission,
+        saleChannel,
+        customer,
+        salePriceInput: salePrice
+    });
     if (!salePrice && listedPrice > 0) {
-        salePrice = commissionBase - commissionAmount;
-        if (salePrice < 0) salePrice = 0;
+        salePrice = financials.salePrice;
         const salePriceField = document.getElementById('editSalePrice');
         if (salePriceField) salePriceField.value = salePrice.toFixed(2);
     }
-    const netAmount = salePrice;
-    const discountValue = listedPrice - (salePrice + commissionAmount);
-    const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
+    const {
+        vendorDiscountAmount,
+        amountPaid: commissionBase,
+        commissionAmount,
+        netAmount,
+        discountValue,
+        discountPercentValue
+    } = financials;
     
     if (isNaN(index) || index < 0 || index >= sales.length) {
         hideLoadingSpinner('edit-sale');
@@ -13822,7 +13978,7 @@ async function handleEditSale(e) {
         customer: customer,
         dateSold: dateSold,
         notes: notes,
-        commission: commission,
+        commission: financials.commission,
         commissionAmount: commissionAmount,
         netAmount: netAmount,
         discount: discountValue,
@@ -14157,11 +14313,7 @@ function formatSignedMoney(amount) {
 }
 
 function getSaleGrossAmount(sale) {
-    const listed = parseFloat(sale.listedPrice);
-    if (!Number.isNaN(listed) && listed > 0) return listed;
-    const paid = parseFloat(sale.amountPaid);
-    if (!Number.isNaN(paid) && paid > 0) return paid;
-    return parseFloat(sale.salePrice || sale.netAmount || sale.price || 0) || 0;
+    return getSaleAmountTowardMonthlyTotal(sale);
 }
 
 function getMonthlyShopReportVendorFee() {
@@ -14357,7 +14509,7 @@ function generateMonthlyShopReport() {
     reportContent.innerHTML = `
         <div class="financial-report monthly-shop-report">
             <h2>Monthly Shop Statement</h2>
-            <p>Total sales minus shop commission and the monthly vendor fee. Each month has its own commission percent — change it if the shop used a different rate. Negative totals show in parentheses.</p>
+            <p>Each sale line counts at its register amount (listed price minus any vendor discount). Monthly shop commission is calculated on that month’s total — not per item. Subtract the vendor fee for your payout. Negative totals show in parentheses.</p>
             <div class="shop-statement-controls no-print">
                 <div>
                     <label for="shopReportYear">Year</label>

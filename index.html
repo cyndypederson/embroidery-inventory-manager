@@ -621,8 +621,8 @@
                 <div class="section-header">
                     <h2>Sales Management</h2>
                     <div class="section-actions">
-                        <button class="btn btn-outline" onclick="updateExistingSalesWithCommission()" title="Update existing sales with commission fields">
-                            <i class="fas fa-sync-alt"></i> Update Commission Data
+                        <button class="btn btn-outline" onclick="updateExistingSalesWithCommission()" title="Fix shop sale line totals and missing commission fields">
+                            <i class="fas fa-sync-alt"></i> Fix Shop Sale Totals
                         </button>
                         <button class="btn btn-outline" onclick="cleanupInvalidInvoices()" title="Remove any invoices containing shop sales">
                             <i class="fas fa-broom"></i> Clean Invalid Invoices
@@ -1583,8 +1583,8 @@
                 </div>
                 <div class="form-group half-width">
                     <label for="salePrice">Net Price (What You Receive)</label>
-                    <input type="number" id="salePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateDiscount()">
-                    <small class="form-help">The amount you receive after commission (auto-calculated from list price and commission)</small>
+                    <input type="number" id="salePrice" step="0.01" min="0" placeholder="Register amount for this sale" oninput="calculateDiscount()">
+                    <small class="form-help">Shop sales: amount after vendor discount (counts toward monthly total). Shop commission is on the monthly statement.</small>
                 </div>
                 <div class="form-group full-width">
                     <div id="discountInfo" class="discount-info" style="display: none;">
@@ -1610,7 +1610,7 @@
                 <div class="form-group half-width">
                     <label for="saleCommission">Commission %</label>
                     <input type="number" id="saleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateSalePriceFromCommission()">
-                    <small class="form-help">Shop commission percentage (if applicable)</small>
+                    <small class="form-help">Non-shop sales only. Flippin’ Happy commission is set on the monthly shop statement.</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="saleNotes">Notes</label>
@@ -1682,9 +1682,9 @@
                     <small class="form-help">Extra discount you give to a vendor.</small>
                 </div>
                 <div class="form-group half-width">
-                    <label for="editSalePrice">Net Price (What You Receive)</label>
-                    <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Amount you receive after commission" oninput="calculateEditDiscount()">
-                    <small class="form-help">The amount you receive after commission</small>
+                    <label for="editSalePrice">Sale amount</label>
+                    <input type="number" id="editSalePrice" step="0.01" min="0" placeholder="Register amount for this sale" oninput="calculateEditDiscount()">
+                    <small class="form-help">Shop sales: after vendor discount only; shop commission is monthly.</small>
                 </div>
                 <div class="form-group full-width">
                     <div id="editDiscountInfo" class="discount-info" style="display: none;">
@@ -1710,7 +1710,7 @@
                 <div class="form-group half-width">
                     <label for="editSaleCommission">Commission %</label>
                     <input type="number" id="editSaleCommission" step="0.01" min="0" max="100" placeholder="0.00" oninput="calculateEditSalePriceFromCommission()">
-                    <small class="form-help">Shop commission percentage (if applicable)</small>
+                    <small class="form-help">Non-shop sales only. Flippin’ Happy commission is on the monthly shop statement.</small>
                 </div>
                 <div class="form-group half-width">
                     <label for="editSaleNotes">Notes</label>
