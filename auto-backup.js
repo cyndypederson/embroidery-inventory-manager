@@ -3,9 +3,13 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://cyndypstitchcraft_db_user:4G2vcEQSjAvJoUxY@embroider-inventory.2x57teq.mongodb.net/?retryWrites=true&w=majority&appName=embroider-inventory';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function createBackup() {
+    if (!MONGODB_URI) {
+        console.error('❌ Set MONGODB_URI in .env before running auto-backup');
+        process.exit(1);
+    }
     const client = new MongoClient(MONGODB_URI);
     
     try {

@@ -4528,12 +4528,6 @@ body {
         line-height: 1.2 !important;
     }
     
-    /* Hide Data Management tab on mobile only */
-    .nav-btn[data-tab="data"],
-    #data.tab-content {
-        display: none !important;
-    }
-    
     /* OCR buttons now work on mobile with improved error handling */
     
     /* Show mobile card containers */

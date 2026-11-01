@@ -1,4 +1,5 @@
 const { launch } = require('./test-utils/puppeteer-config');
+const { loginTestUser } = require('./test-utils/auth-login');
 
 class SmokeTester {
     constructor() {
@@ -12,8 +13,8 @@ class SmokeTester {
         this.browser = await launch();
         this.page = await this.browser.newPage();
         this.page.setDefaultNavigationTimeout(60000);
-        await this.page.goto(this.baseUrl, { waitUntil: 'load' });
-        await this.page.waitForSelector('button[data-tab="projects"]', { timeout: 10000 });
+        await loginTestUser(this.page, this.baseUrl);
+        await this.page.waitForSelector('button[data-tab="projects"]', { timeout: 15000 });
     }
 
     async testCriticalPaths() {

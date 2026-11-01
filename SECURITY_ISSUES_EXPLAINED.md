@@ -3,6 +3,8 @@
 **Date:** October 12, 2025  
 **Status:** 7 warnings found (all informational, non-critical)
 
+**Update (2026-11-01 — audit remediation):** Production now requires a logged-in session for all data reads (`GET /api/*` inventory, customers, sales, invoices, snapshot). Admin login uses `ADMIN_PASSWORD` in Vercel env only (no default in code). CORS is restricted to known app origins. Public static `/data/*` is not deployed on Vercel. See `audit/website-2026-10-27/implementation-2026-11-01.md`.
+
 ---
 
 ## 📋 Summary
@@ -54,8 +56,8 @@ Instead of sending `type: "project"`, a hacker could send `type: { $ne: null }` 
 **Real-world risk:**  
 ⭐ **LOW for you** because:
 - You're the only user - you're not going to hack yourself
-- The app requires authentication (password protection)
-- It's running on your local computer, not publicly accessible
+- Data API routes require an authenticated session on production
+- Input validation on write paths is still recommended for defense in depth
 - MongoDB Atlas has its own security layer
 
 **Should you fix it?**  

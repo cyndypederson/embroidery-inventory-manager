@@ -9,7 +9,11 @@ const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
 // MongoDB connection (same as server.js)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://cyndypstitchcraft_db_user:4G2vcEQSjAvJoUxY@embroider-inventory.2x57teq.mongodb.net/?retryWrites=true&w=majority&appName=embroider-inventory';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+    console.error('Set MONGODB_URI in .env before running data-integrity-test.js');
+    process.exit(1);
+}
 
 // Color codes for output
 const colors = {

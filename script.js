@@ -250,6 +250,39 @@ function generateSaleId() {
     return `sale-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
+const LEGACY_TENANT_STORAGE_KEYS = {
+    inventory: 'embroideryInventory',
+    customers: 'embroideryCustomers',
+    sales: 'embroiderySales'
+};
+
+function getTenantStoragePrefix() {
+    return (tenantConfig && tenantConfig.tenantId) || 'embroidery';
+}
+
+function tenantDataStorageKey(kind) {
+    return `${getTenantStoragePrefix()}_${kind}`;
+}
+
+function readLocalStorageJsonForTenant(kind) {
+    const key = tenantDataStorageKey(kind);
+    let raw = localStorage.getItem(key);
+    if (raw == null && LEGACY_TENANT_STORAGE_KEYS[kind]) {
+        raw = localStorage.getItem(LEGACY_TENANT_STORAGE_KEYS[kind]);
+        if (raw != null) {
+            try {
+                localStorage.setItem(key, raw);
+            } catch (_) { /* quota */ }
+        }
+    }
+    if (raw == null) return null;
+    try {
+        return JSON.parse(raw);
+    } catch (_) {
+        return null;
+    }
+}
+
 // Performance optimization settings
 const PERFORMANCE_CONFIG = {
     PAGINATION_SIZE: 50,
@@ -2633,10 +2666,18 @@ class DataManager {
             
             const commissionAmount = parseFloat(sale.commissionAmount) || 0;
             const commissionPercent = parseFloat(sale.commission) || 0;
-            if (commissionAmount > 0) {
+            const shopConsignment = typeof isShopConsignmentSale === 'function' && isShopConsignmentSale(sale);
+            if (commissionAmount > 0 && !shopConsignment) {
                 yPos += 8;
                 doc.text(`Commission (${commissionPercent}%):`, 140, yPos);
                 doc.text(`$${commissionAmount.toFixed(2)}`, 170, yPos);
+            }
+            if (shopConsignment) {
+                yPos += 8;
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(9);
+                doc.text('Shop commission is on your monthly shop statement.', 14, yPos + 4);
+                yPos += 6;
             }
             
             yPos += 8;
@@ -3219,7 +3260,7 @@ class AnalyticsManager {
                 const saleDate = new Date(sale.dateSold);
                 return saleDate.getMonth() === month.month && saleDate.getFullYear() === month.year;
             });
-            return monthSales.reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+            return monthSales.reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
         });
         
         return {
@@ -3413,10 +3454,7 @@ class AnalyticsManager {
     }
     
     calculateTotalRevenue() {
-        return sales.reduce((sum, sale) => {
-            const net = parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0) || 0;
-            return sum + net;
-        }, 0);
+        return sales.reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
     }
     
     calculateAverageProjectValue() {
@@ -3447,7 +3485,7 @@ class AnalyticsManager {
         const currentMonthRevenue = sales.filter(sale => {
             const saleDate = new Date(sale.dateSold);
             return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
-        }).reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+        }).reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
         
         const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
         const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
@@ -3455,7 +3493,7 @@ class AnalyticsManager {
         const lastMonthRevenue = sales.filter(sale => {
             const saleDate = new Date(sale.dateSold);
             return saleDate.getMonth() === lastMonth && saleDate.getFullYear() === lastMonthYear;
-        }).reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+        }).reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
         
         return lastMonthRevenue > 0 ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
     }
@@ -3464,7 +3502,7 @@ class AnalyticsManager {
         const customerSales = {};
         sales.forEach(sale => {
             if (sale.customer) {
-                customerSales[sale.customer] = (customerSales[sale.customer] || 0) + (sale.salePrice || 0);
+                customerSales[sale.customer] = (customerSales[sale.customer] || 0) + getSaleRevenueAmount(sale);
             }
         });
         
@@ -3492,7 +3530,7 @@ class AnalyticsManager {
         const monthlyData = {};
         sales.forEach(sale => {
             const month = new Date(sale.dateSold).getMonth();
-            monthlyData[month] = (monthlyData[month] || 0) + (sale.salePrice || 0);
+            monthlyData[month] = (monthlyData[month] || 0) + getSaleRevenueAmount(sale);
         });
         
         return monthlyData;
@@ -3626,7 +3664,7 @@ class RevenuePredictor {
             const monthRevenue = sales.filter(sale => {
                 const saleDate = new Date(sale.dateSold);
                 return saleDate.getMonth() === date.getMonth() && saleDate.getFullYear() === date.getFullYear();
-            }).reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
+            }).reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
             
             months.push(monthRevenue);
         }
@@ -7684,9 +7722,9 @@ function loadDataFromLocalStorage() {
     }
     
     console.log('🔄 Loading data from localStorage');
-    inventory = JSON.parse(localStorage.getItem('embroideryInventory')) || [];
-    customers = JSON.parse(localStorage.getItem('embroideryCustomers')) || [];
-    sales = JSON.parse(localStorage.getItem('embroiderySales')) || [];
+    inventory = readLocalStorageJsonForTenant('inventory') || [];
+    customers = readLocalStorageJsonForTenant('customers') || [];
+    sales = readLocalStorageJsonForTenant('sales') || [];
     loadInvoicesFromLocalStorage();
     
     // Assign to window object for mobile cards
@@ -8167,9 +8205,9 @@ async function saveDataToLocalStorage() {
     const snapshot = getAppDataSnapshot();
     const writeAll = (data) => {
         const ok = [
-            writeLocalStorageJson('embroideryInventory', data.inventory),
-            writeLocalStorageJson('embroideryCustomers', data.customers),
-            writeLocalStorageJson('embroiderySales', data.sales)
+            writeLocalStorageJson(tenantDataStorageKey('inventory'), data.inventory),
+            writeLocalStorageJson(tenantDataStorageKey('customers'), data.customers),
+            writeLocalStorageJson(tenantDataStorageKey('sales'), data.sales)
         ].every(Boolean);
         saveInvoicesToLocalStorage();
         localStorage.setItem('lastDataSave', Date.now().toString());
@@ -8210,7 +8248,8 @@ function cleanupLocalStorage() {
         });
         
         // Clear any large photo data that might be taking up space
-        const inventoryData = localStorage.getItem('embroideryInventory');
+        const inventoryData = localStorage.getItem(tenantDataStorageKey('inventory'))
+            || localStorage.getItem(LEGACY_TENANT_STORAGE_KEYS.inventory);
         if (inventoryData) {
             try {
                 const inventory = JSON.parse(inventoryData);
@@ -8225,7 +8264,7 @@ function cleanupLocalStorage() {
                 });
                 
                 if (hasLargePhotos) {
-                    localStorage.setItem('embroideryInventory', JSON.stringify(inventory));
+                    localStorage.setItem(tenantDataStorageKey('inventory'), JSON.stringify(inventory));
                     console.log('Removed large photo data to free up space');
                 }
             } catch (e) {
@@ -8328,77 +8367,115 @@ async function saveData() {
  * Merge items that exist only in this browser (memory and/or localStorage)
  * into MongoDB/cloud. Recovers projects added while not truly logged in.
  */
-async function syncLocalOnlyInventoryToCloud() {
-    let stored = [];
-    try {
-        stored = JSON.parse(localStorage.getItem('embroideryInventory') || '[]');
-    } catch (e) {
-        console.warn('Could not read local inventory for sync', e);
-        stored = [];
-    }
-    if (!Array.isArray(stored)) stored = [];
-
-    // Include in-memory items too — localhost auth-bypass used to leave new
-    // cards only in memory after a failed cloud save.
-    const memory = [
-        ...(Array.isArray(inventory) ? inventory : []),
-        ...(Array.isArray(window.inventory) ? window.inventory : [])
-    ];
-
+function mergeLocalOnlyRecords(stored, memory, fingerprintFn) {
     const byKey = new Map();
     const addCandidate = (item) => {
         if (!item || typeof item !== 'object') return;
-        const id = String(item._id || '');
-        const name = ((item.description || item.name || '') + '').trim().toLowerCase();
-        const when = item.dateAdded || item.createdAt || '';
-        const key = id || `${name}|${when}|${item.quantity || 1}|${item.status || ''}|${item.customer || ''}`;
-        if (!key || key === '|||1||') return;
+        const key = fingerprintFn(item);
+        if (!key) return;
         if (!byKey.has(key)) byKey.set(key, item);
     };
-    stored.forEach(addCandidate);
-    memory.forEach(addCandidate);
-    const candidates = [...byKey.values()];
+    (stored || []).forEach(addCandidate);
+    (memory || []).forEach(addCandidate);
+    return [...byKey.values()];
+}
 
-    if (candidates.length === 0) {
+function inventoryFingerprint(item) {
+    const id = String(item._id || '');
+    const name = ((item.description || item.name || '') + '').trim().toLowerCase();
+    const when = item.dateAdded || item.createdAt || '';
+    const key = id || `${name}|${when}|${item.quantity || 1}|${item.status || ''}|${item.customer || ''}`;
+    return key === '|||1||' ? '' : key;
+}
+
+function customerFingerprint(item) {
+    const name = ((item.name || item.customer || '') + '').trim().toLowerCase();
+    const when = item.dateAdded || item.createdAt || '';
+    return name ? `${name}|${when}|${item.contact || ''}` : '';
+}
+
+function saleFingerprint(item) {
+    const id = String(item.id || '');
+    if (id) return `id:${id}`;
+    const when = item.dateSold || '';
+    const name = ((item.itemName || '') + '').trim().toLowerCase();
+    const amt = item.listedPrice || item.netAmount || item.salePrice || 0;
+    return name ? `${name}|${when}|${amt}|${item.customer || ''}` : '';
+}
+
+async function syncLocalOnlyInventoryToCloud() {
+    const storedInventory = readLocalStorageJsonForTenant('inventory') || [];
+    const storedCustomers = readLocalStorageJsonForTenant('customers') || [];
+    const storedSales = readLocalStorageJsonForTenant('sales') || [];
+
+    const memoryInventory = [
+        ...(Array.isArray(inventory) ? inventory : []),
+        ...(Array.isArray(window.inventory) ? window.inventory : [])
+    ];
+    const memoryCustomers = [
+        ...(Array.isArray(customers) ? customers : []),
+        ...(Array.isArray(window.customers) ? window.customers : [])
+    ];
+    const memorySales = [
+        ...(Array.isArray(sales) ? sales : []),
+        ...(Array.isArray(window.sales) ? window.sales : [])
+    ];
+
+    const invCandidates = mergeLocalOnlyRecords(storedInventory, memoryInventory, inventoryFingerprint);
+    const custCandidates = mergeLocalOnlyRecords(storedCustomers, memoryCustomers, customerFingerprint);
+    const saleCandidates = mergeLocalOnlyRecords(storedSales, memorySales, saleFingerprint);
+
+    if (invCandidates.length === 0 && custCandidates.length === 0 && saleCandidates.length === 0) {
         return 0;
     }
 
     try {
-        const res = await fetch('/api/inventory', { credentials: 'include' });
+        const res = await fetch('/api/snapshot', { credentials: 'include' });
         if (!res.ok) {
-            throw new Error(`Failed to load cloud inventory: ${res.status}`);
+            throw new Error(`Failed to load cloud snapshot: ${res.status}`);
         }
         const cloud = await res.json();
-        if (!Array.isArray(cloud)) {
-            throw new Error('Cloud inventory was not an array');
-        }
+        const cloudInv = Array.isArray(cloud.inventory) ? cloud.inventory : [];
+        const cloudCust = Array.isArray(cloud.customers) ? cloud.customers : [];
+        const cloudSales = Array.isArray(cloud.sales) ? cloud.sales : [];
 
-        const cloudIds = new Set(cloud.map(i => String(i._id || '')));
-        const cloudFingerprints = new Set(cloud.map(i => {
-            const name = ((i.description || i.name || '') + '').trim().toLowerCase();
-            const when = i.dateAdded || i.createdAt || '';
-            return `${name}|${when}|${i.quantity || 1}|${i.status || ''}|${i.customer || ''}`;
-        }));
-
-        const missing = candidates.filter(i => {
+        const cloudInvIds = new Set(cloudInv.map(i => String(i._id || '')));
+        const cloudInvFp = new Set(cloudInv.map(inventoryFingerprint).filter(Boolean));
+        const missingInv = invCandidates.filter(i => {
             const id = String(i._id || '');
-            if (id && cloudIds.has(id)) return false;
-            const name = ((i.description || i.name || '') + '').trim().toLowerCase();
-            const when = i.dateAdded || i.createdAt || '';
-            const fp = `${name}|${when}|${i.quantity || 1}|${i.status || ''}|${i.customer || ''}`;
-            return name && !cloudFingerprints.has(fp);
+            if (id && cloudInvIds.has(id)) return false;
+            const fp = inventoryFingerprint(i);
+            return fp && !cloudInvFp.has(fp);
         });
 
-        if (missing.length === 0) {
-            console.log('☁️ No local-only inventory items to sync');
+        const cloudCustFp = new Set(cloudCust.map(customerFingerprint).filter(Boolean));
+        const missingCust = custCandidates.filter(c => {
+            const fp = customerFingerprint(c);
+            return fp && !cloudCustFp.has(fp);
+        });
+
+        const cloudSaleIds = new Set(cloudSales.map(s => String(s.id || '')));
+        const cloudSaleFp = new Set(cloudSales.map(saleFingerprint).filter(Boolean));
+        const missingSales = saleCandidates.filter(s => {
+            const id = String(s.id || '');
+            if (id && cloudSaleIds.has(id)) return false;
+            const fp = saleFingerprint(s);
+            return fp && !cloudSaleFp.has(fp);
+        });
+
+        const totalMissing = missingInv.length + missingCust.length + missingSales.length;
+        if (totalMissing === 0) {
+            console.log('☁️ No local-only records to sync');
             return 0;
         }
 
-        console.log(`☁️ Syncing ${missing.length} local-only item(s) to cloud`, missing.map(i => i.description || i.name));
-        inventory = [...cloud, ...missing];
+        inventory = [...cloudInv, ...missingInv];
+        customers = [...cloudCust, ...missingCust];
+        sales = [...cloudSales, ...missingSales];
         window.inventory = inventory;
+        window.customers = customers;
+        window.sales = sales;
 
-        // Use direct API save to avoid synchronizeViews wiping state mid-sync
         window.isSaving = true;
         window.isModifying = true;
         await saveDataToAPI();
@@ -8411,9 +8488,13 @@ async function syncLocalOnlyInventoryToCloud() {
         if (typeof loadCompletedItemsTable === 'function') loadCompletedItemsTable();
         if (typeof loadWIPTab === 'function') loadWIPTab();
         if (typeof updateDashboardStats === 'function') updateDashboardStats();
+        if (typeof refreshSalesViews === 'function') refreshSalesViews();
 
-        showNotification(`Synced ${missing.length} local-only item(s) to the cloud (visible on live after refresh)`, 'success');
-        return missing.length;
+        showNotification(
+            `Synced ${totalMissing} local-only record(s) to the cloud (${missingInv.length} items, ${missingCust.length} customers, ${missingSales.length} sales)`,
+            'success'
+        );
+        return totalMissing;
     } catch (err) {
         console.error('Local→cloud inventory sync failed:', err);
         const needsLogin = /401|403|Auth/i.test(err.message || '');
@@ -11673,7 +11754,14 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
 // Function to add a project to the invoice
 
 // Sales Management
-function updateExistingSalesWithCommission() {
+async function updateExistingSalesWithCommission() {
+    const authed = await checkAuthentication();
+    if (!authed) {
+        showNotification('Log in before fixing shop sale totals.', 'warning');
+        promptLoginRequired('Log in to update sales data', 'fix shop sale totals');
+        return;
+    }
+
     let updated = false;
     let updatedCount = 0;
     let shopFixedCount = 0;
@@ -11714,7 +11802,7 @@ function updateExistingSalesWithCommission() {
     });
     
     if (updated) {
-        saveDataToAPI();
+        await saveDataToAPI();
         console.log(`Updated ${updatedCount} sales with commission fields; fixed ${shopFixedCount} shop sales for monthly commission model`);
         
         if (isLocalhost()) {
@@ -12850,6 +12938,25 @@ function getSaleAmountTowardMonthlyTotal(sale) {
     return parseFloat(sale?.salePrice || sale?.netAmount || sale?.price || 0) || 0;
 }
 
+/** Revenue/analytics amount for a sale row (shop = register total; direct = net to seller). */
+function getSaleRevenueAmount(sale) {
+    if (!sale) return 0;
+    if (isShopConsignmentSale(sale)) {
+        return getSaleAmountTowardMonthlyTotal(sale);
+    }
+    return parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0) || 0;
+}
+
+function ensureInventoryStableId(item, index) {
+    if (!item || item._id) return item?._id;
+    if (typeof newClientRecordId === 'function') {
+        item._id = newClientRecordId(index);
+    } else {
+        item._id = `item-${Date.now()}-${index}`;
+    }
+    return item._id;
+}
+
 function isShopSaleFormActive(formPrefix) {
     const isEdit = formPrefix === 'edit';
     const channelEl = document.getElementById(isEdit ? 'editSaleChannel' : 'saleChannel');
@@ -13023,10 +13130,15 @@ function createOrUpdateSaleFromProject(index, dateSold) {
         item.customer = getDefaultShopCustomer();
     }
     
+    ensureInventoryStableId(item, index);
+
     const existingSaleId = item.saleId;
     let saleRecord = existingSaleId ? sales.find(sale => sale.id === existingSaleId) : null;
+    if (!saleRecord && item._id) {
+        saleRecord = sales.find(sale => sale.inventoryItemId === item._id) || null;
+    }
     
-    const saleId = existingSaleId || generateSaleId();
+    const saleId = existingSaleId || saleRecord?.id || generateSaleId();
     const listedPrice = getProjectTotalPrice(item);
     const vendorDiscountPercent = 0;
     const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
@@ -13045,6 +13157,7 @@ function createOrUpdateSaleFromProject(index, dateSold) {
         id: saleId,
         saleSource: 'project',
         itemIndex: index,
+        inventoryItemId: item._id || null,
         saleType: 'inventory',
         itemName: item.description || item.name || 'Project Sale',
         customer: item.customer || 'No Customer/Location',
@@ -13241,6 +13354,14 @@ async function completeMarkAsSold(index, dateSold) {
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
 
     inventory[index].status = 'sold';
+    if (item.type === 'inventory') {
+        const onHand = Math.max(0, parseFloat(item.quantity) || 0);
+        const soldUnits = Math.max(1, parseFloat(item.quantitySold) || 1);
+        item.quantity = Math.max(0, onHand - soldUnits);
+        if (item.quantity === 0) {
+            item.status = 'out-of-stock';
+        }
+    }
     createOrUpdateSaleFromProject(index, dateSold);
     await saveData();
     loadInventoryTable();

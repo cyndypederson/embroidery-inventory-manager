@@ -51,14 +51,8 @@ ADMIN_USERNAME=your_username
 ADMIN_PASSWORD=your_password
 ```
 
-### **Option 2: Edit server.js (Quick but not recommended)**
-Find lines 179-180 in `server.js`:
-```javascript
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Kobedavis#1';
-```
-
-Change the default values after `||`
+### **Option 2: Local `.env` only**
+There is **no** default password in `server.js`. For localhost, set `ADMIN_PASSWORD` in `.env` (quote values that contain `#`).
 
 ---
 

@@ -18,9 +18,11 @@ node server.js
 - Open **http://localhost:3002** in the browser (not file://).
 
 ## Data & persistence
-- **Primary store:** MongoDB Atlas. Collections: inventory, customers, sales, gallery, ideas, patterns.
-- **data/*.json:** Used by server to **seed** when a collection is empty on connect; also used by **Restore from data files**.
-- **POST /api/seed-from-files:** Restores DB from `data/inventory.json`, `data/customers.json`, etc. (replaces collections). Use when DB is empty or to reset from backup.
+- **Primary store:** MongoDB Atlas. Collections: inventory, customers, sales, invoices, sessions.
+- **Client save path:** Authenticated `GET/POST /api/snapshot` (transactional save). Legacy per-collection `/api/inventory` etc. remain for compatibility but are deprecated.
+- **Auth:** `ADMIN_USERNAME` / `ADMIN_PASSWORD` in env (Vercel + local `.env`). No default password in `server.js`.
+- **LocalStorage keys:** Prefixed by tenant id (`embroidery_inventory`, etc.) with migration from legacy `embroideryInventory` keys.
+- **data/*.json:** Local seed/backup files only; not served as public static files on Vercel production.
 - **Same data on local + production:** Use the same `MONGODB_URI` (and `DB_NAME`) in Vercel env as in local `.env`, then redeploy.
 
 ## Backups

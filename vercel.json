@@ -19,10 +19,6 @@
       "use": "@vercel/static"
     },
     {
-      "src": "data/(.*)",
-      "use": "@vercel/static"
-    },
-    {
       "src": "logo.png",
       "use": "@vercel/static"
     },
@@ -63,10 +59,6 @@
     {
       "src": "/script.js",
       "dest": "/script.js"
-    },
-    {
-      "src": "/data/(.*)",
-      "dest": "/data/$1"
     },
     {
       "src": "/logo.png",

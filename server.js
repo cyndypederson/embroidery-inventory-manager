@@ -226,9 +226,47 @@ async function initializeKnittingDefaults() {
     }
 }
 
+const ALLOWED_CORS_ORIGINS = [
+    'https://embroidery-inventory-manager.vercel.app',
+    process.env.EMBROIDERY_SITE_URL,
+    process.env.KNITTING_SITE_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+].filter(Boolean);
+
+function isAllowedCorsOrigin(origin) {
+    if (!origin) return true;
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return true;
+    return ALLOWED_CORS_ORIGINS.some((allowed) => origin === allowed || origin.startsWith(String(allowed).replace(/\/$/, '')));
+}
+
+const loginRateLimit = new Map();
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_RATE_MAX = 30;
+
+function checkLoginRateLimit(req) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const key = String(ip).split(',')[0].trim();
+    const now = Date.now();
+    let entry = loginRateLimit.get(key);
+    if (!entry || now > entry.resetAt) {
+        entry = { count: 0, resetAt: now + LOGIN_RATE_WINDOW_MS };
+    }
+    entry.count += 1;
+    loginRateLimit.set(key, entry);
+    return entry.count <= LOGIN_RATE_MAX;
+}
+
+const MIN_PARTNER_PASSWORD_LENGTH = 8;
+
 // Middleware
 app.use(cors({
-    origin: true,
+    origin(origin, callback) {
+        if (isAllowedCorsOrigin(origin)) {
+            callback(null, origin || true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' })); // Increase payload limit
@@ -337,6 +375,9 @@ app.post('/api/login', async (req, res) => {
     if (!username || !password) {
         return res.status(400).json({ success: false, message: 'Username and password are required' });
     }
+    if (!checkLoginRateLimit(req)) {
+        return res.status(429).json({ success: false, message: 'Too many login attempts. Try again later.' });
+    }
 
     try {
         if (isAdminCredential(username, password)) {
@@ -378,8 +419,8 @@ app.post('/api/change-password', requireSessionAuth, async (req, res) => {
     if (!currentPassword || !newPassword) {
         return res.status(400).json({ success: false, message: 'Current and new password are required' });
     }
-    if (newPassword.length < 4) {
-        return res.status(400).json({ success: false, message: 'New password must be at least 4 characters' });
+    if (newPassword.length < MIN_PARTNER_PASSWORD_LENGTH) {
+        return res.status(400).json({ success: false, message: `New password must be at least ${MIN_PARTNER_PASSWORD_LENGTH} characters` });
     }
 
     try {
@@ -437,7 +478,7 @@ app.post('/api/users/create', requireAdminSession, async (req, res) => {
 
     const { username, password } = req.body;
     const partnerName = (username || PARTNER_USERNAME).toLowerCase();
-    if (!password || password.length < 4) {
+    if (!password || password.length < MIN_PARTNER_PASSWORD_LENGTH) {
         return res.status(400).json({ error: 'Password must be at least 4 characters' });
     }
 
@@ -517,7 +558,7 @@ app.post('/api/users/set-password', async (req, res) => {
     }
 
     const { token, password } = req.body;
-    if (!token || !password || password.length < 4) {
+    if (!token || !password || password.length < MIN_PARTNER_PASSWORD_LENGTH) {
         return res.status(400).json({ error: 'Valid token and password (4+ chars) are required' });
     }
 
@@ -647,6 +688,17 @@ app.post('/api/snapshot', requireSessionAuth, async (req, res) => {
         console.error('Error saving snapshot:', error);
         res.status(500).json({ error: 'Failed to save snapshot' });
     }
+});
+
+function markLegacyCollectionApi(res) {
+    res.setHeader('X-Deprecated-Api', 'Use GET/POST /api/snapshot instead');
+}
+
+['/api/inventory', '/api/customers', '/api/sales', '/api/invoices'].forEach((legacyPath) => {
+    app.use(legacyPath, (req, res, next) => {
+        markLegacyCollectionApi(res);
+        next();
+    });
 });
 
 // API endpoints for data persistence (legacy per-collection; auth required on reads)
