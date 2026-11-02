@@ -14806,17 +14806,14 @@ function applyReportsFilters() {
     updateReportsDashboardFromFilters();
     const filters = getReportFilters();
     const count = getFilteredSales(filters).length;
-    if (typeof lastReportsGenerator === 'function') {
-        lastReportsGenerator();
-        showNotification(`Report updated · ${count} sale${count === 1 ? '' : 's'} in period`, count > 0 ? 'success' : 'warning');
-    } else {
-        showNotification(
-            count > 0
-                ? `Filters applied · ${count} sale${count === 1 ? '' : 's'} in period — choose a report`
-                : 'No sales in this period — set Year + Month (e.g. 2026 + October) or click Clear',
-            count > 0 ? 'info' : 'warning'
-        );
-    }
+    const run = typeof lastReportsGenerator === 'function'
+        ? lastReportsGenerator
+        : generateSalesReport;
+    run();
+    showNotification(
+        `Report updated · ${count} sale${count === 1 ? '' : 's'} in period`,
+        count > 0 ? 'success' : 'warning'
+    );
 }
 
 function loadReportsDashboard() {
@@ -14824,6 +14821,10 @@ function loadReportsDashboard() {
     updateReportFilters();
     setDefaultReportPeriodIfEmpty();
     updateReportsDashboardFromFilters();
+    const welcome = document.querySelector('#reportContent .welcome-message');
+    if (welcome && getFilteredSales(getReportFilters()).length > 0) {
+        generateSalesReport();
+    }
 }
 
 function updateReportsDashboardFromFilters() {
