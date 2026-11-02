@@ -14570,17 +14570,60 @@ function bindReportFilterHandlersOnce() {
     if (monthSel) monthSel.addEventListener('change', onMonthYearChange);
 }
 
+function inferReportYearForMonth(monthNum) {
+    const m = Number(monthNum);
+    if (!m || m < 1 || m > 12) return new Date().getFullYear();
+    const years = (sales || [])
+        .map(s => getSaleDateParts(s.dateSold))
+        .filter(p => p && p.month === m)
+        .map(p => p.year);
+    if (years.length) return Math.max(...years);
+    return new Date().getFullYear();
+}
+
 function syncReportDatesFromMonthYear() {
     const yearSel = document.getElementById('reportYearFilter');
     const monthSel = document.getElementById('reportMonthFilter');
     const start = document.getElementById('reportStartDate');
     const end = document.getElementById('reportEndDate');
-    const y = yearSel?.value;
+    let y = yearSel?.value;
     const m = monthSel?.value;
-    if (!y || !m || !start || !end) return;
+    if (!m || !start || !end) return;
+    if (!y && yearSel) {
+        y = String(inferReportYearForMonth(m));
+        yearSel.value = y;
+    }
     const lastDay = new Date(Number(y), Number(m), 0).getDate();
     start.value = `${y}-${String(m).padStart(2, '0')}-01`;
     end.value = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
+
+function ensureReportFiltersReadyForRun() {
+    const preset = document.getElementById('reportDateFilter');
+    if (preset?.value === 'month') {
+        const now = new Date();
+        const monthName = REPORT_MONTH_NAMES[now.getMonth()];
+        showNotification(
+            `“This Month” is ${monthName} ${now.getFullYear()} only — not October. Use Year + Month, or Clear filters.`,
+            'warning'
+        );
+    }
+    syncReportDatesFromMonthYear();
+}
+
+function setDefaultReportPeriodIfEmpty() {
+    const y = document.getElementById('reportYearFilter');
+    const m = document.getElementById('reportMonthFilter');
+    const preset = document.getElementById('reportDateFilter');
+    const start = document.getElementById('reportStartDate');
+    const end = document.getElementById('reportEndDate');
+    const hasRange = (start?.value && end?.value) || preset?.value || y?.value || m?.value;
+    if (hasRange) return;
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    if (y) y.value = String(prev.getFullYear());
+    if (m) m.value = String(prev.getMonth() + 1);
+    syncReportDatesFromMonthYear();
 }
 
 function populateReportYearFilter() {
@@ -14759,18 +14802,27 @@ function updateReportFilterStatus(filters, filteredData) {
 }
 
 function applyReportsFilters() {
+    ensureReportFiltersReadyForRun();
     updateReportsDashboardFromFilters();
+    const filters = getReportFilters();
+    const count = getFilteredSales(filters).length;
     if (typeof lastReportsGenerator === 'function') {
         lastReportsGenerator();
-        showNotification('Report updated with current filters', 'success');
+        showNotification(`Report updated · ${count} sale${count === 1 ? '' : 's'} in period`, count > 0 ? 'success' : 'warning');
     } else {
-        showNotification('Filters applied to dashboard — choose a report above', 'info');
+        showNotification(
+            count > 0
+                ? `Filters applied · ${count} sale${count === 1 ? '' : 's'} in period — choose a report`
+                : 'No sales in this period — set Year + Month (e.g. 2026 + October) or click Clear',
+            count > 0 ? 'info' : 'warning'
+        );
     }
 }
 
 function loadReportsDashboard() {
     bindReportFilterHandlersOnce();
     updateReportFilters();
+    setDefaultReportPeriodIfEmpty();
     updateReportsDashboardFromFilters();
 }
 
@@ -14974,6 +15026,7 @@ function generateComprehensiveReport() {
 
 function generateFinancialReport() {
     markReportRun(generateFinancialReport);
+    ensureReportFiltersReadyForRun();
     const reportContent = document.getElementById('reportContent');
     const filters = getReportFilters();
     const filteredData = getFilteredData(filters);
@@ -15512,6 +15565,7 @@ function generateSalesReportEmptyState(filters, filteredSales) {
 
 function generateSalesReport() {
     markReportRun(generateSalesReport);
+    ensureReportFiltersReadyForRun();
     const reportContent = document.getElementById('reportContent');
     if (!reportContent) return;
     const filters = getReportFilters();
