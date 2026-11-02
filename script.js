@@ -2729,15 +2729,30 @@ class DataManager {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Filter sales by date if provided
+            if (!startDate && !endDate && typeof getReportFilters === 'function') {
+                const reportFilters = getReportFilters();
+                startDate = reportFilters.startDate || null;
+                endDate = reportFilters.endDate || null;
+                if (!startDate && !endDate && reportFilters.dateFilter) {
+                    const bounds = resolveReportPeriodBounds(reportFilters);
+                    if (bounds) {
+                        startDate = formatYmdLocal(bounds.start);
+                        endDate = formatYmdLocal(bounds.end);
+                    }
+                }
+            }
+
             let filteredSales = sales;
-            if (startDate || endDate) {
-                filteredSales = sales.filter(sale => {
-                    const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
-                    if (startDate && saleDate < new Date(startDate)) return false;
-                    if (endDate && saleDate > new Date(endDate)) return false;
-                    return true;
-                });
+            const bounds = (startDate && endDate)
+                ? resolveReportPeriodBounds({ startDate, endDate })
+                : (startDate || endDate)
+                    ? resolveReportPeriodBounds({
+                        startDate: startDate || endDate,
+                        endDate: endDate || startDate
+                    })
+                    : null;
+            if (bounds) {
+                filteredSales = sales.filter(sale => saleDateInBounds(sale.dateSold, bounds));
             }
             
             // Header
@@ -2751,11 +2766,7 @@ class DataManager {
             doc.text(`Total Sales: ${filteredSales.length}`, 14, 44);
             
             // Calculate totals
-            const totalRevenue = filteredSales.reduce((sum, sale) => {
-                const price = parseFloat(sale.price) || parseFloat(sale.salePrice) || 0;
-                const qty = parseFloat(sale.quantity) || 1;
-                return sum + (price * qty);
-            }, 0);
+            const totalRevenue = filteredSales.reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
             
             doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 14, 51);
             
@@ -2782,12 +2793,10 @@ class DataManager {
                     yPos = 14;
                 }
                 
-                const saleDate = sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : 'N/A';
+                const saleDate = sale.dateSold ? formatSaleReportDate(sale.dateSold) : 'N/A';
                 const customer = (sale.customer || 'N/A').substring(0, 20);
-                const item = (sale.description || sale.itemDescription || 'N/A').substring(0, 25);
-                const amount = parseFloat(sale.price) || parseFloat(sale.salePrice) || 0;
-                const qty = parseFloat(sale.quantity) || 1;
-                const total = amount * qty;
+                const item = (sale.itemName || sale.description || sale.itemDescription || 'N/A').substring(0, 25);
+                const total = getSaleRevenueAmount(sale);
                 
                 doc.text(saleDate, 14, yPos);
                 doc.text(customer, 50, yPos);
@@ -12896,11 +12905,17 @@ function clearReportsFilters() {
         endDate.value = '';
     }
     
-    // Re-generate report if there's a function to do so
-    if (typeof generateComprehensiveReport === 'function') {
-        generateComprehensiveReport();
+    lastReportsGenerator = null;
+    const reportContent = document.getElementById('reportContent');
+    if (reportContent) {
+        reportContent.innerHTML = `
+            <div class="welcome-message">
+                <i class="fas fa-chart-line"></i>
+                <h3>Welcome to Reports & Analytics</h3>
+                <p>Set a date range and click <strong>Apply</strong>, then choose a quick report. Use <strong>Sales Report</strong> for sales by month (e.g. October).</p>
+            </div>`;
     }
-    
+    updateReportsDashboardFromFilters();
     showNotification('Filters cleared', 'success');
 }
 
@@ -14483,29 +14498,209 @@ async function deleteSale(saleIdOrIndex) {
 }
 
 // Enhanced Reports System
+let lastReportsGenerator = null;
+let reportFilterHandlersBound = false;
+
+function markReportRun(generatorFn) {
+    lastReportsGenerator = generatorFn;
+}
+
+function bindReportFilterHandlersOnce() {
+    if (reportFilterHandlersBound) return;
+    reportFilterHandlersBound = true;
+    const preset = document.getElementById('reportDateFilter');
+    const start = document.getElementById('reportStartDate');
+    const end = document.getElementById('reportEndDate');
+    if (preset) {
+        preset.addEventListener('change', () => {
+            if (preset.value && start) start.value = '';
+            if (preset.value && end) end.value = '';
+        });
+    }
+    const clearPresetOnCustom = () => {
+        if (preset && (start?.value || end?.value)) preset.value = '';
+    };
+    if (start) start.addEventListener('change', clearPresetOnCustom);
+    if (end) end.addEventListener('change', clearPresetOnCustom);
+}
+
+function parseLocalDateYmd(ymd) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim());
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+function formatYmdLocal(date) {
+    if (!date || Number.isNaN(date.getTime())) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function endOfLocalDay(date) {
+    const d = new Date(date.getTime());
+    d.setHours(23, 59, 59, 999);
+    return d;
+}
+
+function reportPresetLabel(dateFilter) {
+    const labels = {
+        today: 'Today',
+        week: 'Last 7 days',
+        month: 'This month',
+        quarter: 'This quarter',
+        year: 'This year'
+    };
+    return labels[dateFilter] || dateFilter;
+}
+
+function resolveReportPeriodBounds(filters) {
+    if (!filters) return null;
+    if (filters.startDate && filters.endDate) {
+        const start = parseLocalDateYmd(filters.startDate);
+        const end = endOfLocalDay(parseLocalDateYmd(filters.endDate));
+        if (start && end && start <= end) {
+            return {
+                start,
+                end,
+                label: `${filters.startDate} to ${filters.endDate}`,
+                source: 'custom'
+            };
+        }
+    }
+    if (filters.dateFilter) {
+        const now = new Date();
+        let start;
+        let end = endOfLocalDay(now);
+        switch (filters.dateFilter) {
+            case 'today':
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                break;
+            case 'week':
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+                break;
+            case 'month':
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                break;
+            case 'quarter': {
+                const quarter = Math.floor(now.getMonth() / 3);
+                start = new Date(now.getFullYear(), quarter * 3, 1);
+                break;
+            }
+            case 'year':
+                start = new Date(now.getFullYear(), 0, 1);
+                break;
+            default:
+                return null;
+        }
+        return { start, end, label: reportPresetLabel(filters.dateFilter), source: 'preset' };
+    }
+    return null;
+}
+
+function inventoryDateInBounds(dateAdded, bounds) {
+    if (!bounds) return true;
+    if (!dateAdded) return false;
+    const d = new Date(dateAdded);
+    if (Number.isNaN(d.getTime())) return false;
+    return d >= bounds.start && d <= bounds.end;
+}
+
+function saleDateInBounds(dateSold, bounds) {
+    if (!bounds) return true;
+    const raw = String(dateSold || '').trim();
+    if (!raw) return false;
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    const saleDay = iso
+        ? parseLocalDateYmd(`${iso[1]}-${iso[2]}-${iso[3]}`)
+        : new Date(raw);
+    if (!saleDay || Number.isNaN(saleDay.getTime())) return false;
+    return saleDay >= bounds.start && saleDay <= bounds.end;
+}
+
+function getFilteredSales(filters) {
+    let list = Array.isArray(sales) ? [...sales] : [];
+    if (filters?.location) {
+        list = list.filter(sale => (sale.location || '') === filters.location);
+    }
+    const bounds = resolveReportPeriodBounds(filters);
+    if (bounds) {
+        list = list.filter(sale => saleDateInBounds(sale.dateSold, bounds));
+    }
+    return list;
+}
+
+function getFilteredProjects(filters) {
+    let filteredItems = [...inventory];
+    if (filters?.location) {
+        filteredItems = filteredItems.filter(item => item.location === filters.location);
+    }
+    if (filters?.status) {
+        filteredItems = filteredItems.filter(item => item.status === filters.status);
+    }
+    const bounds = resolveReportPeriodBounds(filters);
+    if (bounds) {
+        filteredItems = filteredItems.filter(item => inventoryDateInBounds(item.dateAdded, bounds));
+    }
+    return filteredItems;
+}
+
+function updateReportFilterStatus(filters, filteredData) {
+    const el = document.getElementById('reportFilterStatus');
+    if (!el) return;
+    const bounds = resolveReportPeriodBounds(filters);
+    if (!bounds) {
+        el.textContent = `All time · ${filteredData.salesCount} sale${filteredData.salesCount === 1 ? '' : 's'} · ${filteredData.projectCount} project${filteredData.projectCount === 1 ? '' : 's'}`;
+        return;
+    }
+    el.textContent = `${bounds.label} · ${filteredData.salesCount} sale${filteredData.salesCount === 1 ? '' : 's'} (by sale date) · ${filteredData.projectCount} project${filteredData.projectCount === 1 ? '' : 's'} added in range`;
+}
+
+function applyReportsFilters() {
+    updateReportsDashboardFromFilters();
+    if (typeof lastReportsGenerator === 'function') {
+        lastReportsGenerator();
+        showNotification('Report updated with current filters', 'success');
+    } else {
+        showNotification('Filters applied to dashboard — choose a report above', 'info');
+    }
+}
+
 function loadReportsDashboard() {
-    updateDashboardStats();
+    bindReportFilterHandlersOnce();
     updateReportFilters();
+    updateReportsDashboardFromFilters();
+}
+
+function updateReportsDashboardFromFilters() {
+    const filters = getReportFilters();
+    const filteredData = getFilteredData(filters);
+    updateDashboardStatsFromFiltered(filteredData);
+    updateReportFilterStatus(filters, filteredData);
 }
 
 function updateDashboardStats() {
-    const totalProjects = inventory.length;
-    const completedProjects = inventory.filter(item => item.status === 'completed' || item.status === 'sold' || item.status === 'gift').length;
-    const activeCustomers = new Set(inventory.map(item => item.customer).filter(customer => customer)).size;
-    
-    // Calculate total revenue from sales
-    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0), 0);
+    updateReportsDashboardFromFilters();
+}
+
+function updateDashboardStatsFromFiltered(filteredData) {
+    const items = filteredData.items;
+    const totalProjects = items.length;
+    const completedProjects = filteredData.completedProjects;
+    const activeCustomers = new Set(items.map(item => item.customer).filter(customer => customer)).size;
+    const totalRevenue = filteredData.totalRevenue;
     
     // Calculate average project value
-    const projectsWithValue = inventory.filter(item => item.price && item.price > 0);
-    const avgProjectValue = projectsWithValue.length > 0 ? 
+    const projectsWithValue = items.filter(item => item.price && item.price > 0);
+    const avgProjectValue = projectsWithValue.length > 0 ?
         projectsWithValue.reduce((sum, item) => sum + parseFloat(item.price), 0) / projectsWithValue.length : 0;
-    
-    // Calculate completion rate
+
     const completionRate = totalProjects > 0 ? (completedProjects / totalProjects * 100) : 0;
-    
-    // Update the dashboard
-    document.getElementById('totalProjects').textContent = totalProjects;
+
+    const totalProjectsEl = document.getElementById('totalProjects');
+    if (!totalProjectsEl) return;
+    totalProjectsEl.textContent = totalProjects;
     document.getElementById('totalRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
     document.getElementById('completedProjects').textContent = completedProjects;
     document.getElementById('activeCustomers').textContent = activeCustomers;
@@ -14636,6 +14831,7 @@ function generateTestReport() {
 }
 
 function generateComprehensiveReport() {
+    markReportRun(generateComprehensiveReport);
     const reportContent = document.getElementById('reportContent');
     const filters = getReportFilters();
     const filteredData = getFilteredData(filters);
@@ -14646,10 +14842,12 @@ function generateComprehensiveReport() {
                 <h2>📊 Comprehensive Business Report</h2>
                 <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
                 <p><strong>Period:</strong> ${filters.dateRange}</p>
+                ${generateReportScopeNote(filters, filteredData)}
             </div>
             
             <div class="report-sections">
                 ${generateFinancialSummary(filteredData)}
+                ${generateSalesSummarySection(filteredData, filters)}
                 ${generateProjectSummary(filteredData)}
                 ${generateCustomerSummary(filteredData)}
                 ${generateProductivitySummary(filteredData)}
@@ -14659,6 +14857,7 @@ function generateComprehensiveReport() {
 }
 
 function generateFinancialReport() {
+    markReportRun(generateFinancialReport);
     const reportContent = document.getElementById('reportContent');
     const filters = getReportFilters();
     const filteredData = getFilteredData(filters);
@@ -14666,10 +14865,12 @@ function generateFinancialReport() {
     reportContent.innerHTML = `
         <div class="financial-report">
             <h2>💰 Financial Summary</h2>
+            ${generateReportScopeNote(filters, filteredData)}
+            <p class="report-filters-help">Revenue below is from <strong>sales in the date range</strong>. The project table uses <strong>list prices</strong> for projects added in the range.</p>
             <div class="financial-stats">
                 <div class="stat-card">
                     <div class="stat-number">$${filteredData.totalRevenue.toFixed(2)}</div>
-                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-label">Sales Revenue (${filteredData.salesCount})</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">$${filteredData.avgProjectValue.toFixed(2)}</div>
@@ -14750,19 +14951,32 @@ function getShopReportCommissionPercent(rates, year, month) {
     return getDefaultShopCommissionPercent(year, month);
 }
 
+function inferShopReportPeriodFromFilters(filters) {
+    const bounds = resolveReportPeriodBounds(filters);
+    if (!bounds || !filters.startDate || !filters.endDate) return null;
+    const start = parseLocalDateYmd(filters.startDate);
+    const end = parseLocalDateYmd(filters.endDate);
+    if (!start || !end || start.getFullYear() !== end.getFullYear() || start.getMonth() !== end.getMonth()) {
+        return null;
+    }
+    return { year: start.getFullYear(), month: start.getMonth() + 1 };
+}
+
 function generateMonthlyShopReport() {
+    markReportRun(generateMonthlyShopReport);
     const reportContent = document.getElementById('reportContent');
     if (!reportContent) return;
 
     const now = new Date();
+    const filterPeriod = inferShopReportPeriodFromFilters(getReportFilters());
     const yearEl = document.getElementById('shopReportYear');
     const monthEl = document.getElementById('shopReportMonth');
     const customerEl = document.getElementById('shopReportCustomer');
     const vendorFeeEl = document.getElementById('shopReportVendorFee');
     const commissionRates = collectShopReportCommissionRates();
 
-    const selectedYear = yearEl?.value || String(now.getFullYear());
-    const selectedMonth = monthEl?.value || '';
+    const selectedYear = yearEl?.value || (filterPeriod ? String(filterPeriod.year) : String(now.getFullYear()));
+    const selectedMonth = monthEl?.value || (filterPeriod ? String(filterPeriod.month) : '');
     const selectedCustomer = customerEl?.value || '';
     const vendorFee = vendorFeeEl
         ? (parseFloat(vendorFeeEl.value) || 0)
@@ -14899,9 +15113,14 @@ function generateMonthlyShopReport() {
         </div>
     ` : '';
 
+    const filterHint = filterPeriod && !yearEl?.value && !monthEl?.value
+        ? `<p class="report-scope-note">Month/year pre-filled from report date filters (${monthNames[filterPeriod.month - 1]} ${filterPeriod.year}).</p>`
+        : '';
+
     reportContent.innerHTML = `
         <div class="financial-report monthly-shop-report">
             <h2>Monthly Shop Statement</h2>
+            ${filterHint}
             <p>Each sale line counts at its register amount (listed price minus any vendor discount). Monthly shop commission is calculated on that month’s total — not per item. Subtract the vendor fee for your payout. Negative totals show in parentheses.</p>
             <div class="shop-statement-controls no-print">
                 <div>
@@ -14928,6 +15147,7 @@ function generateMonthlyShopReport() {
 }
 
 function generateCustomerReport() {
+    markReportRun(generateCustomerReport);
     const reportContent = document.getElementById('reportContent');
     const filters = getReportFilters();
     const filteredData = getFilteredData(filters);
@@ -14969,6 +15189,7 @@ function generateCustomerReport() {
 }
 
 function generateProductivityReport() {
+    markReportRun(generateProductivityReport);
     const reportContent = document.getElementById('reportContent');
     const filters = getReportFilters();
     const filteredData = getFilteredData(filters);
@@ -15009,6 +15230,7 @@ function generateProductivityReport() {
 }
 
 function generateInventoryReport() {
+    markReportRun(generateInventoryReport);
     const reportContent = document.getElementById('reportContent');
     const filters = getReportFilters();
     const filteredData = getFilteredData(filters);
@@ -15016,6 +15238,7 @@ function generateInventoryReport() {
     reportContent.innerHTML = `
         <div class="inventory-report">
             <h2>📦 Inventory Status Report</h2>
+            ${generateReportScopeNote(filters, filteredData)}
             <div class="inventory-summary">
                 <p><strong>Total Items:</strong> ${filteredData.items.length}</p>
                 <p><strong>Location:</strong> ${filters.location || 'All Locations'}</p>
@@ -15038,7 +15261,7 @@ function generateInventoryReport() {
                 <tbody>
                     ${filteredData.items.map(item => `
                         <tr>
-                            <td>${item.name}</td>
+                            <td>${SecurityManager.escapeHtml(getInventoryItemDisplayName(item, 'Untitled'))}</td>
                             <td>${item.customer || 'No Customer'}</td>
                             <td>${item.location || 'Not specified'}</td>
                             <td><span class="status-badge status-${item.status}">${item.status}</span></td>
@@ -15055,102 +15278,53 @@ function generateInventoryReport() {
 
 // Helper functions for reports
 function getReportFilters() {
-    const location = document.getElementById('reportLocationFilter').value;
-    const status = document.getElementById('reportStatusFilter').value;
-    const dateFilter = document.getElementById('reportDateFilter').value;
-    const startDate = document.getElementById('reportStartDate').value;
-    const endDate = document.getElementById('reportEndDate').value;
-    
-    let dateRange = 'All Time';
-    if (dateFilter) {
-        dateRange = dateFilter;
-    } else if (startDate && endDate) {
-        dateRange = `${startDate} to ${endDate}`;
+    const location = document.getElementById('reportLocationFilter')?.value || '';
+    const status = document.getElementById('reportStatusFilter')?.value || '';
+    const dateFilter = document.getElementById('reportDateFilter')?.value || '';
+    const startDate = document.getElementById('reportStartDate')?.value || '';
+    const endDate = document.getElementById('reportEndDate')?.value || '';
+
+    let dateRange = 'All time';
+    const bounds = resolveReportPeriodBounds({ dateFilter, startDate, endDate });
+    if (bounds) {
+        dateRange = bounds.label;
     }
-    
+
     return { location, status, dateFilter, startDate, endDate, dateRange };
 }
 
 function getFilteredData(filters) {
-    let filteredItems = [...inventory];
-    
-    // Apply location filter
-    if (filters.location) {
-        filteredItems = filteredItems.filter(item => item.location === filters.location);
-    }
-    
-    // Apply status filter
-    if (filters.status) {
-        filteredItems = filteredItems.filter(item => item.status === filters.status);
-    }
-    
-    // Apply date filter
-    if (filters.dateFilter || (filters.startDate && filters.endDate)) {
-        const now = new Date();
-        let startDate, endDate;
-        
-        if (filters.dateFilter) {
-            switch (filters.dateFilter) {
-                case 'today':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                    break;
-                case 'week':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    endDate = now;
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = now;
-                    break;
-                case 'quarter':
-                    const quarter = Math.floor(now.getMonth() / 3);
-                    startDate = new Date(now.getFullYear(), quarter * 3, 1);
-                    endDate = now;
-                    break;
-                case 'year':
-                    startDate = new Date(now.getFullYear(), 0, 1);
-                    endDate = now;
-                    break;
-            }
-        } else {
-            startDate = new Date(filters.startDate);
-            endDate = new Date(filters.endDate);
-        }
-        
-        filteredItems = filteredItems.filter(item => {
-            const itemDate = new Date(item.dateAdded);
-            return itemDate >= startDate && itemDate <= endDate;
-        });
-    }
-    
-    // Calculate statistics
-    const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.netAmount ?? sale.salePrice ?? sale.price ?? 0), 0);
+    const filteredItems = getFilteredProjects(filters);
+    const filteredSales = getFilteredSales(filters);
+
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + getSaleRevenueAmount(sale), 0);
     const completedProjects = filteredItems.filter(item => item.status === 'completed' || item.status === 'sold' || item.status === 'gift').length;
     const uniqueCustomers = new Set(filteredItems.map(item => item.customer).filter(customer => customer)).size;
     const projectsWithValue = filteredItems.filter(item => item.price && item.price > 0);
-    const avgProjectValue = projectsWithValue.length > 0 ? 
+    const avgProjectValue = projectsWithValue.length > 0 ?
         projectsWithValue.reduce((sum, item) => sum + parseFloat(item.price), 0) / projectsWithValue.length : 0;
     const completionRate = filteredItems.length > 0 ? (completedProjects / filteredItems.length * 100) : 0;
     const avgProjectsPerCustomer = uniqueCustomers > 0 ? filteredItems.length / uniqueCustomers : 0;
-    const avgCustomerValue = uniqueCustomers > 0 ? totalRevenue / uniqueCustomers : 0;
-    
-    // Calculate average days to complete
+    const salesCustomers = new Set(filteredSales.map(s => s.customer).filter(Boolean)).size;
+    const avgCustomerValue = salesCustomers > 0 ? totalRevenue / salesCustomers : 0;
+
     const completedItems = filteredItems.filter(item => item.status === 'completed' && item.dateAdded);
-    const avgDaysToComplete = completedItems.length > 0 ? 
+    const avgDaysToComplete = completedItems.length > 0 ?
         completedItems.reduce((sum, item) => {
-            const startDate = new Date(item.dateAdded);
-            const endDate = new Date(); // Assuming completed today for simplicity
-            return sum + Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+            const start = new Date(item.dateAdded);
+            const end = new Date();
+            return sum + Math.floor((end - start) / (1000 * 60 * 60 * 24));
         }, 0) / completedItems.length : 0;
-    
-    // Projects this month
+
     const thisMonth = new Date();
     thisMonth.setDate(1);
     const projectsThisMonth = filteredItems.filter(item => new Date(item.dateAdded) >= thisMonth).length;
-    
+
     return {
         items: filteredItems,
+        sales: filteredSales,
+        salesCount: filteredSales.length,
+        projectCount: filteredItems.length,
         totalRevenue,
         completedProjects,
         uniqueCustomers,
@@ -15161,6 +15335,101 @@ function getFilteredData(filters) {
         avgDaysToComplete,
         projectsThisMonth
     };
+}
+
+function generateReportScopeNote(filters, filteredData) {
+    const bounds = resolveReportPeriodBounds(filters);
+    if (!bounds) {
+        return `<p class="report-scope-note">Showing all time · ${filteredData.salesCount} sales · ${filteredData.projectCount} projects in scope.</p>`;
+    }
+    return `<p class="report-scope-note"><strong>${SecurityManager.escapeHtml(bounds.label)}</strong> · ${filteredData.salesCount} sale${filteredData.salesCount === 1 ? '' : 's'} · ${filteredData.projectCount} project${filteredData.projectCount === 1 ? '' : 's'} added in range.</p>`;
+}
+
+function formatSaleReportDate(dateSold) {
+    const parts = getSaleDateParts(dateSold);
+    if (!parts) return '—';
+    const iso = String(dateSold).match(/^(\d{4}-\d{2}-\d{2})/);
+    if (iso) return iso[1];
+    return new Date(dateSold).toLocaleDateString();
+}
+
+function generateSalesReportEmptyState(filters, filteredSales) {
+    const bounds = resolveReportPeriodBounds(filters);
+    const allSales = Array.isArray(sales) ? sales.length : 0;
+    if (filteredSales.length > 0) return '';
+    let hint = `You have ${allSales} sale${allSales === 1 ? '' : 's'} on record overall.`;
+    if (bounds) {
+        hint += ' Try widening the date range or clearing filters.';
+    } else {
+        hint += ' Record sales on the Sales tab first.';
+    }
+    return `<div class="report-empty-state"><p>No sales match this period.</p><p>${hint}</p></div>`;
+}
+
+function generateSalesReport() {
+    markReportRun(generateSalesReport);
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) return;
+    const filters = getReportFilters();
+    const filteredData = getFilteredData(filters);
+    const filteredSales = filteredData.sales;
+    const shopTotal = filteredSales.filter(isShopConsignmentSale).reduce((sum, s) => sum + getSaleRevenueAmount(s), 0);
+    const otherTotal = filteredSales.filter(s => !isShopConsignmentSale(s)).reduce((sum, s) => sum + getSaleRevenueAmount(s), 0);
+
+    const rows = filteredSales.length === 0
+        ? ''
+        : filteredSales
+            .slice()
+            .sort((a, b) => String(a.dateSold || '').localeCompare(String(b.dateSold || '')))
+            .map(sale => {
+                const name = SecurityManager.escapeHtml(sale.itemName || sale.description || 'Sale');
+                const customer = SecurityManager.escapeHtml(sale.customer || '—');
+                const channel = sale.saleChannel === 'shop' ? 'Shop' : 'Individual';
+                const amount = getSaleRevenueAmount(sale);
+                return `<tr>
+                    <td>${formatSaleReportDate(sale.dateSold)}</td>
+                    <td>${name}</td>
+                    <td>${customer}</td>
+                    <td>${channel}</td>
+                    <td>$${amount.toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+
+    reportContent.innerHTML = `
+        <div class="sales-report">
+            <h2>🧾 Sales Report</h2>
+            ${generateReportScopeNote(filters, filteredData)}
+            ${generateSalesReportEmptyState(filters, filteredSales)}
+            <div class="financial-stats">
+                <div class="stat-card">
+                    <div class="stat-number">$${filteredData.totalRevenue.toFixed(2)}</div>
+                    <div class="stat-label">Total (${filteredSales.length} sales)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">$${shopTotal.toFixed(2)}</div>
+                    <div class="stat-label">Shop register total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">$${otherTotal.toFixed(2)}</div>
+                    <div class="stat-label">Other sales</div>
+                </div>
+            </div>
+            ${filteredSales.length ? `
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Sale date</th>
+                        <th>Item</th>
+                        <th>Customer / location</th>
+                        <th>Channel</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>` : ''}
+        </div>
+    `;
+    updateReportFilterStatus(filters, filteredData);
 }
 
 function generateRevenueByStatus(items) {
@@ -15226,13 +15495,34 @@ function generateStatusDistribution(items) {
     `).join('');
 }
 
+function generateSalesSummarySection(data, filters) {
+    if (!data.sales || data.sales.length === 0) {
+        return `
+        <div class="report-section">
+            <h3>🧾 Sales in period</h3>
+            ${generateSalesReportEmptyState(filters, data.sales || [])}
+        </div>`;
+    }
+    const topLines = data.sales.slice(0, 5).map(sale => {
+        const name = SecurityManager.escapeHtml(sale.itemName || 'Sale');
+        return `<li>${formatSaleReportDate(sale.dateSold)} — ${name} — $${getSaleRevenueAmount(sale).toFixed(2)}</li>`;
+    }).join('');
+    return `
+        <div class="report-section">
+            <h3>🧾 Sales in period (${data.salesCount})</h3>
+            <p>Total sales revenue: <strong>$${data.totalRevenue.toFixed(2)}</strong></p>
+            <ul class="report-sales-preview">${topLines}</ul>
+            <p><em>Use Sales Report for the full list.</em></p>
+        </div>`;
+}
+
 function generateFinancialSummary(data) {
     return `
         <div class="report-section">
             <h3>💰 Financial Overview</h3>
             <div class="financial-grid">
                 <div class="financial-item">
-                    <span class="label">Total Revenue:</span>
+                    <span class="label">Sales revenue (${data.salesCount}):</span>
                     <span class="value">$${data.totalRevenue.toFixed(2)}</span>
                 </div>
                 <div class="financial-item">

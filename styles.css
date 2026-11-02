@@ -2025,6 +2025,38 @@ tr:nth-child(even) {
     font-weight: 600;
 }
 
+.report-filters-help {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    color: #495057;
+    line-height: 1.45;
+}
+
+.report-filter-status {
+    margin: 1rem 0 0;
+    font-size: 0.9rem;
+    color: #2C5F7C;
+    min-height: 1.25rem;
+}
+
+.report-scope-note {
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+.report-empty-state {
+    padding: 1rem 1.25rem;
+    background: #fff8e6;
+    border: 1px solid #ffe08a;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.report-sales-preview {
+    margin: 0.5rem 0 0 1.25rem;
+}
+
 .filter-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -5528,6 +5560,46 @@ body {
     border: 2px solid #e9ecef;
     border-radius: 8px;
     font-size: 1rem;
+}
+
+.mark-sold-pricing {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    text-align: left;
+}
+
+.mark-sold-price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+.mark-sold-price-row + .mark-sold-price-row {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #dee2e6;
+}
+
+.mark-sold-register-row strong {
+    color: #2C5F7C;
+}
+
+.mark-sold-v2v-group .btn-v2v-discount {
+    width: 100%;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.mark-sold-v2v-group .btn-v2v-discount.active {
+    background: #2C5F7C;
+    color: #fff;
+    border-color: #2C5F7C;
 }
 
 .confirm-body {

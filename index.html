@@ -798,7 +798,7 @@
                         <button class="btn btn-primary" onclick="generateComprehensiveReport()">
                             <i class="fas fa-chart-bar"></i> Generate Full Report
                         </button>
-                        <button class="btn btn-info" onclick="generateTestReport()" title="Generate a test report with sample data">
+                        <button type="button" class="btn btn-info" hidden onclick="generateTestReport()" title="Sample data preview">
                             <i class="fas fa-flask"></i> Generate Test Report
                         </button>
                         <button class="btn btn-secondary" onclick="printCurrentReport()">
@@ -843,6 +843,9 @@
                     <div class="quick-reports">
                         <h3>Quick Reports</h3>
                         <div class="report-buttons">
+                            <button class="btn btn-outline" onclick="generateSalesReport()">
+                                <i class="fas fa-receipt"></i> Sales Report
+                            </button>
                             <button class="btn btn-outline" onclick="generateFinancialReport()">
                                 <i class="fas fa-dollar-sign"></i> Financial Summary
                             </button>
@@ -864,32 +867,37 @@
                     <!-- Report Filters -->
                     <div class="report-filters">
                         <h3>Report Filters</h3>
+                        <p class="report-filters-help">Date range uses <strong>sale date</strong> on Sales &amp; Shop Statement reports, and <strong>date added</strong> on project/inventory reports. Custom from/to dates override the preset dropdown.</p>
                         <div class="filter-row">
-                            <select id="reportLocationFilter">
+                            <select id="reportLocationFilter" title="Projects by location; sales with matching location">
                                 <option value="">All Locations</option>
                             </select>
-                            <select id="reportStatusFilter">
-                                <option value="">All Status</option>
+                            <select id="reportStatusFilter" title="Project status only (not sales)">
+                                <option value="">All Project Status</option>
                                 <option value="pending">Pending</option>
                                 <option value="in-progress">In Progress</option>
                                 <option value="completed">Completed</option>
                                 <option value="gift">Gift</option>
                                 <option value="sold">Sold</option>
                             </select>
-                            <select id="reportDateFilter">
+                            <select id="reportDateFilter" title="Quick range for both report types">
                                 <option value="">All Time</option>
                                 <option value="today">Today</option>
-                                <option value="week">This Week</option>
+                                <option value="week">Last 7 Days</option>
                                 <option value="month">This Month</option>
                                 <option value="quarter">This Quarter</option>
                                 <option value="year">This Year</option>
                             </select>
-                            <input type="date" id="reportStartDate" placeholder="Start Date">
-                            <input type="date" id="reportEndDate" placeholder="End Date">
-                            <button class="btn btn-outline" onclick="clearReportsFilters()" title="Clear all filters">
-                                <i class="fas fa-times"></i> Clear Filters
+                            <input type="date" id="reportStartDate" aria-label="Start date">
+                            <input type="date" id="reportEndDate" aria-label="End date">
+                            <button type="button" class="btn btn-primary" onclick="applyReportsFilters()" title="Refresh dashboard and re-run the last report">
+                                <i class="fas fa-sync"></i> Apply
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="clearReportsFilters()" title="Clear all filters">
+                                <i class="fas fa-times"></i> Clear
                             </button>
                         </div>
+                        <p id="reportFilterStatus" class="report-filter-status" aria-live="polite"></p>
                     </div>
                 </div>
 
@@ -898,7 +906,7 @@
                     <div class="welcome-message">
                         <i class="fas fa-chart-line"></i>
                         <h3>Welcome to Reports & Analytics</h3>
-                        <p>Select a quick report above or use the filters to generate custom reports. View your business insights and track your embroidery business performance.</p>
+                        <p>Set a date range and click <strong>Apply</strong>, then choose a quick report. Use <strong>Sales Report</strong> for sales by month (e.g. October).</p>
                     </div>
                 </div>
             </div>
