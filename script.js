@@ -7990,6 +7990,7 @@ function loadData() {
     // Load other data that doesn't depend on current tab
     updateLocationFilters();
     updateCustomerFilters();
+    updateReportFilters();
     
     // Load mobile cards for the currently active tab on initial page load
     if (isMobile()) {
@@ -12675,20 +12676,49 @@ function populateItemSelect(selectId, options = {}) {
 }
 
 function updateLocationFilters() {
-    const locations = [...new Set([...inventory.map(item => item.location), ...customers.map(customer => customer.location)])];
-    
-    const locationFilters = document.querySelectorAll('#locationFilter, #reportLocationFilter');
-    locationFilters.forEach(filter => {
-        const currentValue = filter.value;
-        filter.innerHTML = '<option value="">All Locations</option>';
-        locations.forEach(location => {
-            const option = document.createElement('option');
-            option.value = location;
-            option.textContent = location;
-            filter.appendChild(option);
-        });
-        filter.value = currentValue;
+    const locations = [...new Set([
+        ...inventory.map(item => item.location),
+        ...customers.map(customer => customer.location)
+    ].filter(loc => loc && String(loc).trim() && String(loc).toLowerCase() !== 'not specified'))];
+
+    const locationFilter = document.getElementById('locationFilter');
+    if (!locationFilter) return;
+    const currentValue = locationFilter.value;
+    locationFilter.innerHTML = '<option value="">All Locations</option>';
+    locations.forEach(location => {
+        const option = document.createElement('option');
+        option.value = location;
+        option.textContent = location;
+        locationFilter.appendChild(option);
     });
+    if ([...locationFilter.options].some(o => o.value === currentValue)) {
+        locationFilter.value = currentValue;
+    }
+}
+
+function isReportShopCustomerName(name) {
+    const n = String(name || '').trim();
+    if (!n) return false;
+    const lower = n.toLowerCase();
+    return lower !== 'not specified'
+        && lower !== 'no customer'
+        && lower !== 'no customer/location'
+        && !lower.startsWith('no customer');
+}
+
+function collectReportShopCustomerNames() {
+    const names = new Set();
+    (inventory || []).forEach(item => {
+        if (isReportShopCustomerName(item.customer)) names.add(String(item.customer).trim());
+    });
+    (sales || []).forEach(sale => {
+        if (isReportShopCustomerName(sale.customer)) names.add(String(sale.customer).trim());
+    });
+    (customers || []).forEach(c => {
+        const label = c.name || c.customer;
+        if (isReportShopCustomerName(label)) names.add(String(label).trim());
+    });
+    return [...names].sort((a, b) => a.localeCompare(b));
 }
 
 function updateCustomerFilters() {
@@ -14557,16 +14587,20 @@ function reportPresetLabel(dateFilter) {
 
 function resolveReportPeriodBounds(filters) {
     if (!filters) return null;
-    if (filters.startDate && filters.endDate) {
-        const start = parseLocalDateYmd(filters.startDate);
-        const end = endOfLocalDay(parseLocalDateYmd(filters.endDate));
+    if (filters.startDate || filters.endDate) {
+        const start = filters.startDate
+            ? parseLocalDateYmd(filters.startDate)
+            : parseLocalDateYmd('2000-01-01');
+        const end = filters.endDate
+            ? endOfLocalDay(parseLocalDateYmd(filters.endDate))
+            : endOfLocalDay(new Date(2099, 11, 31));
         if (start && end && start <= end) {
-            return {
-                start,
-                end,
-                label: `${filters.startDate} to ${filters.endDate}`,
-                source: 'custom'
-            };
+            const label = filters.startDate && filters.endDate
+                ? `${filters.startDate} to ${filters.endDate}`
+                : filters.startDate
+                    ? `From ${filters.startDate}`
+                    : `Through ${filters.endDate}`;
+            return { start, end, label, source: 'custom' };
         }
     }
     if (filters.dateFilter) {
@@ -14621,8 +14655,9 @@ function saleDateInBounds(dateSold, bounds) {
 
 function getFilteredSales(filters) {
     let list = Array.isArray(sales) ? [...sales] : [];
-    if (filters?.location) {
-        list = list.filter(sale => (sale.location || '') === filters.location);
+    const shop = filters?.shopOrCustomer || filters?.location;
+    if (shop) {
+        list = list.filter(sale => (sale.customer || '').trim() === shop);
     }
     const bounds = resolveReportPeriodBounds(filters);
     if (bounds) {
@@ -14633,8 +14668,9 @@ function getFilteredSales(filters) {
 
 function getFilteredProjects(filters) {
     let filteredItems = [...inventory];
-    if (filters?.location) {
-        filteredItems = filteredItems.filter(item => item.location === filters.location);
+    const shop = filters?.shopOrCustomer || filters?.location;
+    if (shop) {
+        filteredItems = filteredItems.filter(item => (item.customer || '').trim() === shop);
     }
     if (filters?.status) {
         filteredItems = filteredItems.filter(item => item.status === filters.status);
@@ -14709,19 +14745,23 @@ function updateDashboardStatsFromFiltered(filteredData) {
 }
 
 function updateReportFilters() {
-    // Update location filter
-    const locations = [...new Set(inventory.map(item => item.location).filter(location => location))];
     const locationFilter = document.getElementById('reportLocationFilter');
+    if (!locationFilter) return;
     const currentLocation = locationFilter.value;
-    
-    locationFilter.innerHTML = '<option value="">All Locations</option>';
-    locations.forEach(location => {
+    const shops = collectReportShopCustomerNames();
+
+    locationFilter.innerHTML = '<option value="">All customers &amp; shops</option>';
+    shops.forEach(name => {
         const option = document.createElement('option');
-        option.value = location;
-        option.textContent = location;
+        option.value = name;
+        option.textContent = name;
         locationFilter.appendChild(option);
     });
-    locationFilter.value = currentLocation;
+    const stillValid = !currentLocation || shops.includes(currentLocation);
+    locationFilter.value = stillValid ? currentLocation : '';
+    if (currentLocation && !stillValid) {
+        updateReportsDashboardFromFilters();
+    }
 }
 
 function generateTestReport() {
@@ -15241,7 +15281,7 @@ function generateInventoryReport() {
             ${generateReportScopeNote(filters, filteredData)}
             <div class="inventory-summary">
                 <p><strong>Total Items:</strong> ${filteredData.items.length}</p>
-                <p><strong>Location:</strong> ${filters.location || 'All Locations'}</p>
+                <p><strong>Customer / shop:</strong> ${filters.shopOrCustomer || filters.location || 'All'}</p>
                 <p><strong>Status:</strong> ${filters.status || 'All Status'}</p>
                 <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
             </div>
@@ -15278,7 +15318,7 @@ function generateInventoryReport() {
 
 // Helper functions for reports
 function getReportFilters() {
-    const location = document.getElementById('reportLocationFilter')?.value || '';
+    const shopOrCustomer = document.getElementById('reportLocationFilter')?.value || '';
     const status = document.getElementById('reportStatusFilter')?.value || '';
     const dateFilter = document.getElementById('reportDateFilter')?.value || '';
     const startDate = document.getElementById('reportStartDate')?.value || '';
@@ -15290,7 +15330,15 @@ function getReportFilters() {
         dateRange = bounds.label;
     }
 
-    return { location, status, dateFilter, startDate, endDate, dateRange };
+    return {
+        shopOrCustomer,
+        location: shopOrCustomer,
+        status,
+        dateFilter,
+        startDate,
+        endDate,
+        dateRange
+    };
 }
 
 function getFilteredData(filters) {
