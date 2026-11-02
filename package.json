@@ -19,6 +19,7 @@
     "pm2:logs": "pm2 logs embroidery-inventory",
     "test": "node test-smoke.js",
     "test:smoke": "node test-smoke.js",
+    "test:reports": "node scripts/verify-reports-all.js",
     "test:modals": "node test-modal-separation.js",
     "test:comprehensive": "node test-comprehensive.js",
     "test:all": "npm run test:smoke && npm run test:modals && npm run test:comprehensive",

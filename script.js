@@ -2234,7 +2234,7 @@ class DataManager {
             metadata: {
                 totalItems: getAppDataItemCount(),
                 lastModified: timestamp,
-                appVersion: '1.0.130',
+                appVersion: '1.0.131',
                 slim: true,
                 cloudSaved: cloudOk
             }
@@ -4282,7 +4282,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.130'; // Current app version
+                const currentVersion = '1.0.131'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6591,7 +6591,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.130';
+        const currentVersion = '1.0.131';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
