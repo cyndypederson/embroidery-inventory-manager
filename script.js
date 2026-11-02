@@ -7703,6 +7703,7 @@ async function loadDataFromAPI() {
         hideLoadingSpinner('load');
         loadData();
         updateConnectionStatus('connected');
+        refreshReportsTabAfterDataLoad();
     } catch (error) {
         console.error('❌ API data loading failed:', error.message);
         hideLoadingSpinner('load');
@@ -12934,6 +12935,11 @@ function clearReportsFilters() {
     if (endDate) {
         endDate.value = '';
     }
+
+    const reportYear = document.getElementById('reportYearFilter');
+    if (reportYear) reportYear.value = '';
+    const reportMonth = document.getElementById('reportMonthFilter');
+    if (reportMonth) reportMonth.value = '';
     
     lastReportsGenerator = null;
     const reportContent = document.getElementById('reportContent');
@@ -14541,10 +14547,14 @@ function bindReportFilterHandlersOnce() {
     const preset = document.getElementById('reportDateFilter');
     const start = document.getElementById('reportStartDate');
     const end = document.getElementById('reportEndDate');
+    const yearSel = document.getElementById('reportYearFilter');
+    const monthSel = document.getElementById('reportMonthFilter');
     if (preset) {
         preset.addEventListener('change', () => {
             if (preset.value && start) start.value = '';
             if (preset.value && end) end.value = '';
+            if (preset.value && yearSel) yearSel.value = '';
+            if (preset.value && monthSel) monthSel.value = '';
         });
     }
     const clearPresetOnCustom = () => {
@@ -14552,6 +14562,45 @@ function bindReportFilterHandlersOnce() {
     };
     if (start) start.addEventListener('change', clearPresetOnCustom);
     if (end) end.addEventListener('change', clearPresetOnCustom);
+    const onMonthYearChange = () => {
+        if (preset) preset.value = '';
+        syncReportDatesFromMonthYear();
+    };
+    if (yearSel) yearSel.addEventListener('change', onMonthYearChange);
+    if (monthSel) monthSel.addEventListener('change', onMonthYearChange);
+}
+
+function syncReportDatesFromMonthYear() {
+    const yearSel = document.getElementById('reportYearFilter');
+    const monthSel = document.getElementById('reportMonthFilter');
+    const start = document.getElementById('reportStartDate');
+    const end = document.getElementById('reportEndDate');
+    const y = yearSel?.value;
+    const m = monthSel?.value;
+    if (!y || !m || !start || !end) return;
+    const lastDay = new Date(Number(y), Number(m), 0).getDate();
+    start.value = `${y}-${String(m).padStart(2, '0')}-01`;
+    end.value = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
+
+function populateReportYearFilter() {
+    const yearSel = document.getElementById('reportYearFilter');
+    if (!yearSel) return;
+    const prev = yearSel.value;
+    const years = [...new Set((sales || []).map(s => getSaleCalendarYear(s.dateSold)).filter(y => y != null))]
+        .sort((a, b) => b - a);
+    const currentYear = new Date().getFullYear();
+    if (!years.includes(currentYear)) years.unshift(currentYear);
+    yearSel.innerHTML = '<option value="">Any year</option>';
+    years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        yearSel.appendChild(opt);
+    });
+    if (prev && [...yearSel.options].some(o => o.value === prev)) {
+        yearSel.value = prev;
+    }
 }
 
 function parseLocalDateYmd(ymd) {
@@ -14585,6 +14634,8 @@ function reportPresetLabel(dateFilter) {
     return labels[dateFilter] || dateFilter;
 }
 
+const REPORT_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 function resolveReportPeriodBounds(filters) {
     if (!filters) return null;
     if (filters.startDate || filters.endDate) {
@@ -14601,6 +14652,20 @@ function resolveReportPeriodBounds(filters) {
                     ? `From ${filters.startDate}`
                     : `Through ${filters.endDate}`;
             return { start, end, label, source: 'custom' };
+        }
+    }
+    if (filters.reportYear && filters.reportMonth) {
+        const y = Number(filters.reportYear);
+        const m = Number(filters.reportMonth);
+        if (y > 0 && m >= 1 && m <= 12) {
+            const start = new Date(y, m - 1, 1);
+            const end = endOfLocalDay(new Date(y, m, 0));
+            return {
+                start,
+                end,
+                label: `${REPORT_MONTH_NAMES[m - 1]} ${y}`,
+                source: 'month-year'
+            };
         }
     }
     if (filters.dateFilter) {
@@ -14744,7 +14809,18 @@ function updateDashboardStatsFromFiltered(filteredData) {
     document.getElementById('completionRate').textContent = `${completionRate.toFixed(1)}%`;
 }
 
+function refreshReportsTabAfterDataLoad() {
+    const activeTab = document.querySelector('.nav-btn.active')?.getAttribute('data-tab');
+    if (activeTab !== 'reports') return;
+    updateReportFilters();
+    updateReportsDashboardFromFilters();
+    if (typeof lastReportsGenerator === 'function') {
+        lastReportsGenerator();
+    }
+}
+
 function updateReportFilters() {
+    populateReportYearFilter();
     const locationFilter = document.getElementById('reportLocationFilter');
     if (!locationFilter) return;
     const currentLocation = locationFilter.value;
@@ -15321,11 +15397,19 @@ function getReportFilters() {
     const shopOrCustomer = document.getElementById('reportLocationFilter')?.value || '';
     const status = document.getElementById('reportStatusFilter')?.value || '';
     const dateFilter = document.getElementById('reportDateFilter')?.value || '';
+    const reportYear = document.getElementById('reportYearFilter')?.value || '';
+    const reportMonth = document.getElementById('reportMonthFilter')?.value || '';
     const startDate = document.getElementById('reportStartDate')?.value || '';
     const endDate = document.getElementById('reportEndDate')?.value || '';
 
     let dateRange = 'All time';
-    const bounds = resolveReportPeriodBounds({ dateFilter, startDate, endDate });
+    const bounds = resolveReportPeriodBounds({
+        dateFilter,
+        startDate,
+        endDate,
+        reportYear,
+        reportMonth
+    });
     if (bounds) {
         dateRange = bounds.label;
     }
@@ -15335,6 +15419,8 @@ function getReportFilters() {
         location: shopOrCustomer,
         status,
         dateFilter,
+        reportYear,
+        reportMonth,
         startDate,
         endDate,
         dateRange
@@ -15405,13 +15491,23 @@ function generateSalesReportEmptyState(filters, filteredSales) {
     const bounds = resolveReportPeriodBounds(filters);
     const allSales = Array.isArray(sales) ? sales.length : 0;
     if (filteredSales.length > 0) return '';
-    let hint = `You have ${allSales} sale${allSales === 1 ? '' : 's'} on record overall.`;
-    if (bounds) {
-        hint += ' Try widening the date range or clearing filters.';
-    } else {
-        hint += ' Record sales on the Sales tab first.';
+    let hint = `Loaded ${allSales} sale${allSales === 1 ? '' : 's'} in this browser session.`;
+    if (allSales === 0) {
+        hint += ' If you just logged in, wait for “Loading data…” to finish, then click Apply again.';
     }
-    return `<div class="report-empty-state"><p>No sales match this period.</p><p>${hint}</p></div>`;
+    if (filters.dateFilter === 'month') {
+        const now = new Date();
+        hint += ` “This Month” means ${REPORT_MONTH_NAMES[now.getMonth()]} ${now.getFullYear()} only — use Year + Month (e.g. October + 2026) for a specific month.`;
+    } else if (bounds) {
+        hint += ' Widen the date range, set Year + Month, or click Clear and try October + 2026.';
+    } else {
+        hint += ' Set Year and Month (or start/end dates), click Apply, then open Sales Report.';
+    }
+    const shop = filters.shopOrCustomer || filters.location;
+    if (shop) {
+        hint += ` Customer/shop filter is set to “${SecurityManager.escapeHtml(shop)}”.`;
+    }
+    return `<div class="report-empty-state"><p>No sales match this period${bounds ? ` (${SecurityManager.escapeHtml(bounds.label)})` : ''}.</p><p>${hint}</p></div>`;
 }
 
 function generateSalesReport() {
