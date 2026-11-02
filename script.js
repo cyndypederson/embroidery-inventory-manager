@@ -7364,6 +7364,18 @@ async function handleEditCompletedItem(e) {
     // Store expanded customer groups before reload
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
     
+    const statusSelect = document.getElementById('editCompletedItemStatus');
+    const statusValue = statusSelect?.value || 'completed';
+    const isGift = statusValue === 'gift';
+    const isSold = statusValue === 'sold';
+    const v2vOn = isEditCompletedItemV2vActive();
+    const saleDate = getElementValue('editCompletedItemSaleDate') || getLocalISODate();
+
+    if (isSold && !getElementValue('editCompletedItemSaleDate')) {
+        showNotification('Please enter the sale date', 'error');
+        return;
+    }
+
     // Update the item
     inventory[index] = {
         ...inventory[index],
@@ -7371,13 +7383,24 @@ async function handleEditCompletedItem(e) {
         quantity: parseInt(getElementValue('editCompletedItemQuantity')) || 1,
         price: toEditablePrice(getElementValue('editCompletedItemPrice')),
         customer: applyTenantCustomerDefault(getElementValue('editCompletedItemCustomer')),
+        location: getElementValue('editCompletedItemLocation'),
+        notes: getElementValue('editCompletedItemNotes'),
         invoicedDate: getElementValue('editCompletedItemInvoicedDate'),
-        status: document.getElementById('editCompletedItemIsGift')?.checked === true ? 'gift' : 'completed',
-        isGift: document.getElementById('editCompletedItemIsGift')?.checked === true,
-        // Preserve existing image data
+        status: isGift ? 'gift' : (isSold ? 'sold' : 'completed'),
+        isGift,
+        v2vDiscountOnSale: v2vOn,
         photo: inventory[index].photo,
         imageData: inventory[index].imageData
     };
+
+    if (isSold) {
+        if (v2vOn) {
+            inventory[index].lastSaleVendorDiscountPercent = V2V_VENDOR_DISCOUNT_PERCENT;
+        }
+        createOrUpdateSaleFromProject(index, saleDate, {
+            vendorDiscountPercent: v2vOn ? V2V_VENDOR_DISCOUNT_PERCENT : 0
+        });
+    }
     
     console.log('Completed item updated:', inventory[index]);
     
@@ -7392,12 +7415,18 @@ async function handleEditCompletedItem(e) {
     // Close modal
     closeModal('editCompletedItemModal');
     
-    showNotification(
-        inventory[index].status === 'gift'
-            ? 'Saved as a gift — it will show on Projects, not in Completed'
-            : 'Completed item updated successfully',
-        'success'
-    );
+    let msg = 'Completed item updated successfully';
+    if (inventory[index].status === 'gift') {
+        msg = 'Saved as a gift — it will show on Projects, not in Completed';
+    } else if (inventory[index].status === 'sold') {
+        const listed = getProjectTotalPrice(inventory[index]);
+        const register = getMarkAsSoldRegisterTotal(listed, v2vOn);
+        msg = v2vOn
+            ? `Marked sold — $${register.toFixed(2)} toward monthly sales (V2V).`
+            : 'Marked sold and sale recorded.';
+        refreshSalesViews();
+    }
+    showNotification(msg, 'success');
     console.log('Completed item updated successfully');
 }
 
@@ -11781,6 +11810,9 @@ async function updateExistingSalesWithCommission() {
         }
 
         if (isShopConsignmentSale(sale)) {
+            if (sale.lineStoreCommission2026) {
+                return;
+            }
             const lineTotal = getSaleAmountTowardMonthlyTotal(sale);
             const hadLineCommission = (parseFloat(sale.commissionAmount) || 0) > 0
                 || (parseFloat(sale.commission) || 0) > 0;
@@ -11817,6 +11849,68 @@ async function updateExistingSalesWithCommission() {
     } else if (isLocalhost()) {
         showNotification('All sales already match the monthly shop commission model.', 'info');
     }
+}
+
+/** One-time style fix: 2026 shop rows store 10% store commission on each completed sale line. */
+function applyStoreCommissionFieldsTo2026ShopSale(sale) {
+    const parts = getSaleDateParts(sale.dateSold);
+    if (!parts || parts.year !== 2026 || !isShopConsignmentSale(sale)) {
+        return false;
+    }
+    const rate = SHOP_VENDOR_AUTO_COMMISSION_PERCENT;
+    const lineBase = getSaleAmountTowardMonthlyTotal(sale);
+    const commissionAmount = lineBase * (rate / 100);
+    const netAmount = Math.max(0, lineBase - commissionAmount);
+
+    sale.commission = rate;
+    sale.commissionAmount = commissionAmount;
+    sale.amountPaid = lineBase;
+    sale.netAmount = netAmount;
+    sale.salePrice = netAmount;
+    sale.lineStoreCommission2026 = true;
+    return true;
+}
+
+async function apply2026ShopStoreCommissionOnSales() {
+    const authed = await checkAuthentication();
+    if (!authed) {
+        showNotification('Log in before updating 2026 sales.', 'warning');
+        promptLoginRequired('Log in to update 2026 sales', 'apply 2026 store commission');
+        return;
+    }
+
+    const toUpdate = sales.filter(s => {
+        const parts = getSaleDateParts(s.dateSold);
+        return parts?.year === 2026 && isShopConsignmentSale(s);
+    }).length;
+
+    if (toUpdate === 0) {
+        showNotification('No 2026 shop sales found.', 'info');
+        return;
+    }
+
+    const ok = confirm(
+        `Apply ${SHOP_VENDOR_AUTO_COMMISSION_PERCENT}% store commission on ${toUpdate} shop sale(s) dated in 2026?\n\n` +
+        'Each line will show commission and net after store cut (register amount is unchanged). Other years are not changed.'
+    );
+    if (!ok) return;
+
+    let count = 0;
+    sales.forEach((sale) => {
+        if (applyStoreCommissionFieldsTo2026ShopSale(sale)) {
+            count++;
+        }
+    });
+
+    if (count === 0) {
+        showNotification('No 2026 shop sales were updated.', 'info');
+        return;
+    }
+
+    await saveDataToAPI();
+    showNotification(`Updated ${count} shop sale(s) in 2026 with ${SHOP_VENDOR_AUTO_COMMISSION_PERCENT}% store commission.`, 'success');
+    loadSalesTable();
+    if (typeof loadSalesCards === 'function') loadSalesCards();
 }
 
 function loadSalesTable() {
@@ -12170,7 +12264,7 @@ function toggleSaleItemType() {
     if (saleType === 'inventory') {
         inventoryFields.style.display = 'block';
         customFields.style.display = 'none';
-        saleItemSelect.required = true;
+        saleItemSelect.required = false;
         document.getElementById('customItemName').required = false;
         populateItemSelect('saleItem');
     } else if (saleType === 'custom') {
@@ -12186,6 +12280,26 @@ function toggleSaleItemType() {
     }
 }
 
+function syncEditSaleItemNameFromDropdown() {
+    const select = document.getElementById('editSaleItem');
+    const nameField = document.getElementById('editSaleItemName');
+    if (!select || !nameField || !select.value) return;
+    const parsedIndex = parseInt(select.value, 10);
+    if (Number.isNaN(parsedIndex) || !inventory[parsedIndex]) return;
+    const fromItem = getInventoryItemDisplayName(inventory[parsedIndex], '');
+    if (fromItem && !nameField.value.trim()) nameField.value = fromItem;
+}
+
+function syncSaleItemNameFromDropdown() {
+    const select = document.getElementById('saleItem');
+    const nameField = document.getElementById('saleItemName');
+    if (!select || !nameField || !select.value) return;
+    const parsedIndex = parseInt(select.value, 10);
+    if (Number.isNaN(parsedIndex) || !inventory[parsedIndex]) return;
+    const fromItem = getInventoryItemDisplayName(inventory[parsedIndex], '');
+    if (fromItem && !nameField.value.trim()) nameField.value = fromItem;
+}
+
 function toggleEditSaleItemType(selectedIndex = null) {
     const saleType = document.getElementById('editSaleType').value;
     const inventoryFields = document.getElementById('editInventorySaleFields');
@@ -12195,8 +12309,13 @@ function toggleEditSaleItemType(selectedIndex = null) {
     if (saleType === 'inventory') {
         if (inventoryFields) inventoryFields.style.display = 'block';
         if (customFields) customFields.style.display = 'none';
-        saleItemSelect.required = true;
+        saleItemSelect.required = false;
         const options = { includeSold: true };
+        const editIdxEl = document.getElementById('editSaleIndex');
+        const editIdx = editIdxEl && editIdxEl.value !== '' ? parseInt(editIdxEl.value, 10) : NaN;
+        if (!Number.isNaN(editIdx) && sales[editIdx]?.id) {
+            options.linkedSaleId = sales[editIdx].id;
+        }
         if (selectedIndex !== null && selectedIndex !== undefined) {
             options.selectedIndex = selectedIndex;
         } else if (saleItemSelect && saleItemSelect.dataset.selectedIndex !== undefined) {
@@ -12338,11 +12457,13 @@ async function handleAddSale(e) {
             }
         }
         
+        const manualItemName = document.getElementById('saleItemName')?.value.trim() || '';
+
         // Item selection is now optional
         if (!linkedItem) {
             // Create a generic sale without specific inventory item
         newSale = {
-            itemName: 'Inventory Item (Not Specified)',
+            itemName: manualItemName || 'Inventory Item (Not Specified)',
             customer: customer,
             location: '',
             listedPrice: listedPrice,
@@ -12367,7 +12488,7 @@ async function handleAddSale(e) {
                 return;
             }
             newSale = {
-                itemName: linkedItem.name,
+                itemName: manualItemName || getInventoryItemDisplayName(linkedItem, 'Inventory Item'),
                 customer: customer,
                 location: linkedItem.location,
                 listedPrice: listedPrice,
@@ -12524,16 +12645,18 @@ function populateItemSelect(selectId, options = {}) {
     
     const includeSold = options.includeSold || false;
     const selectedIndex = options.selectedIndex !== undefined ? parseInt(options.selectedIndex) : null;
+    const linkedSaleId = options.linkedSaleId || null;
     
     inventory.forEach((item, index) => {
-        if (item.status !== 'sold' || includeSold || index === selectedIndex) {
-            if (item.type === 'project' && item.isGift && index !== selectedIndex) {
+        const linkedToThisSale = linkedSaleId && item.saleId === linkedSaleId;
+        if (item.status !== 'sold' || includeSold || index === selectedIndex || linkedToThisSale) {
+            if (item.type === 'project' && item.isGift && index !== selectedIndex && !linkedToThisSale) {
                 return;
             }
             const option = document.createElement('option');
             option.value = index;
             const customerDisplay = item.customer || 'No Customer';
-            option.textContent = `${item.name} - ${customerDisplay} (${item.status})`;
+            option.textContent = `${getInventoryItemDisplayName(item, 'Untitled')} - ${customerDisplay} (${item.status})`;
             if (index === selectedIndex) {
                 option.selected = true;
             }
@@ -12906,8 +13029,16 @@ function getProjectTotalPrice(item) {
     return pricePerUnit * quantity;
 }
 
+function getInventoryItemDisplayName(item, fallback = 'Inventory Item') {
+    if (!item) return fallback;
+    const label = (item.description || item.name || '').trim();
+    return label || fallback;
+}
+
 /** Default shop commission rate on Monthly Shop Statement (applied to month total, not per line). */
 const SHOP_VENDOR_AUTO_COMMISSION_PERCENT = 10;
+/** Vendor-to-vendor discount when a vendor buys your item in the shop (per sale line). */
+const V2V_VENDOR_DISCOUNT_PERCENT = 10;
 
 function isShopConsignmentCustomer(customerRaw) {
     const n = (customerRaw || '').toLowerCase();
@@ -13121,7 +13252,7 @@ function toggleProjectSaleDateField(prefix) {
     }
 }
 
-function createOrUpdateSaleFromProject(index, dateSold) {
+function createOrUpdateSaleFromProject(index, dateSold, saleOptions = {}) {
     const item = inventory[index];
     if (!item) return;
     if (item.type === 'project' && item.isGift) return;
@@ -13140,7 +13271,7 @@ function createOrUpdateSaleFromProject(index, dateSold) {
     
     const saleId = existingSaleId || saleRecord?.id || generateSaleId();
     const listedPrice = getProjectTotalPrice(item);
-    const vendorDiscountPercent = 0;
+    const vendorDiscountPercent = Math.max(0, parseFloat(saleOptions.vendorDiscountPercent) || 0);
     const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
     const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
     const netAmount = commissionBase;
@@ -13159,7 +13290,7 @@ function createOrUpdateSaleFromProject(index, dateSold) {
         itemIndex: index,
         inventoryItemId: item._id || null,
         saleType: 'inventory',
-        itemName: item.description || item.name || 'Project Sale',
+        itemName: getInventoryItemDisplayName(item, 'Project Sale'),
         customer: item.customer || 'No Customer/Location',
         location: item.location || '',
         quantity: item.quantity || 1,
@@ -13175,7 +13306,9 @@ function createOrUpdateSaleFromProject(index, dateSold) {
         amountPaid,
         saleChannel: isShopSale ? 'shop' : 'individual',
         dateSold: saleDate,
-        notes: 'Auto-generated from project sale. Edit to adjust vendor discount; shop commission is on the monthly statement.'
+        notes: vendorDiscountPercent > 0
+            ? `Auto-generated from project sale. V2V vendor discount (${vendorDiscountPercent}%). Shop commission is on the monthly statement.`
+            : 'Auto-generated from project sale. Edit to adjust vendor discount; shop commission is on the monthly statement.'
     };
     
     if (saleRecord) {
@@ -13295,6 +13428,106 @@ async function markAsSold(index) {
 }
 
 let pendingMarkAsSoldIndex = null;
+let pendingMarkAsSoldV2v = false;
+
+function isMarkAsSoldV2vActive() {
+    const btn = document.getElementById('markAsSoldV2vBtn');
+    return !!(btn && btn.classList.contains('active'));
+}
+
+function getMarkAsSoldRegisterTotal(listedPrice, v2vActive) {
+    const listed = parseFloat(listedPrice) || 0;
+    if (!v2vActive) return listed;
+    const discount = listed * (V2V_VENDOR_DISCOUNT_PERCENT / 100);
+    return Math.max(0, listed - discount);
+}
+
+function findSaleForInventoryItem(item, index) {
+    if (!item) return null;
+    if (item.saleId) {
+        const byId = sales.find(s => s.id === item.saleId);
+        if (byId) return byId;
+    }
+    if (item._id) {
+        const byItemId = sales.find(s => s.inventoryItemId === item._id);
+        if (byItemId) return byItemId;
+    }
+    if (index != null && index >= 0) {
+        return sales.find(s => s.itemIndex === index) || null;
+    }
+    return null;
+}
+
+function getCompletedItemListedTotalFromForm() {
+    const qty = parseFloat(document.getElementById('editCompletedItemQuantity')?.value) || 0;
+    const price = parseFloat(document.getElementById('editCompletedItemPrice')?.value) || 0;
+    return qty * price;
+}
+
+function isEditCompletedItemV2vActive() {
+    const btn = document.getElementById('editCompletedItemV2vBtn');
+    return !!(btn && btn.classList.contains('active'));
+}
+
+function updateEditCompletedItemPricing() {
+    const listedEl = document.getElementById('editCompletedItemListedTotal');
+    const registerEl = document.getElementById('editCompletedItemRegisterTotal');
+    if (!listedEl || !registerEl) return;
+    const listed = getCompletedItemListedTotalFromForm();
+    const v2v = isEditCompletedItemV2vActive();
+    const register = getMarkAsSoldRegisterTotal(listed, v2v);
+    listedEl.textContent = `$${listed.toFixed(2)}`;
+    registerEl.textContent = v2v
+        ? `$${register.toFixed(2)} (V2V ${V2V_VENDOR_DISCOUNT_PERCENT}% off)`
+        : `$${register.toFixed(2)}`;
+}
+
+function toggleEditCompletedItemV2vDiscount() {
+    const btn = document.getElementById('editCompletedItemV2vBtn');
+    if (!btn) return;
+    btn.classList.toggle('active');
+    updateEditCompletedItemPricing();
+}
+
+function toggleEditCompletedItemSaleFields() {
+    const status = document.getElementById('editCompletedItemStatus')?.value;
+    const saleGroup = document.getElementById('editCompletedItemSaleDateGroup');
+    const v2vGroup = document.getElementById('editCompletedItemV2vGroup');
+    const isGift = status === 'gift';
+    const isSold = status === 'sold';
+    if (saleGroup) saleGroup.style.display = isSold ? 'block' : 'none';
+    if (v2vGroup) v2vGroup.style.display = isGift ? 'none' : 'block';
+    if (isSold) {
+        const saleDate = document.getElementById('editCompletedItemSaleDate');
+        if (saleDate && !saleDate.value) {
+            saleDate.value = getLocalISODate();
+        }
+    }
+}
+
+function updateMarkAsSoldModalPricing() {
+    const index = pendingMarkAsSoldIndex;
+    const item = index != null ? inventory[index] : null;
+    const listedEl = document.getElementById('markAsSoldListedTotal');
+    const registerEl = document.getElementById('markAsSoldRegisterTotal');
+    if (!item || !listedEl || !registerEl) return;
+
+    const listed = getProjectTotalPrice(item);
+    const v2v = isMarkAsSoldV2vActive();
+    const register = getMarkAsSoldRegisterTotal(listed, v2v);
+    listedEl.textContent = `$${listed.toFixed(2)}`;
+    registerEl.textContent = v2v
+        ? `$${register.toFixed(2)} (V2V ${V2V_VENDOR_DISCOUNT_PERCENT}% off)`
+        : `$${register.toFixed(2)}`;
+}
+
+function toggleMarkAsSoldV2vDiscount() {
+    const btn = document.getElementById('markAsSoldV2vBtn');
+    if (!btn) return;
+    btn.classList.toggle('active');
+    pendingMarkAsSoldV2v = btn.classList.contains('active');
+    updateMarkAsSoldModalPricing();
+}
 
 function openMarkAsSoldModal(index) {
     const item = inventory[index];
@@ -13308,11 +13541,20 @@ function openMarkAsSoldModal(index) {
     }
 
     pendingMarkAsSoldIndex = index;
+    pendingMarkAsSoldV2v = false;
+    const v2vBtn = document.getElementById('markAsSoldV2vBtn');
+    const preferV2v = !!item.v2vDiscountOnSale;
+    if (v2vBtn) {
+        v2vBtn.classList.toggle('active', preferV2v);
+        pendingMarkAsSoldV2v = preferV2v;
+    }
+
     const nameEl = document.getElementById('markAsSoldItemName');
     if (nameEl) {
         const label = item.description || item.name || 'this item';
         nameEl.textContent = `Record the sale date for “${label}”.`;
     }
+    updateMarkAsSoldModalPricing();
     const dateInput = document.getElementById('markAsSoldDate');
     if (dateInput) {
         dateInput.value = getLocalISODate();
@@ -13327,6 +13569,7 @@ function openMarkAsSoldModal(index) {
 async function confirmMarkAsSold() {
     const index = pendingMarkAsSoldIndex;
     const dateSold = document.getElementById('markAsSoldDate')?.value;
+    const v2vApplied = isMarkAsSoldV2vActive();
     if (index === null || index === undefined) {
         closeModal('markAsSoldModal');
         return;
@@ -13336,11 +13579,14 @@ async function confirmMarkAsSold() {
         return;
     }
     pendingMarkAsSoldIndex = null;
+    pendingMarkAsSoldV2v = false;
     closeModal('markAsSoldModal');
-    await completeMarkAsSold(index, dateSold);
+    await completeMarkAsSold(index, dateSold, {
+        vendorDiscountPercent: v2vApplied ? V2V_VENDOR_DISCOUNT_PERCENT : 0
+    });
 }
 
-async function completeMarkAsSold(index, dateSold) {
+async function completeMarkAsSold(index, dateSold, saleOptions = {}) {
     const item = inventory[index];
     if (!item) {
         showNotification('Item not found', 'error');
@@ -13352,6 +13598,7 @@ async function completeMarkAsSold(index, dateSold) {
     }
 
     const expandedCustomers = getCurrentlyExpandedCustomerGroups();
+    const vendorDiscountPercent = Math.max(0, parseFloat(saleOptions.vendorDiscountPercent) || 0);
 
     inventory[index].status = 'sold';
     if (item.type === 'inventory') {
@@ -13362,7 +13609,11 @@ async function completeMarkAsSold(index, dateSold) {
             item.status = 'out-of-stock';
         }
     }
-    createOrUpdateSaleFromProject(index, dateSold);
+    item.v2vDiscountOnSale = vendorDiscountPercent > 0;
+    if (vendorDiscountPercent > 0) {
+        item.lastSaleVendorDiscountPercent = vendorDiscountPercent;
+    }
+    createOrUpdateSaleFromProject(index, dateSold, { vendorDiscountPercent });
     await saveData();
     loadInventoryTable();
     if (typeof loadProjectsCards === 'function') {
@@ -13374,7 +13625,12 @@ async function completeMarkAsSold(index, dateSold) {
 
     restoreExpandedCustomerGroups(expandedCustomers);
 
-    showNotification('Item marked as sold!', 'success');
+    const listed = getProjectTotalPrice(item);
+    const register = getMarkAsSoldRegisterTotal(listed, vendorDiscountPercent > 0);
+    const v2vNote = vendorDiscountPercent > 0
+        ? ` V2V discount applied — $${register.toFixed(2)} toward monthly sales.`
+        : '';
+    showNotification(`Item marked as sold!${v2vNote}`, 'success');
 }
 
 // Test function removed - no longer needed
@@ -13989,10 +14245,19 @@ async function editSale(index) {
     
     const sale = sales[index];
     if (!sale) return;
+
+    let resolvedSaleType = sale.saleType || '';
+    if (!resolvedSaleType && (sale.saleSource === 'project' || sale.itemIndex != null)) {
+        resolvedSaleType = 'inventory';
+    }
     
     // Populate the edit form
     document.getElementById('editSaleIndex').value = index;
-    document.getElementById('editSaleType').value = sale.saleType || '';
+    document.getElementById('editSaleType').value = resolvedSaleType;
+    const editItemNameField = document.getElementById('editSaleItemName');
+    if (editItemNameField) {
+        editItemNameField.value = sale.itemName || sale.description || '';
+    }
     document.getElementById('editSaleChannel').checked = sale.saleChannel === 'shop';
     document.getElementById('editListedPrice').value = sale.listedPrice || 0;
     document.getElementById('editSalePrice').value = sale.netAmount || sale.salePrice || sale.price || 0;
@@ -14014,10 +14279,10 @@ async function editSale(index) {
     // Handle sale type specific fields
     toggleEditSaleItemType(sale.itemIndex);
     
-    if (sale.saleType === 'inventory' && sale.itemIndex !== null) {
+    if (resolvedSaleType === 'inventory' && sale.itemIndex !== null && sale.itemIndex !== undefined) {
         const editItemSelect = document.getElementById('editSaleItem');
         if (editItemSelect) editItemSelect.value = sale.itemIndex;
-    } else if (sale.saleType === 'custom') {
+    } else if (resolvedSaleType === 'custom') {
         document.getElementById('editCustomItemName').value = sale.itemName || '';
         document.getElementById('editCustomItemDescription').value = sale.description || '';
     }
@@ -14112,21 +14377,28 @@ async function handleEditSale(e) {
         sales[index].id = generateSaleId();
     }
     
+    const manualItemName = document.getElementById('editSaleItemName')?.value.trim() || '';
+
     // Handle sale type specific fields
     if (saleType === 'inventory') {
         const selectedItemIndex = document.getElementById('editSaleItem').value;
         if (selectedItemIndex) {
             const parsedIndex = parseInt(selectedItemIndex);
             sales[index].itemIndex = !Number.isNaN(parsedIndex) ? parsedIndex : null;
-            sales[index].itemName = inventory[parsedIndex]?.name || 'Inventory Item';
-            sales[index].location = inventory[parsedIndex]?.location || '';
+            const linked = !Number.isNaN(parsedIndex) ? inventory[parsedIndex] : null;
+            sales[index].location = linked?.location || sales[index].location || '';
         }
+        const linked = sales[index].itemIndex != null ? inventory[sales[index].itemIndex] : null;
+        const linkedName = getInventoryItemDisplayName(linked, '');
+        sales[index].itemName = manualItemName || linkedName || sales[index].itemName || 'Inventory Item';
     } else if (saleType === 'custom') {
-        const itemName = document.getElementById('editCustomItemName').value.trim() || 'Custom Item';
+        const customName = document.getElementById('editCustomItemName').value.trim();
         const description = document.getElementById('editCustomItemDescription').value.trim();
-        sales[index].itemName = itemName;
+        sales[index].itemName = manualItemName || customName || 'Custom Item';
         sales[index].description = description;
         sales[index].itemIndex = null;
+    } else if (manualItemName) {
+        sales[index].itemName = manualItemName;
     }
     
     const newItemIndex = sales[index].itemIndex !== undefined && sales[index].itemIndex !== null ? parseInt(sales[index].itemIndex) : null;
@@ -17077,18 +17349,36 @@ async function editCompletedItem(index) {
     setElementValue('editCompletedItemQuantity', item.quantity || 1);
     setPriceFieldValue('editCompletedItemPrice', item.price);
     setElementValue('editCompletedItemInvoicedDate', item.invoicedDate || '');
+    setElementValue('editCompletedItemLocation', item.location || '');
+    setElementValue('editCompletedItemNotes', item.notes || '');
     
     // Populate customer dropdown
     populateCustomerSelect('editCompletedItemCustomer');
     setElementValue('editCompletedItemCustomer', item.customer || '');
     
-    // Calculate total
-    calculateCompletedItemTotal();
-    
-    const giftEl = document.getElementById('editCompletedItemIsGift');
-    if (giftEl) {
-        giftEl.checked = !!item.isGift;
+    const linkedSale = findSaleForInventoryItem(item, index);
+    const statusEl = document.getElementById('editCompletedItemStatus');
+    if (statusEl) {
+        if (item.isGift || item.status === 'gift') {
+            statusEl.value = 'gift';
+        } else if (item.status === 'sold') {
+            statusEl.value = 'sold';
+        } else {
+            statusEl.value = 'completed';
+        }
     }
+    setElementValue('editCompletedItemSaleDate', linkedSale?.dateSold || item.dateSold || getLocalISODate());
+
+    const v2vBtn = document.getElementById('editCompletedItemV2vBtn');
+    const v2vActive = !!(item.v2vDiscountOnSale
+        || (linkedSale && parseFloat(linkedSale.vendorDiscount) > 0));
+    if (v2vBtn) {
+        v2vBtn.classList.toggle('active', v2vActive);
+    }
+
+    toggleEditCompletedItemSaleFields();
+    calculateCompletedItemTotal();
+    updateEditCompletedItemPricing();
     
     // Show the modal
     const modal = document.getElementById('editCompletedItemModal');
@@ -17109,6 +17399,7 @@ function calculateCompletedItemTotal() {
         const total = quantity * price;
         totalElement.value = total.toFixed(2);
     }
+    updateEditCompletedItemPricing();
 }
 
 // Copy current completed item
