@@ -2238,7 +2238,7 @@ class DataManager {
             metadata: {
                 totalItems: getAppDataItemCount(),
                 lastModified: timestamp,
-                appVersion: '1.0.131',
+                appVersion: '1.0.132',
                 slim: true,
                 cloudSaved: cloudOk
             }
@@ -4286,7 +4286,7 @@ class DesktopManager {
         fetch('/version.json')
             .then(response => response.json())
             .then(data => {
-                const currentVersion = '1.0.131'; // Current app version
+                const currentVersion = '1.0.132'; // Current app version
                 if (data.version !== currentVersion) {
                     this.showNotification('Update Available', {
                         body: `Version ${data.version} is available. Current version: ${currentVersion}`,
@@ -6515,6 +6515,7 @@ if (window.performance && window.performance.navigation.type === 1) {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Embroidery Inventory Manager Initialized');
+    refreshStaleAppShellIfNeeded();
     
     await loadTenantConfig();
     checkPartnerSetupUrl();
@@ -6595,7 +6596,7 @@ function updateVersionDisplay() {
     const versionElement = document.getElementById('versionDisplay');
     if (versionElement) {
         // Use the same version as defined in the script
-        const currentVersion = '1.0.131';
+        const currentVersion = '1.0.132';
         versionElement.innerHTML = `<i class="fas fa-tag"></i> v${currentVersion}`;
     }
 }
@@ -6774,6 +6775,7 @@ function initializeApp() {
     
     // Check for logo
     checkLogo();
+    ensureSalesBinDiscountUi();
 }
 
 function checkLogo() {
@@ -13691,6 +13693,73 @@ function toggleEditCompletedItemBinDiscount() {
     updateEditCompletedItemPricing();
 }
 
+/** Cached index.html may lag behind script.js — inject sales-bin fields when missing. */
+function ensureSalesBinDiscountUi() {
+    const markSoldModal = document.getElementById('markAsSoldModal');
+    if (markSoldModal && !document.getElementById('markAsSoldBinCheck')) {
+        const saleDateGroup = document.getElementById('markAsSoldDate')?.closest('.form-group');
+        if (saleDateGroup) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'form-group mark-sold-bin-group';
+            wrapper.style.textAlign = 'left';
+            wrapper.style.marginTop = '1rem';
+            wrapper.innerHTML = `
+                <label class="mark-sold-bin-toggle" for="markAsSoldBinCheck">
+                    <input type="checkbox" id="markAsSoldBinCheck" onchange="toggleMarkAsSoldBinDiscount()">
+                    Sales bin / discounted price
+                </label>
+                <small class="form-help">Sold below tag price (e.g. clearance bin). Separate from V2V — enter what the register rang up.</small>
+                <div id="markAsSoldBinAmountGroup" class="mark-sold-bin-amount" hidden>
+                    <label for="markAsSoldRegisterAmount">Amount received</label>
+                    <input type="number" id="markAsSoldRegisterAmount" step="0.01" min="0" placeholder="e.g. 4.00" oninput="updateMarkAsSoldModalPricing()">
+                </div>`;
+            saleDateGroup.parentNode.insertBefore(wrapper, saleDateGroup);
+        }
+    }
+
+    const editV2vGroup = document.getElementById('editCompletedItemV2vGroup');
+    if (editV2vGroup && !document.getElementById('editCompletedItemBinCheck')) {
+        const pricingBlock = document.getElementById('editCompletedItemPricing');
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mark-sold-bin-group';
+        wrapper.style.marginTop = '0.75rem';
+        wrapper.innerHTML = `
+            <label class="mark-sold-bin-toggle" for="editCompletedItemBinCheck">
+                <input type="checkbox" id="editCompletedItemBinCheck" onchange="toggleEditCompletedItemBinDiscount()">
+                Sales bin / discounted price
+            </label>
+            <small class="form-help">Below tag price (clearance bin, etc.). Separate from V2V.</small>
+            <div id="editCompletedItemBinAmountGroup" class="mark-sold-bin-amount" hidden>
+                <label for="editCompletedItemRegisterAmount">Amount received</label>
+                <input type="number" id="editCompletedItemRegisterAmount" step="0.01" min="0" placeholder="e.g. 4.00" oninput="updateEditCompletedItemPricing()">
+            </div>`;
+        if (pricingBlock) {
+            editV2vGroup.insertBefore(wrapper, pricingBlock);
+        } else {
+            editV2vGroup.appendChild(wrapper);
+        }
+    }
+}
+
+function refreshStaleAppShellIfNeeded() {
+    const meta = document.querySelector('meta[name="version"]');
+    if (!meta) return;
+    const localVersion = meta.getAttribute('content') || '';
+    fetch('/version.json', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((data) => {
+            if (!data?.version || data.version === localVersion) return;
+            const reloadKey = `html-refresh-${data.version}`;
+            if (sessionStorage.getItem(reloadKey)) return;
+            sessionStorage.setItem(reloadKey, '1');
+            const url = new URL(window.location.href);
+            url.searchParams.set('html-v', data.version);
+            url.searchParams.set('t', String(Date.now()));
+            window.location.replace(url.toString());
+        })
+        .catch(() => {});
+}
+
 function findSaleForInventoryItem(item, index) {
     if (!item) return null;
     if (item.saleId) {
@@ -13797,6 +13866,7 @@ function toggleMarkAsSoldV2vDiscount() {
 }
 
 function openMarkAsSoldModal(index) {
+    ensureSalesBinDiscountUi();
     const item = inventory[index];
     if (!item) {
         showNotification('Item not found', 'error');
@@ -18038,6 +18108,7 @@ function loadCompletedItemsTable() {
 
 // Edit a completed item
 async function editCompletedItem(index) {
+    ensureSalesBinDiscountUi();
     // Require authentication
     if (!await requireAuthentication('edit this completed item')) {
         return;
