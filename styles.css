@@ -7685,7 +7685,8 @@ body {
     margin-left: 0.5rem;
 }
 
-.price-tags-page {
+.price-tags-page,
+.price-tags-page.tag-layout-standard {
     --tag-size: 2.5in;
     --tag-gap: 0.125in;
     --tag-grid: 7.75in;
@@ -7701,6 +7702,49 @@ body {
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
     border: 1px solid #d0d0d0;
     box-sizing: border-box;
+}
+
+/* Taller cards for brooches / necklaces — 3×2 on US Letter */
+.price-tags-page.tag-layout-jewelry {
+    --tag-size-w: 2.5in;
+    --tag-size-h: 4in;
+    --tag-gap: 0.125in;
+    --tag-grid-w: 7.75in;
+    --tag-grid-h: 8.125in;
+    --tag-page-pad-x: 0.375in;
+    --tag-page-pad-y: 1.4375in;
+    --tag-cut-v1: 2.5in;
+    --tag-cut-v2: 5.125in;
+    --tag-cut-h1: 4in;
+}
+
+.tag-layout-jewelry .price-tags-grid {
+    grid-template-columns: repeat(3, var(--tag-size-w));
+    grid-template-rows: repeat(2, var(--tag-size-h));
+    width: var(--tag-grid-w);
+    height: var(--tag-grid-h);
+    background-image:
+        linear-gradient(to right, transparent var(--tag-cut-v1), rgba(0,0,0,0.4) var(--tag-cut-v1), rgba(0,0,0,0.4) calc(var(--tag-cut-v1) + 1px), transparent calc(var(--tag-cut-v1) + 1px)),
+        linear-gradient(to right, transparent var(--tag-cut-v2), rgba(0,0,0,0.4) var(--tag-cut-v2), rgba(0,0,0,0.4) calc(var(--tag-cut-v2) + 1px), transparent calc(var(--tag-cut-v2) + 1px)),
+        linear-gradient(to bottom, transparent var(--tag-cut-h1), rgba(0,0,0,0.4) var(--tag-cut-h1), rgba(0,0,0,0.4) calc(var(--tag-cut-h1) + 1px), transparent calc(var(--tag-cut-h1) + 1px));
+}
+
+.tag-layout-jewelry .price-tag {
+    width: var(--tag-size-w);
+    height: var(--tag-size-h);
+    min-height: var(--tag-size-h);
+    max-height: var(--tag-size-h);
+}
+
+.price-tag-jewelry-card .price-tag-pin-zone {
+    flex: 1 1 auto;
+    min-height: 1.25in;
+    margin: 0.04in 0 0.06in;
+    border-bottom: 1px dashed #d8d8d8;
+}
+
+.price-tag-jewelry-card .price-tag-body {
+    flex: 0 0 auto;
 }
 
 .price-tags-page:last-child {
