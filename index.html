@@ -1955,6 +1955,17 @@
                         <i class="fas fa-handshake"></i> V2V discount (10%)
                     </button>
                     <small class="form-help">Applies when you mark sold or set status to Sold. Counts toward monthly shop sales at the discounted amount.</small>
+                    <div class="mark-sold-bin-group" style="margin-top: 0.75rem;">
+                        <label class="mark-sold-bin-toggle" for="editCompletedItemBinCheck">
+                            <input type="checkbox" id="editCompletedItemBinCheck" onchange="toggleEditCompletedItemBinDiscount()">
+                            Sales bin / discounted price
+                        </label>
+                        <small class="form-help">Below tag price (clearance bin, etc.). Separate from V2V.</small>
+                        <div id="editCompletedItemBinAmountGroup" class="mark-sold-bin-amount" hidden>
+                            <label for="editCompletedItemRegisterAmount">Amount received</label>
+                            <input type="number" id="editCompletedItemRegisterAmount" step="0.01" min="0" placeholder="e.g. 4.00" oninput="updateEditCompletedItemPricing()">
+                        </div>
+                    </div>
                     <div id="editCompletedItemPricing" class="mark-sold-pricing" style="margin-top: 0.75rem;" aria-live="polite">
                         <div class="mark-sold-price-row">
                             <span>Listed total</span>
@@ -2284,6 +2295,17 @@
                     </button>
                     <small class="form-help">Toggle if the buyer was another vendor in the shop. Monthly shop commission is still calculated on the discounted amount.</small>
                 </div>
+                <div class="form-group mark-sold-bin-group" style="text-align: left; margin-top: 1rem;">
+                    <label class="mark-sold-bin-toggle" for="markAsSoldBinCheck">
+                        <input type="checkbox" id="markAsSoldBinCheck" onchange="toggleMarkAsSoldBinDiscount()">
+                        Sales bin / discounted price
+                    </label>
+                    <small class="form-help">Sold below tag price (e.g. clearance bin). Separate from V2V — enter what the register rang up.</small>
+                    <div id="markAsSoldBinAmountGroup" class="mark-sold-bin-amount" hidden>
+                        <label for="markAsSoldRegisterAmount">Amount received</label>
+                        <input type="number" id="markAsSoldRegisterAmount" step="0.01" min="0" placeholder="e.g. 4.00" oninput="updateMarkAsSoldModalPricing()">
+                    </div>
+                </div>
                 <div class="form-group" style="text-align: left; margin-top: 1rem;">
                     <label for="markAsSoldDate">Sale Date</label>
                     <input type="date" id="markAsSoldDate" required>
@@ -2458,7 +2480,7 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('priceTagModal')">&times;</span>
             <h2><i class="fas fa-tags"></i> Generate Price Tags</h2>
-            <form id="priceTagForm" class="modal-form">
+            <form id="priceTagForm" class="modal-form" novalidate>
                 <div class="form-group">
                     <label for="priceTagVendorName">Shop/Vendor Name *</label>
                     <input type="text" id="priceTagVendorName" name="vendorName" required 
@@ -2467,14 +2489,14 @@
                 
                 <div class="form-group">
                     <label for="priceTagVendorLogo">Shop/Vendor Logo URL (optional)</label>
-                    <input type="url" id="priceTagVendorLogo" name="vendorLogo" 
+                    <input type="text" id="priceTagVendorLogo" name="vendorLogo" 
                            placeholder="Auto-loaded from /public/logos/vendors/">
                     <small>Auto-loads from <code>public/logos/vendors/[vendor-name].png</code> or enter URL manually</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="priceTagMyLogo">Your Logo URL (optional)</label>
-                    <input type="url" id="priceTagMyLogo" name="myLogo" 
+                    <input type="text" id="priceTagMyLogo" name="myLogo" 
                            placeholder="Auto-loaded from /public/logos/">
                     <small>Auto-loads from <code>public/logos/my-logo.png</code> or enter URL manually</small>
                 </div>
@@ -2598,6 +2620,6 @@
             console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.128 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.131&t=202611021032&cb=reports-oct-fix" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.131&t=202611021032&cb=header-logo-fix" id="js-cache-bust"></script>
 </body>
 </html>

@@ -1,3 +1,7 @@
+// Brand assets (header, favicon, hang tags, price tags, invoices)
+const BRAND_LOGO_PATH = '/logos/my-logo.png';
+const BRAND_LOGO_FALLBACK = '/logos/stitchcraft-logo.svg';
+
 // Data storage
 let inventory = [];
 let customers = [];
@@ -6775,8 +6779,8 @@ function initializeApp() {
 function checkLogo() {
     const logo = document.getElementById('logo');
     const fallbackIcon = document.getElementById('fallback-icon');
-    const brandSrc = typeof BRAND_LOGO_PATH !== 'undefined' ? BRAND_LOGO_PATH : '/logos/my-logo.png';
-    const fallbackSrc = typeof BRAND_LOGO_FALLBACK !== 'undefined' ? BRAND_LOGO_FALLBACK : '/logos/stitchcraft-logo.svg';
+    const brandSrc = BRAND_LOGO_PATH;
+    const fallbackSrc = BRAND_LOGO_FALLBACK;
 
     const applyFavicon = (src) => {
         document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
@@ -6784,13 +6788,17 @@ function checkLogo() {
         });
     };
 
+    const showLogo = (img) => {
+        img.style.display = 'block';
+        if (fallbackIcon) {
+            fallbackIcon.style.display = 'none';
+        }
+        applyFavicon(img.src.split('?')[0]);
+    };
+
     if (logo) {
         logo.onload = function() {
-            this.style.display = 'block';
-            if (fallbackIcon) {
-                fallbackIcon.style.display = 'none';
-            }
-            applyFavicon(this.src.split('?')[0]);
+            showLogo(this);
         };
         logo.onerror = function() {
             if (!this.dataset.triedFallback) {
@@ -6805,6 +6813,10 @@ function checkLogo() {
         };
         logo.src = brandSrc;
         applyFavicon(brandSrc);
+        // Cached logos may not fire onload again after src is set
+        if (logo.complete && logo.naturalWidth > 0) {
+            showLogo(logo);
+        }
     } else {
         applyFavicon(brandSrc);
     }
@@ -7384,6 +7396,10 @@ async function handleEditCompletedItem(e) {
         showNotification('Please enter the sale date', 'error');
         return;
     }
+    if (isSold && isEditCompletedItemBinActive() && getEditCompletedItemBinRegisterAmount() == null) {
+        showNotification('Enter the amount received for this discounted sale', 'error');
+        return;
+    }
 
     // Update the item
     inventory[index] = {
@@ -7406,8 +7422,11 @@ async function handleEditCompletedItem(e) {
         if (v2vOn) {
             inventory[index].lastSaleVendorDiscountPercent = V2V_VENDOR_DISCOUNT_PERCENT;
         }
+        const binOn = isEditCompletedItemBinActive();
+        const binAmount = getEditCompletedItemBinRegisterAmount();
         createOrUpdateSaleFromProject(index, saleDate, {
-            vendorDiscountPercent: v2vOn ? V2V_VENDOR_DISCOUNT_PERCENT : 0
+            vendorDiscountPercent: v2vOn ? V2V_VENDOR_DISCOUNT_PERCENT : 0,
+            registerAmount: binOn ? binAmount : undefined
         });
     }
     
@@ -7429,10 +7448,13 @@ async function handleEditCompletedItem(e) {
         msg = 'Saved as a gift — it will show on Projects, not in Completed';
     } else if (inventory[index].status === 'sold') {
         const listed = getProjectTotalPrice(inventory[index]);
-        const register = getMarkAsSoldRegisterTotal(listed, v2vOn);
-        msg = v2vOn
-            ? `Marked sold — $${register.toFixed(2)} toward monthly sales (V2V).`
-            : 'Marked sold and sale recorded.';
+        const binOn = isEditCompletedItemBinActive();
+        const register = resolveMarkAsSoldRegisterTotal(listed, v2vOn, binOn ? getEditCompletedItemBinRegisterAmount() : null);
+        msg = binOn && Number.isFinite(register)
+            ? `Marked sold — $${register.toFixed(2)} toward monthly sales (discounted).`
+            : v2vOn
+                ? `Marked sold — $${register.toFixed(2)} toward monthly sales (V2V).`
+                : 'Marked sold and sale recorded.';
         refreshSalesViews();
     }
     showNotification(msg, 'success');
@@ -11089,9 +11111,6 @@ function openLogoTagModalFromUI() {
 const LOGO_TAG_QR_PATH = '/logos/qr-facebook.png';
 /** Shown on price tag footer next to shop QR — change in one place for reprints. */
 const PRICE_TAG_SOCIAL_HANDLE = '@cyndypstitchcraft';
-/** Drop replacement brand art here — hang tags, price tags, invoices, header, favicon. */
-const BRAND_LOGO_PATH = '/logos/my-logo.png';
-const BRAND_LOGO_FALLBACK = '/logos/stitchcraft-logo.svg';
 /** 3×3 grid of 2.5in tags on US Letter. */
 const TAGS_PER_LETTER_SHEET = 9;
 
@@ -11221,7 +11240,7 @@ async function previewLogoTags(alsoPrint) {
     }
 }
 
-function openPriceTagModal() {
+async function openPriceTagModal() {
     // Get selected completed items
     const selectedItems = getSelectedCompletedItems();
     
@@ -11229,6 +11248,8 @@ function openPriceTagModal() {
         showNotification('Please select at least one completed item first', 'warning');
         return;
     }
+
+    await updateVendorFromSelectedItems();
     
     // Populate selected items list
     const itemsList = document.getElementById('priceTagSelectedItems');
@@ -11326,17 +11347,15 @@ async function findVendorLogo(vendorName) {
 // Function to check if a file exists (with timeout to avoid too many requests)
 function checkFileExists(url) {
     return new Promise((resolve) => {
-        // Use fetch with timeout - try GET first, fallback to HEAD
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-        
-        // Try GET first (more reliable for images)
-        fetch(url + '?t=' + Date.now(), { 
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        fetch(url + '?t=' + Date.now(), {
             method: 'GET',
             signal: controller.signal,
             cache: 'no-cache'
         })
-            .then(response => {
+            .then((response) => {
                 clearTimeout(timeoutId);
                 const exists = response.ok && response.status === 200;
                 if (exists) {
@@ -11344,18 +11363,17 @@ function checkFileExists(url) {
                 }
                 resolve(exists);
             })
-            .catch((error) => {
+            .catch(() => {
                 clearTimeout(timeoutId);
-                // Try HEAD as fallback
                 const headController = new AbortController();
-                const headTimeout = setTimeout(() => headController.abort(), 1000);
-                
+                const headTimeout = setTimeout(() => headController.abort(), 1500);
+
                 fetch(url + '?t=' + Date.now(), {
                     method: 'HEAD',
                     signal: headController.signal,
                     cache: 'no-cache'
                 })
-                    .then(response => {
+                    .then((response) => {
                         clearTimeout(headTimeout);
                         const exists = response.ok;
                         if (exists) {
@@ -11366,10 +11384,56 @@ function checkFileExists(url) {
                     .catch(() => {
                         clearTimeout(headTimeout);
                         console.log(`❌ File not found: ${url}`);
-                resolve(false);
+                        resolve(false);
                     });
             });
     });
+}
+
+/** Wait for price-tag images so print does not run before logos paint. */
+function waitForPriceTagImages(container, timeoutMs = 10000) {
+    if (!container) return Promise.resolve();
+    const imgs = [...container.querySelectorAll('img')];
+    if (imgs.length === 0) return Promise.resolve();
+
+    const waitOne = (img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+            const done = () => resolve();
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
+        });
+    };
+
+    return Promise.race([
+        Promise.all(imgs.map(waitOne)),
+        new Promise((resolve) => setTimeout(resolve, timeoutMs))
+    ]);
+}
+
+function vendorLogoMapLookup(vendorLogoMap, vendorName) {
+    if (!vendorName || !vendorLogoMap) return undefined;
+    if (vendorLogoMap[vendorName] !== undefined) {
+        return vendorLogoMap[vendorName];
+    }
+    const target = normalizeVendorName(vendorName);
+    if (!target) return undefined;
+    for (const [key, path] of Object.entries(vendorLogoMap)) {
+        if (normalizeVendorName(key) === target) {
+            return path;
+        }
+    }
+    return undefined;
+}
+
+/** Known shop logos — used if network existence checks time out. */
+function defaultVendorLogoPath(vendorName) {
+    if (!vendorName) return null;
+    const norm = normalizeVendorName(vendorName);
+    if (norm === 'flippin-happy' || (norm.includes('flippin') && norm.includes('happy'))) {
+        return '/logos/vendors/flippin-happy.png';
+    }
+    return null;
 }
 
 // Function to find user's logo
@@ -11410,25 +11474,23 @@ async function checkAndLoadVendorLogo(vendorName) {
         }
         return;
     }
-    
-    const normalizedName = normalizeVendorName(vendorName);
-    const vendorLogo = `/logos/vendors/${normalizedName}.png`;
-        const vendorLogoInput = document.getElementById('priceTagVendorLogo');
-    
+
+    const vendorLogoInput = document.getElementById('priceTagVendorLogo');
     if (!vendorLogoInput) return;
-    
-    // Check if logo file exists before setting it
-    const logoExists = await checkFileExists(vendorLogo);
-    if (logoExists) {
-                vendorLogoInput.value = vendorLogo;
-        console.log(`✅ Using vendor logo path: ${vendorLogo}`);
-            } else {
-        // Clear the input if logo doesn't exist
+
+    let logoPath = await findVendorLogo(vendorName);
+    if (!logoPath) {
+        logoPath = defaultVendorLogoPath(vendorName);
+    }
+    if (logoPath) {
+        vendorLogoInput.value = logoPath;
+        console.log(`✅ Using vendor logo path: ${logoPath}`);
+    } else {
         vendorLogoInput.value = '';
-                    vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
-                    console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
-                }
-            }
+        vendorLogoInput.placeholder = 'Logo not found - enter URL manually';
+        console.log(`⚠️ Vendor logo not found for: ${vendorName}`);
+    }
+}
 
 // Function to load vendor logos automatically
 async function loadVendorLogos(vendorName) {
@@ -11464,6 +11526,14 @@ function getSelectedCompletedItems() {
 
 async function previewPriceTags() {
     await generatePriceTags(true);
+}
+
+async function printPriceTagsFromPreview() {
+    const preview = document.getElementById('priceTagPreview');
+    await waitForPriceTagImages(preview);
+    document.body.classList.add('printing-price-tags');
+    document.body.classList.remove('printing-logo-tags', 'printing-invoice');
+    window.print();
 }
 
 async function generatePriceTags(previewOnly = false) {
@@ -11508,13 +11578,20 @@ async function generatePriceTags(previewOnly = false) {
     const allVendors = [...new Set(selectedItemsForTags.map(item => item.customer).filter(c => c && c !== 'No Customer'))];
     const vendorLogoMap = {}; // Map vendor name to logo path (or null if no logo)
     
+    async function resolveVendorLogoForTags(name) {
+        if (!name) return null;
+        let path = await findVendorLogo(name);
+        if (!path) {
+            path = defaultVendorLogoPath(name);
+        }
+        return path;
+    }
+
     // Check logo for the main vendor name if provided
     if (vendorName && !vendorLogo) {
         console.log('🔍 Checking logo for main vendor:', vendorName);
-        const normalizedName = normalizeVendorName(vendorName);
-        const vendorLogoPath = `/logos/vendors/${normalizedName}.png`;
-        const logoExists = await checkFileExists(vendorLogoPath);
-        if (logoExists) {
+        const vendorLogoPath = await resolveVendorLogoForTags(vendorName);
+        if (vendorLogoPath) {
             vendorLogo = vendorLogoPath;
             vendorLogoMap[vendorName] = vendorLogoPath;
             console.log('✅ Found logo for main vendor:', vendorName);
@@ -11528,18 +11605,20 @@ async function generatePriceTags(previewOnly = false) {
     
     // Check logos for all other vendors in selected items
     for (const vendor of allVendors) {
-        if (vendor !== vendorName && !vendorLogoMap[vendor]) {
-            console.log('🔍 Checking logo for vendor:', vendor);
-            const normalizedName = normalizeVendorName(vendor);
-            const vendorLogoPath = `/logos/vendors/${normalizedName}.png`;
-            const logoExists = await checkFileExists(vendorLogoPath);
-            if (logoExists) {
-                vendorLogoMap[vendor] = vendorLogoPath;
-                console.log('✅ Found logo for vendor:', vendor);
-            } else {
-                vendorLogoMap[vendor] = null;
-                console.log('⚠️ No logo found for vendor:', vendor);
-            }
+        if (vendorLogoMapLookup(vendorLogoMap, vendor) !== undefined) {
+            continue;
+        }
+        if (vendor === vendorName && vendorLogo) {
+            continue;
+        }
+        console.log('🔍 Checking logo for vendor:', vendor);
+        const vendorLogoPath = await resolveVendorLogoForTags(vendor);
+        if (vendorLogoPath) {
+            vendorLogoMap[vendor] = vendorLogoPath;
+            console.log('✅ Found logo for vendor:', vendor);
+        } else {
+            vendorLogoMap[vendor] = null;
+            console.log('⚠️ No logo found for vendor:', vendor);
         }
     }
     
@@ -11650,13 +11729,13 @@ async function generatePriceTags(previewOnly = false) {
         }
     }, 100);
         
-        // If not preview only, print after a short delay
+        // If not preview only, wait for logos then print
         if (!previewOnly) {
-            setTimeout(() => {
+            waitForPriceTagImages(preview).then(() => {
                 document.body.classList.add('printing-price-tags');
                 document.body.classList.remove('printing-logo-tags', 'printing-invoice');
                 window.print();
-            }, 500);
+            });
         }
 }
 
@@ -11665,18 +11744,28 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
     
     // Helper function to get vendor logo for an item
     const getVendorLogoForItem = (item) => {
-        // First, try to get from vendorLogoMap (pre-checked logos)
         const itemVendor = item.customer;
-        if (itemVendor && itemVendor !== 'No Customer' && vendorLogoMap[itemVendor] !== undefined) {
-            return vendorLogoMap[itemVendor]; // Will be null if logo doesn't exist
+        if (itemVendor && itemVendor !== 'No Customer') {
+            const mapped = vendorLogoMapLookup(vendorLogoMap, itemVendor);
+            if (mapped !== undefined) {
+                return mapped;
+            }
+            const fallback = defaultVendorLogoPath(itemVendor);
+            if (fallback) {
+                return fallback;
+            }
         }
-        
-        // If a specific vendor logo was provided and item matches that vendor, use it
+
         if (vendorLogo && itemVendor === vendorName) {
             return vendorLogo;
         }
-        
-        // Otherwise, no logo available
+        if (vendorName) {
+            const fallback = defaultVendorLogoPath(vendorName);
+            if (fallback) {
+                return fallback;
+            }
+        }
+
         return null;
     };
     
@@ -11781,7 +11870,7 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                 <button class="btn btn-outline" onclick="document.getElementById('priceTagPreview').style.display='none'">
                     <i class="fas fa-times"></i> Close
                 </button>
-                <button class="btn btn-primary" onclick="document.body.classList.add('printing-price-tags'); document.body.classList.remove('printing-logo-tags','printing-invoice'); window.print()">
+                <button class="btn btn-primary" onclick="printPriceTagsFromPreview()">
                     <i class="fas fa-print"></i> Print
                 </button>
                 </div>
@@ -13107,15 +13196,19 @@ function isShopConsignmentSale(sale) {
 /** Amount that counts toward monthly shop sales (listed price minus per-line vendor discount). */
 function getSaleAmountTowardMonthlyTotal(sale) {
     const listed = parseFloat(sale?.listedPrice);
+    const paid = parseFloat(sale?.amountPaid);
     if (Number.isFinite(listed) && listed > 0) {
         let vendorDiscountAmount = parseFloat(sale.vendorDiscountAmount);
         if (!Number.isFinite(vendorDiscountAmount)) {
             const vendorDiscountPercent = parseFloat(sale.vendorDiscount) || 0;
             vendorDiscountAmount = listed * (vendorDiscountPercent / 100);
         }
-        return Math.max(0, listed - vendorDiscountAmount);
+        const defaultRegister = Math.max(0, listed - vendorDiscountAmount);
+        if (Number.isFinite(paid) && paid >= 0 && Math.abs(paid - defaultRegister) > 0.009) {
+            return paid;
+        }
+        return defaultRegister;
     }
-    const paid = parseFloat(sale?.amountPaid);
     if (Number.isFinite(paid) && paid > 0) return paid;
     return parseFloat(sale?.salePrice || sale?.netAmount || sale?.price || 0) || 0;
 }
@@ -13325,11 +13418,19 @@ function createOrUpdateSaleFromProject(index, dateSold, saleOptions = {}) {
     const vendorDiscountPercent = Math.max(0, parseFloat(saleOptions.vendorDiscountPercent) || 0);
     const vendorDiscountAmount = listedPrice * (vendorDiscountPercent / 100);
     const commissionBase = Math.max(0, listedPrice - vendorDiscountAmount);
-    const netAmount = commissionBase;
-    const amountPaid = commissionBase;
+    let registerOverride = saleOptions.registerAmount;
+    if (registerOverride != null && registerOverride !== '') {
+        registerOverride = parseFloat(registerOverride);
+        if (!Number.isFinite(registerOverride) || registerOverride < 0) registerOverride = null;
+    } else {
+        registerOverride = null;
+    }
+    const registerTotal = registerOverride != null ? registerOverride : commissionBase;
+    const netAmount = registerTotal;
+    const amountPaid = registerTotal;
     const commissionPercent = 0;
     const commissionAmount = 0;
-    const discountValue = listedPrice - netAmount;
+    const discountValue = Math.max(0, listedPrice - registerTotal);
     const discountPercentValue = listedPrice > 0 ? ((discountValue / listedPrice) * 100).toFixed(1) : 0;
     const saleDate = dateSold || saleRecord?.dateSold || getLocalISODate();
     const customerName = (item.customer || '').toLowerCase();
@@ -13357,9 +13458,11 @@ function createOrUpdateSaleFromProject(index, dateSold, saleOptions = {}) {
         amountPaid,
         saleChannel: isShopSale ? 'shop' : 'individual',
         dateSold: saleDate,
-        notes: vendorDiscountPercent > 0
-            ? `Auto-generated from project sale. V2V vendor discount (${vendorDiscountPercent}%). Shop commission is on the monthly statement.`
-            : 'Auto-generated from project sale. Edit to adjust vendor discount; shop commission is on the monthly statement.'
+        notes: registerOverride != null
+            ? `Auto-generated from project sale. Sales bin / discounted register amount ($${registerTotal.toFixed(2)}). Shop commission is on the monthly statement.`
+            : vendorDiscountPercent > 0
+                ? `Auto-generated from project sale. V2V vendor discount (${vendorDiscountPercent}%). Shop commission is on the monthly statement.`
+                : 'Auto-generated from project sale. Edit to adjust vendor discount; shop commission is on the monthly statement.'
     };
     
     if (saleRecord) {
@@ -13493,6 +13596,101 @@ function getMarkAsSoldRegisterTotal(listedPrice, v2vActive) {
     return Math.max(0, listed - discount);
 }
 
+function resolveMarkAsSoldRegisterTotal(listedPrice, v2vActive, registerOverride) {
+    if (registerOverride != null && Number.isFinite(registerOverride) && registerOverride >= 0) {
+        return registerOverride;
+    }
+    return getMarkAsSoldRegisterTotal(listedPrice, v2vActive);
+}
+
+function saleRegisterDiffersFromDefault(sale, listedPrice) {
+    if (!sale) return false;
+    const listed = parseFloat(listedPrice) || parseFloat(sale.listedPrice) || 0;
+    if (listed <= 0) return false;
+    const paid = parseFloat(sale.amountPaid ?? sale.salePrice ?? sale.netAmount);
+    if (!Number.isFinite(paid)) return false;
+    const v2v = (parseFloat(sale.vendorDiscount) || 0) > 0;
+    const defaultReg = getMarkAsSoldRegisterTotal(listed, v2v);
+    return Math.abs(paid - defaultReg) > 0.009;
+}
+
+function isMarkAsSoldBinActive() {
+    return !!document.getElementById('markAsSoldBinCheck')?.checked;
+}
+
+function getMarkAsSoldBinRegisterAmount() {
+    if (!isMarkAsSoldBinActive()) return null;
+    const val = parseFloat(document.getElementById('markAsSoldRegisterAmount')?.value);
+    return Number.isFinite(val) && val >= 0 ? val : null;
+}
+
+function isEditCompletedItemBinActive() {
+    return !!document.getElementById('editCompletedItemBinCheck')?.checked;
+}
+
+function getEditCompletedItemBinRegisterAmount() {
+    if (!isEditCompletedItemBinActive()) return null;
+    const val = parseFloat(document.getElementById('editCompletedItemRegisterAmount')?.value);
+    return Number.isFinite(val) && val >= 0 ? val : null;
+}
+
+function setMarkAsSoldV2vActive(active) {
+    const btn = document.getElementById('markAsSoldV2vBtn');
+    if (btn) btn.classList.toggle('active', !!active);
+    pendingMarkAsSoldV2v = !!active;
+}
+
+function setEditCompletedItemV2vActive(active) {
+    const btn = document.getElementById('editCompletedItemV2vBtn');
+    if (btn) btn.classList.toggle('active', !!active);
+}
+
+function setMarkAsSoldBinUi(active, amount) {
+    const check = document.getElementById('markAsSoldBinCheck');
+    const group = document.getElementById('markAsSoldBinAmountGroup');
+    const input = document.getElementById('markAsSoldRegisterAmount');
+    if (check) check.checked = !!active;
+    if (group) group.hidden = !active;
+    if (input && amount != null && Number.isFinite(amount)) {
+        input.value = amount.toFixed(2);
+    } else if (input && !active) {
+        input.value = '';
+    }
+}
+
+function setEditCompletedItemBinUi(active, amount) {
+    const check = document.getElementById('editCompletedItemBinCheck');
+    const group = document.getElementById('editCompletedItemBinAmountGroup');
+    const input = document.getElementById('editCompletedItemRegisterAmount');
+    if (check) check.checked = !!active;
+    if (group) group.hidden = !active;
+    if (input && amount != null && Number.isFinite(amount)) {
+        input.value = amount.toFixed(2);
+    } else if (input && !active) {
+        input.value = '';
+    }
+}
+
+function toggleMarkAsSoldBinDiscount() {
+    const active = isMarkAsSoldBinActive();
+    const group = document.getElementById('markAsSoldBinAmountGroup');
+    if (group) group.hidden = !active;
+    if (active) {
+        setMarkAsSoldV2vActive(false);
+    }
+    updateMarkAsSoldModalPricing();
+}
+
+function toggleEditCompletedItemBinDiscount() {
+    const active = isEditCompletedItemBinActive();
+    const group = document.getElementById('editCompletedItemBinAmountGroup');
+    if (group) group.hidden = !active;
+    if (active) {
+        setEditCompletedItemV2vActive(false);
+    }
+    updateEditCompletedItemPricing();
+}
+
 function findSaleForInventoryItem(item, index) {
     if (!item) return null;
     if (item.saleId) {
@@ -13526,17 +13724,26 @@ function updateEditCompletedItemPricing() {
     if (!listedEl || !registerEl) return;
     const listed = getCompletedItemListedTotalFromForm();
     const v2v = isEditCompletedItemV2vActive();
-    const register = getMarkAsSoldRegisterTotal(listed, v2v);
+    const bin = isEditCompletedItemBinActive();
+    const binAmount = getEditCompletedItemBinRegisterAmount();
+    const register = resolveMarkAsSoldRegisterTotal(listed, v2v, bin ? binAmount : null);
     listedEl.textContent = `$${listed.toFixed(2)}`;
-    registerEl.textContent = v2v
-        ? `$${register.toFixed(2)} (V2V ${V2V_VENDOR_DISCOUNT_PERCENT}% off)`
-        : `$${register.toFixed(2)}`;
+    let registerLabel = `$${Number.isFinite(register) ? register.toFixed(2) : '—'}`;
+    if (bin && binAmount != null) {
+        registerLabel += ' (sales bin)';
+    } else if (v2v) {
+        registerLabel += ` (V2V ${V2V_VENDOR_DISCOUNT_PERCENT}% off)`;
+    }
+    registerEl.textContent = registerLabel;
 }
 
 function toggleEditCompletedItemV2vDiscount() {
     const btn = document.getElementById('editCompletedItemV2vBtn');
     if (!btn) return;
     btn.classList.toggle('active');
+    if (btn.classList.contains('active')) {
+        setEditCompletedItemBinUi(false);
+    }
     updateEditCompletedItemPricing();
 }
 
@@ -13565,11 +13772,17 @@ function updateMarkAsSoldModalPricing() {
 
     const listed = getProjectTotalPrice(item);
     const v2v = isMarkAsSoldV2vActive();
-    const register = getMarkAsSoldRegisterTotal(listed, v2v);
+    const bin = isMarkAsSoldBinActive();
+    const binAmount = getMarkAsSoldBinRegisterAmount();
+    const register = resolveMarkAsSoldRegisterTotal(listed, v2v, bin ? binAmount : null);
     listedEl.textContent = `$${listed.toFixed(2)}`;
-    registerEl.textContent = v2v
-        ? `$${register.toFixed(2)} (V2V ${V2V_VENDOR_DISCOUNT_PERCENT}% off)`
-        : `$${register.toFixed(2)}`;
+    let registerLabel = `$${Number.isFinite(register) ? register.toFixed(2) : '—'}`;
+    if (bin && binAmount != null) {
+        registerLabel += ' (sales bin)';
+    } else if (v2v) {
+        registerLabel += ` (V2V ${V2V_VENDOR_DISCOUNT_PERCENT}% off)`;
+    }
+    registerEl.textContent = registerLabel;
 }
 
 function toggleMarkAsSoldV2vDiscount() {
@@ -13577,6 +13790,9 @@ function toggleMarkAsSoldV2vDiscount() {
     if (!btn) return;
     btn.classList.toggle('active');
     pendingMarkAsSoldV2v = btn.classList.contains('active');
+    if (pendingMarkAsSoldV2v) {
+        setMarkAsSoldBinUi(false);
+    }
     updateMarkAsSoldModalPricing();
 }
 
@@ -13593,12 +13809,16 @@ function openMarkAsSoldModal(index) {
 
     pendingMarkAsSoldIndex = index;
     pendingMarkAsSoldV2v = false;
-    const v2vBtn = document.getElementById('markAsSoldV2vBtn');
-    const preferV2v = !!item.v2vDiscountOnSale;
-    if (v2vBtn) {
-        v2vBtn.classList.toggle('active', preferV2v);
-        pendingMarkAsSoldV2v = preferV2v;
-    }
+    const linkedSale = findSaleForInventoryItem(item, index);
+    const listed = getProjectTotalPrice(item);
+    const preferV2v = !!item.v2vDiscountOnSale
+        || (linkedSale && parseFloat(linkedSale.vendorDiscount) > 0);
+    const customRegister = linkedSale && saleRegisterDiffersFromDefault(linkedSale, listed)
+        ? parseFloat(linkedSale.amountPaid ?? linkedSale.salePrice ?? linkedSale.netAmount)
+        : null;
+    const useBin = customRegister != null && !preferV2v;
+    setMarkAsSoldV2vActive(preferV2v && !useBin);
+    setMarkAsSoldBinUi(useBin, useBin ? customRegister : null);
 
     const nameEl = document.getElementById('markAsSoldItemName');
     if (nameEl) {
@@ -13621,6 +13841,8 @@ async function confirmMarkAsSold() {
     const index = pendingMarkAsSoldIndex;
     const dateSold = document.getElementById('markAsSoldDate')?.value;
     const v2vApplied = isMarkAsSoldV2vActive();
+    const binApplied = isMarkAsSoldBinActive();
+    const binAmount = getMarkAsSoldBinRegisterAmount();
     if (index === null || index === undefined) {
         closeModal('markAsSoldModal');
         return;
@@ -13629,11 +13851,17 @@ async function confirmMarkAsSold() {
         showNotification('Please enter the sale date', 'error');
         return;
     }
+    if (binApplied && binAmount == null) {
+        showNotification('Enter the amount received for this discounted sale', 'error');
+        return;
+    }
     pendingMarkAsSoldIndex = null;
     pendingMarkAsSoldV2v = false;
+    setMarkAsSoldBinUi(false);
     closeModal('markAsSoldModal');
     await completeMarkAsSold(index, dateSold, {
-        vendorDiscountPercent: v2vApplied ? V2V_VENDOR_DISCOUNT_PERCENT : 0
+        vendorDiscountPercent: v2vApplied ? V2V_VENDOR_DISCOUNT_PERCENT : 0,
+        registerAmount: binApplied ? binAmount : undefined
     });
 }
 
@@ -13677,11 +13905,15 @@ async function completeMarkAsSold(index, dateSold, saleOptions = {}) {
     restoreExpandedCustomerGroups(expandedCustomers);
 
     const listed = getProjectTotalPrice(item);
-    const register = getMarkAsSoldRegisterTotal(listed, vendorDiscountPercent > 0);
-    const v2vNote = vendorDiscountPercent > 0
-        ? ` V2V discount applied — $${register.toFixed(2)} toward monthly sales.`
-        : '';
-    showNotification(`Item marked as sold!${v2vNote}`, 'success');
+    const binAmount = saleOptions.registerAmount != null ? parseFloat(saleOptions.registerAmount) : null;
+    const register = resolveMarkAsSoldRegisterTotal(listed, vendorDiscountPercent > 0, binAmount);
+    let saleNote = '';
+    if (binAmount != null && Number.isFinite(register)) {
+        saleNote = ` Sales bin price — $${register.toFixed(2)} toward monthly sales.`;
+    } else if (vendorDiscountPercent > 0) {
+        saleNote = ` V2V discount applied — $${register.toFixed(2)} toward monthly sales.`;
+    }
+    showNotification(`Item marked as sold!${saleNote}`, 'success');
 }
 
 // Test function removed - no longer needed
@@ -17858,12 +18090,15 @@ async function editCompletedItem(index) {
     }
     setElementValue('editCompletedItemSaleDate', linkedSale?.dateSold || item.dateSold || getLocalISODate());
 
-    const v2vBtn = document.getElementById('editCompletedItemV2vBtn');
+    const listedForSale = getProjectTotalPrice(item);
     const v2vActive = !!(item.v2vDiscountOnSale
         || (linkedSale && parseFloat(linkedSale.vendorDiscount) > 0));
-    if (v2vBtn) {
-        v2vBtn.classList.toggle('active', v2vActive);
-    }
+    const customRegister = linkedSale && saleRegisterDiffersFromDefault(linkedSale, listedForSale)
+        ? parseFloat(linkedSale.amountPaid ?? linkedSale.salePrice ?? linkedSale.netAmount)
+        : null;
+    const binActive = customRegister != null && !v2vActive;
+    setEditCompletedItemV2vActive(v2vActive && !binActive);
+    setEditCompletedItemBinUi(binActive, binActive ? customRegister : null);
 
     toggleEditCompletedItemSaleFields();
     calculateCompletedItemTotal();
