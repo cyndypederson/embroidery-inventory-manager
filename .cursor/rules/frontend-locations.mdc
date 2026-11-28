@@ -1,0 +1,17 @@
+---
+description: Where to edit common UI features (avoid whole-repo search)
+globs: "{script.js,index.html,styles.css}"
+alwaysApply: false
+---
+
+# Code map (frontend)
+
+| Feature | Files / hints |
+|---------|----------------|
+| Price tags, jewelry cards, sales signs | `script.js` ~`buildPriceTagCellHTML`, `index.html` price tag modal; `styles.css` `.price-tag` |
+| Tabs / cards UI | `switchTab`, `*Cards` loaders in `script.js`; `index.html` tab buttons `data-tab` |
+| Save / load | `loadDataFromAPI`, `saveDataToAPI` → `/api/snapshot` |
+| Shop reports | `getShopReportCommissionPercent`, monthly shop statement section in `script.js` |
+| Auth overlay | `server.js` session + login modal in `index.html` |
+
+`script.js` is large (~19k lines). Grep for the **function name** above instead of `glob **/*`.

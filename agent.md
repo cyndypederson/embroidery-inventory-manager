@@ -1,5 +1,7 @@
 # Agent / Project memory
 
+Cursor loads **`.cursor/rules/`** automatically. This file is extra detail for humans and agents.
+
 Use this file to remember project context, gotchas, and how things work.
 
 ## Project
@@ -14,12 +16,13 @@ Use this file to remember project context, gotchas, and how things work.
 cd /Users/cyndyp/Desktop/Projects/Embroidery
 node server.js
 ```
+- Before deploy: `npm run test:ci` (fast). With server up: `npm run test:smoke` and optionally `node security-test.js`.
 - Requires `.env` with `MONGODB_URI` (and optional `PORT=3002`, `DB_NAME`).
 - Open **http://localhost:3002** in the browser (not file://).
 
 ## Data & persistence
 - **Primary store:** MongoDB Atlas. Collections: inventory, customers, sales, invoices, sessions.
-- **Client save path:** Authenticated `GET/POST /api/snapshot` (transactional save). Legacy per-collection `/api/inventory` etc. remain for compatibility but are deprecated.
+- **Client save path:** Authenticated `GET/POST /api/snapshot` (Mongo transaction when supported; save **fails** if transaction fails — no silent partial replace). Legacy per-collection `/api/inventory` etc. remain for compatibility but are deprecated.
 - **Auth:** `ADMIN_USERNAME` / `ADMIN_PASSWORD` in env (Vercel + local `.env`). No default password in `server.js`.
 - **LocalStorage keys:** Prefixed by tenant id (`embroidery_inventory`, etc.) with migration from legacy `embroideryInventory` keys.
 - **data/*.json:** Local seed/backup files only; not served as public static files on Vercel production.
@@ -35,6 +38,10 @@ node server.js
 - **loadSalesTable():** If `salesTableBody` doesn’t exist (page uses cards), it calls `loadSalesCards()` and returns to avoid null innerHTML error.
 - **Form handlers:** Must exist before init: handleAddCustomer, handleEditCustomer, handleAddSale, handleEditSale, handleAddPhoto, handleAddIdea, populateCustomerSelect, setupPhotoPreviews, updateLocationFilters, updateCustomerFilters, showLoadingSpinner, hideLoadingSpinner.
 - **saveData():** Global save to API; only runs after first successful load (`window.__dataLoadedOnce`).
+
+## Shop commission
+- **10%** for shop consignment customers. Node: `lib/shop-commission.js`. Browser: `SHOP_VENDOR_AUTO_COMMISSION_PERCENT` in `script.js`.
+- Run `npm run test:commission` after changing rates.
 
 ## Gotchas
 - Open app at http://localhost:3002; opening index.html as file:// will break API calls.

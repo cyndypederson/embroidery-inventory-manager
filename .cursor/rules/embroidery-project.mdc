@@ -1,0 +1,28 @@
+---
+description: StitchCraft inventory app — stack, data, auth, and agent workflow
+alwaysApply: true
+---
+
+# Embroidery Inventory Manager
+
+## Stack
+- Node/Express `server.js`, MongoDB Atlas, static `index.html` / `styles.css` / `script.js`
+- Local: **http://localhost:3002** (`.env` `PORT=3002`). Never use `file://`.
+- Live: Vercel (`embroidery-inventory-manager.vercel.app`)
+
+## Data
+- Authenticated **GET/POST `/api/snapshot`** is the primary path (inventory, customers, sales, invoices).
+- Legacy `/api/inventory` etc. require session; prefer snapshot for load/save.
+- Credentials only in `.env` / Vercel env — not in code.
+
+## Shop commission (business rule)
+- **10%** for shop consignment (Flippin' Happy / First Avenue / shop-vendor customers).
+- Node source: `lib/shop-commission.js`. Browser mirror: `SHOP_VENDOR_AUTO_COMMISSION_PERCENT` in `script.js`.
+- Keep email automation and UI in sync; run `npm run test:commission`.
+
+## Agent workflow
+- **Do not git commit or push** unless the user explicitly asks in that message.
+- Prefer small, focused diffs; match existing style in `script.js`.
+- After server/route changes: user must restart `node server.js`.
+- Verify with `npm run test:smoke` when touching UI (needs local server + `.env`).
+- Human context: see `agent.md`. Historical audits: `audit/website-2026-10-27/` (some items superseded).

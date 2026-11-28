@@ -654,8 +654,10 @@ async function saveSnapshotCollections(database, payload) {
             await session.endSession();
         }
     } catch (error) {
-        console.warn('Snapshot transaction failed, falling back to sequential save:', error.message);
-        await runSequential();
+        console.error('Snapshot transaction failed:', error.message);
+        const err = new Error('Snapshot save failed — database left unchanged');
+        err.cause = error;
+        throw err;
     }
 }
 

@@ -126,8 +126,31 @@ async function runSecurityTests() {
         }
     }
     
-    // Test 2: XSS Prevention
-    logSection('Test 2: XSS Attack Prevention');
+    // Test 2: Data APIs require session
+    logSection('Test 2: Authenticated Data APIs');
+    try {
+        const paths = ['/api/inventory', '/api/snapshot', '/api/customers', '/api/sales'];
+        let all401 = true;
+        for (const path of paths) {
+            const res = await makeRequest(path);
+            if (res.status !== 401) {
+                all401 = false;
+                logFail(`Unauthenticated ${path}`, `Expected 401, got ${res.status}`);
+                results.failed++;
+                results.issues.push({ issue: 'Open data API', path, status: res.status });
+            }
+        }
+        if (all401) {
+            logPass('Data GET routes return 401 without session');
+            results.passed++;
+        }
+    } catch (error) {
+        logFail('Auth API check', error.message);
+        results.failed++;
+    }
+
+    // Test 3: XSS Prevention
+    logSection('Test 3: XSS Attack Prevention');
     try {
         const xssPayload = '<script>alert("XSS")</script>';
         const res = await makeRequest('/api/inventory', 'POST', {
@@ -153,8 +176,8 @@ async function runSecurityTests() {
         results.passed++;
     }
     
-    // Test 3: SQL/NoSQL Injection
-    logSection('Test 3: NoSQL Injection Prevention');
+    // Test 4: SQL/NoSQL Injection
+    logSection('Test 4: NoSQL Injection Prevention');
     try {
         const injectionPayload = { $ne: null };
         const res = await makeRequest('/api/inventory', 'POST', {
@@ -175,8 +198,8 @@ async function runSecurityTests() {
         results.passed++;
     }
     
-    // Test 4: CORS Headers
-    logSection('Test 4: CORS Policy');
+    // Test 5: CORS Headers
+    logSection('Test 5: CORS Policy');
     try {
         const res = await makeRequest('/', 'GET', null, { Origin: 'http://evil-site.com' });
         
@@ -193,8 +216,8 @@ async function runSecurityTests() {
         results.passed++;
     }
     
-    // Test 5: Sensitive Data Exposure
-    logSection('Test 5: Sensitive Data Exposure');
+    // Test 6: Sensitive Data Exposure
+    logSection('Test 6: Sensitive Data Exposure');
     try {
         const res = await makeRequest('/');
         const html = res.body.toLowerCase();
@@ -216,8 +239,8 @@ async function runSecurityTests() {
         results.failed++;
     }
     
-    // Test 6: Rate Limiting
-    logSection('Test 6: Rate Limiting (Basic Check)');
+    // Test 7: Rate Limiting
+    logSection('Test 7: Rate Limiting (Basic Check)');
     try {
         const requests = [];
         for (let i = 0; i < 50; i++) {
@@ -239,8 +262,8 @@ async function runSecurityTests() {
         results.warnings++;
     }
     
-    // Test 7: Authentication Headers
-    logSection('Test 7: Authentication Security');
+    // Test 8: Authentication Headers
+    logSection('Test 8: Authentication Security');
     try {
         const res = await makeRequest('/api/check-auth');
         

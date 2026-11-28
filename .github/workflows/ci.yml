@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check server
+        run: node --check server.js
+
+      - name: Shop commission unit test
+        run: npm run test:commission
+
+      - name: Production API requires auth (inventory)
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            'https://embroidery-inventory-manager.vercel.app/api/inventory')
+          test "$code" = "401"
+
+      - name: Production API requires auth (snapshot)
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            'https://embroidery-inventory-manager.vercel.app/api/snapshot')
+          test "$code" = "401"
