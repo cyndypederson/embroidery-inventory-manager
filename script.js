@@ -525,6 +525,7 @@ class SecurityManager {
     }
     
     static escapeHtml(text) {
+        if (text == null) return '';
         const map = {
             '&': '&amp;',
             '<': '&lt;',
@@ -532,7 +533,19 @@ class SecurityManager {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    /** Template literal helper: static markup in strings; `${values}` are escaped. */
+    static html(strings, ...values) {
+        let out = '';
+        strings.forEach((str, i) => {
+            out += str;
+            if (i < values.length) {
+                out += SecurityManager.escapeHtml(values[i]);
+            }
+        });
+        return out;
     }
 }
 

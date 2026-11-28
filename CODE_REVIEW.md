@@ -1,4 +1,6 @@
 # Code Review Report - Embroidery Inventory Manager
+
+> **Stale (Nov 2024).** Do not use for security status. See `docs/INDEX.md`, `agent.md`, and live `server.js`. Mongo hardcoded URI and open GET APIs listed below were fixed later.
 **Date:** November 19, 2024  
 **Version:** 1.0.104  
 **Reviewer:** AI Code Review
