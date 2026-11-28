@@ -43,7 +43,7 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logos/my-logo.png">
     
-    <link rel="stylesheet" href="styles.css?v=1.0.133&t=202611261110&cb=jewelry-tag-layout" id="css-cache-bust">
+    <link rel="stylesheet" href="styles.css?v=1.0.144&t=202611262239&cb=tag-white-bg-price" id="css-cache-bust">
     <script>
         // Force cache clear and reload CSS
         (function() {
@@ -718,6 +718,9 @@
                         </button>
                         <button class="btn btn-primary" onclick="openPriceTagModal()">
                             <i class="fas fa-tags"></i> Generate Price Tags
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="openCustomSignModal()" title="Type your own sign text and price — no item selection needed">
+                            <i class="fas fa-sign-hanging"></i> Custom sign
                         </button>
                         <button type="button" class="btn btn-outline" id="btnOpenLogoTags" onclick="openLogoTagModalFromUI(); return false;" title="Same size as price tags: your logo + Facebook QR, 9 per Letter page">
                             <i class="fas fa-qrcode"></i> Logo hang tags
@@ -2476,53 +2479,88 @@
     </div>
 
     <!-- Price Tag Generation Modal -->
-    <div id="priceTagModal" class="modal">
-        <div class="modal-content">
+    <div id="priceTagModal" class="modal price-tag-modal">
+        <div class="modal-content price-tag-modal-content">
             <span class="close" onclick="closeModal('priceTagModal')">&times;</span>
-            <h2><i class="fas fa-tags"></i> Generate Price Tags</h2>
-            <form id="priceTagForm" class="modal-form" novalidate>
-                <div class="form-group">
-                    <label for="priceTagVendorName">Shop/Vendor Name *</label>
-                    <input type="text" id="priceTagVendorName" name="vendorName" required 
-                           placeholder="e.g., Flippin' Happy" value="Flippin' Happy">
+            <h2><i class="fas fa-tags"></i> Print tags &amp; signs</h2>
+            <form id="priceTagForm" class="modal-form price-tag-modal-form" novalidate>
+                <div class="form-group price-tag-source-block">
+                    <span class="price-tag-section-label" id="priceTagSourceLegend">What to print</span>
+                    <div class="price-tag-source-options" role="radiogroup" aria-labelledby="priceTagSourceLegend">
+                        <label class="price-tag-source-label" for="priceTagSourceSelected">
+                            <input type="radio" name="priceTagSource" id="priceTagSourceSelected" value="selected" checked>
+                            <span>Selected completed items</span>
+                        </label>
+                        <label class="price-tag-source-label" for="priceTagSourceCustom">
+                            <input type="radio" name="priceTagSource" id="priceTagSourceCustom" value="custom">
+                            <span>Custom sign</span>
+                        </label>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="priceTagVendorLogo">Shop/Vendor Logo URL (optional)</label>
-                    <input type="text" id="priceTagVendorLogo" name="vendorLogo" 
-                           placeholder="Auto-loaded from /public/logos/vendors/">
-                    <small>Auto-loads from <code>public/logos/vendors/[vendor-name].png</code> or enter URL manually</small>
+
+                <div id="priceTagCustomSignGroup" class="price-tag-custom-panel" style="display: none;">
+                    <p class="form-help-tight custom-sign-intro">Add different signs below. Use <strong>Copies</strong> only when you need more than one of the <em>same</em> sign.</p>
+                    <div id="priceTagCustomSignList" class="custom-sign-list" aria-live="polite"></div>
+                    <button type="button" class="btn btn-outline btn-sm custom-sign-add-btn" id="btnAddCustomSignRow">
+                        <i class="fas fa-plus"></i> Add another sign
+                    </button>
                 </div>
-                
-                <div class="form-group">
-                    <label for="priceTagMyLogo">Your Logo URL (optional)</label>
-                    <input type="text" id="priceTagMyLogo" name="myLogo" 
-                           placeholder="Auto-loaded from /public/logos/">
-                    <small>Auto-loads from <code>public/logos/my-logo.png</code> or enter URL manually</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Selected Items</label>
+
+                <div class="form-group" id="priceTagSelectedItemsGroup">
+                    <label>Selected items</label>
                     <div id="priceTagSelectedItems" class="price-tag-items-list">
-                        <p class="text-muted">No items selected. Please select completed items first.</p>
+                        <p class="text-muted">No items checked. Switch to Custom sign above, or select items on the Completed tab.</p>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="priceTagLayout">Tag size</label>
-                    <select id="priceTagLayout" name="tagLayout" title="Standard squares or taller jewelry display cards">
-                        <option value="standard" selected>Standard hang tag — 2.5″ square (9 per sheet)</option>
-                        <option value="jewelry">Jewelry card — 2.5″ × 4″ (6 per sheet)</option>
+                    <label for="priceTagLayout">Size &amp; layout</label>
+                    <select id="priceTagLayout" name="tagLayout" title="Hang tags, jewelry cards, sales signs, and small formats">
+                        <optgroup label="Standard">
+                            <option value="standard" selected>Standard hang tag — 2.5″ square (9/sheet)</option>
+                            <option value="jewelry">Jewelry card — 2.5″ × 4″ vertical (6/sheet)</option>
+                        </optgroup>
+                        <optgroup label="Small shop tags">
+                            <option value="compactCard">Compact card — 2″ × 1.5″ one-sided (15/sheet)</option>
+                            <option value="miniHangTag">Mini hang tag — 1.5″ × 1.75″ one-sided (20/sheet)</option>
+                            <option value="slimBookmark">Slim bookmark tag — 1⅛″ × 2.5″ one-sided (28/sheet)</option>
+                        </optgroup>
+                        <optgroup label="Sales signs">
+                            <option value="salesSign">Sales sign — 4″ × 3″ (6/sheet)</option>
+                            <option value="salesSignLarge">Large sales sign — 7.25″ × 4.25″ (2/sheet)</option>
+                        </optgroup>
                     </select>
-                    <small>Jewelry cards add extra space at the top for pinning brooches or looping necklace chains.</small>
+                    <small id="priceTagLayoutHelp" class="form-help-tight">Square hang tags for bins and shelves.</small>
                 </div>
 
-                <div class="form-group half-width">
-                    <label for="priceTagLogoHangCount">Also include logo hang tags</label>
-                    <input type="number" id="priceTagLogoHangCount" name="logoHangCount" min="0" max="120" value="0"
-                           title="Extra logo-only hang tags (standard 2.5in squares, on separate sheets when using jewelry cards)">
-                    <small id="priceTagLogoHangHelp">Optional. Example: 1 price tag + 8 logo tags = 9 tags (1 page). Leave 0 for price tags only.</small>
+                <div class="price-tag-modal-row">
+                    <div class="form-group">
+                        <label for="priceTagVendorName">Shop / vendor</label>
+                        <input type="text" id="priceTagVendorName" name="vendorName"
+                               placeholder="Flippin' Happy" value="Flippin' Happy"
+                               title="Logos load automatically from this name">
+                    </div>
+                    <div class="form-group">
+                        <label for="priceTagLogoHangCount">Logo hang tags</label>
+                        <input type="number" id="priceTagLogoHangCount" name="logoHangCount" min="0" max="120" value="0"
+                               title="Optional square logo-only tags (0 = none)">
+                    </div>
                 </div>
+                <p id="priceTagLogoHangHelp" class="form-help-block text-muted">Leave logo hang tags at 0 unless you need extra logo-only squares.</p>
+
+                <details class="price-tag-advanced-logos">
+                    <summary>Override logo URLs (optional)</summary>
+                    <div class="form-group">
+                        <label for="priceTagVendorLogo">Vendor logo URL</label>
+                        <input type="text" id="priceTagVendorLogo" name="vendorLogo"
+                               placeholder="Auto from public/logos/vendors/">
+                    </div>
+                    <div class="form-group">
+                        <label for="priceTagMyLogo">Your logo URL</label>
+                        <input type="text" id="priceTagMyLogo" name="myLogo"
+                               placeholder="Auto from public/logos/">
+                    </div>
+                </details>
                 
                 <div class="form-actions">
                     <button type="button" class="btn btn-outline" onclick="closeModal('priceTagModal')">
@@ -2629,6 +2667,6 @@
             console.log('💥 NUCLEAR CACHE BUST COMPLETE:', timestamp, random, 'Version: 1.0.132 - IMMEDIATE MOBILE RELOAD');
         })();
     </script>
-    <script src="script.js?v=1.0.133&t=202611261110&cb=jewelry-tag-layout" id="js-cache-bust"></script>
+    <script src="script.js?v=1.0.145&t=202611262248&cb=for-bundle-dollar" id="js-cache-bust"></script>
 </body>
 </html>

@@ -11122,15 +11122,77 @@ const TAG_LAYOUTS = {
         pageClass: 'tag-layout-standard',
         tagsPerSheet: 9,
         hint: '3×3 of 2.5″ square tags · 9 per US Letter sheet',
-        jewelryCard: false
+        jewelryCard: false,
+        salesSign: false,
+        separateLogoHangSheets: false
     },
     jewelry: {
         key: 'jewelry',
         pageClass: 'tag-layout-jewelry',
         tagsPerSheet: 6,
         hint: '3×2 jewelry cards · 2.5″ × 4″ · 6 per US Letter sheet',
-        jewelryCard: true
+        jewelryCard: true,
+        salesSign: false,
+        separateLogoHangSheets: true
+    },
+    salesSign: {
+        key: 'salesSign',
+        pageClass: 'tag-layout-sales-sign tag-layout-sales-sign-compact',
+        tagsPerSheet: 6,
+        hint: 'Sales signs · 4″ × 3″ · 6 per US Letter sheet (2×3)',
+        jewelryCard: false,
+        salesSign: true,
+        separateLogoHangSheets: true
+    },
+    salesSignLarge: {
+        key: 'salesSignLarge',
+        pageClass: 'tag-layout-sales-sign tag-layout-sales-sign-large',
+        tagsPerSheet: 2,
+        hint: 'Large sales signs · 7.25″ × 4.25″ · 2 per US Letter sheet',
+        jewelryCard: false,
+        salesSign: true,
+        separateLogoHangSheets: true
+    },
+    compactCard: {
+        key: 'compactCard',
+        pageClass: 'tag-layout-compact-card',
+        tagsPerSheet: 15,
+        hint: 'Compact cards · 2″ × 1.5″ · 15 per US Letter sheet (3×5)',
+        jewelryCard: false,
+        salesSign: false,
+        twoSided: false,
+        separateLogoHangSheets: true
+    },
+    miniHangTag: {
+        key: 'miniHangTag',
+        pageClass: 'tag-layout-mini-hang',
+        tagsPerSheet: 20,
+        hint: 'Mini hang tags · 1.5″ × 1.75″ one-sided · 20 per US Letter sheet',
+        jewelryCard: false,
+        salesSign: false,
+        twoSided: false,
+        separateLogoHangSheets: true
+    },
+    slimBookmark: {
+        key: 'slimBookmark',
+        pageClass: 'tag-layout-slim-bookmark',
+        tagsPerSheet: 28,
+        hint: 'Slim bookmark tags · 1⅛″ × 2.5″ one-sided · 28 per US Letter sheet',
+        jewelryCard: false,
+        salesSign: false,
+        twoSided: false,
+        separateLogoHangSheets: true
     }
+};
+
+const TAG_LAYOUT_HELP = {
+    standard: 'Square hang tags for bins and shelves.',
+    jewelry: 'Taller cards with pin space at the top for brooches and necklaces.',
+    salesSign: 'Medium shelf signs — several per page, with bold name and price.',
+    salesSignLarge: 'Extra-large signs when you want maximum impact (2 per page).',
+    compactCard: 'Small one-sided cards — logos, text, QR, and vendor # on one face.',
+    miniHangTag: 'Small one-sided hang tags for brooches and petite items.',
+    slimBookmark: 'Narrow one-sided tags for bookmarks — all info on a single face.'
 };
 
 function getSelectedPriceTagLayout() {
@@ -11138,17 +11200,189 @@ function getSelectedPriceTagLayout() {
     return TAG_LAYOUTS[key] || TAG_LAYOUTS.standard;
 }
 
+function syncPriceTagLayoutHelp() {
+    const layoutHelp = document.getElementById('priceTagLayoutHelp');
+    const layout = getSelectedPriceTagLayout();
+    if (layoutHelp) {
+        layoutHelp.textContent = TAG_LAYOUT_HELP[layout.key] || TAG_LAYOUT_HELP.standard;
+    }
+    syncPriceTagLogoHangHelp();
+}
+
 function syncPriceTagLogoHangHelp() {
     const help = document.getElementById('priceTagLogoHangHelp');
     const layout = getSelectedPriceTagLayout();
     if (!help) return;
-    if (layout.jewelryCard) {
+    if (layout.separateLogoHangSheets) {
         help.textContent =
-            'Optional. Logo-only hang tags stay 2.5″ squares and print on separate standard sheets after your jewelry cards.';
+            'Logo-only hang tags print on separate square sheets after your signs (0 = none).';
     } else {
         help.textContent =
-            'Optional. Example: 1 price tag + 8 logo tags = 9 tags (1 page). Leave 0 for price tags only.';
+            'Optional extras, e.g. 8 logo hang tags fill a page with 1 price tag. Use 0 for tags/signs only.';
     }
+}
+
+/** Format custom price lines; add $ when user enters plain numbers (5 → $5, 2 for 10 → 2 for $10). */
+function normalizePriceTagDisplayLine(raw) {
+    const text = (raw || '').trim();
+    if (!text) return text;
+
+    const forBundle = text.match(/^(\d+)\s+for\s+(.+)$/i);
+    if (forBundle) {
+        const qty = forBundle[1];
+        let pricePart = forBundle[2].trim();
+        if (!pricePart.startsWith('$') && /^\d+(\.\d{1,2})?$/.test(pricePart)) {
+            const n = parseFloat(pricePart);
+            if (Number.isFinite(n)) {
+                pricePart = pricePart.includes('.') ? `$${n.toFixed(2)}` : `$${n}`;
+            }
+        }
+        return `${qty} for ${pricePart}`;
+    }
+
+    if (text.startsWith('$')) {
+        return text;
+    }
+
+    if (/^\d+(\.\d{1,2})?$/.test(text)) {
+        const n = parseFloat(text);
+        if (Number.isFinite(n)) {
+            return text.includes('.') ? `$${n.toFixed(2)}` : `$${n}`;
+        }
+    }
+
+    return text;
+}
+
+/** One printable price tag cell for the chosen layout. */
+function formatPriceTagPriceLine(item) {
+    if (item && item.priceDisplay != null && String(item.priceDisplay).trim() !== '') {
+        return SecurityManager.escapeHtml(normalizePriceTagDisplayLine(item.priceDisplay));
+    }
+    return `$${(parseFloat(item?.price) || 0).toFixed(2)}`;
+}
+
+function buildPriceTagCellHTML(layout, parts) {
+    const {
+        headerClass,
+        vendorLogoHTML,
+        myLogoHTML,
+        itemName,
+        priceLine,
+        vendorNumberHTML,
+        side = 'front'
+    } = parts;
+
+    const safeName = SecurityManager.escapeHtml(itemName);
+    const safePriceLine = priceLine;
+    const social = SecurityManager.escapeHtml(PRICE_TAG_SOCIAL_HANDLE);
+    const qrImg = `<img src="${LOGO_TAG_QR_PATH}" alt="Facebook QR" class="price-tag-qr">`;
+    const qrFooterHTML = `
+                        ${qrImg}
+                        <span class="price-tag-social">${social}</span>`;
+
+    if (layout.key === 'compactCard') {
+        return `
+                <div class="price-tag price-tag-compact-card">
+                    <div class="${headerClass} price-tag-compact-header">
+                        ${vendorLogoHTML}
+                        ${myLogoHTML}
+                    </div>
+                    <div class="price-tag-compact-main">
+                        <div class="price-tag-compact-copy">
+                            <div class="price-tag-compact-title">${safeName}</div>
+                            <div class="price-tag-compact-price">${safePriceLine}</div>
+                            ${vendorNumberHTML}
+                            <span class="price-tag-social price-tag-compact-social">${social}</span>
+                        </div>
+                        <div class="price-tag-compact-qr">
+                            ${qrImg}
+                        </div>
+                    </div>
+                </div>`;
+    }
+
+    if (layout.key === 'miniHangTag') {
+        return `
+                <div class="price-tag price-tag-mini-hang price-tag-mini-one">
+                    <div class="price-tag-hang-hole" aria-hidden="true" title="Punch hole"></div>
+                    <div class="${headerClass} price-tag-mini-logos">
+                        ${vendorLogoHTML}
+                        ${myLogoHTML}
+                    </div>
+                    <div class="price-tag-mini-body">
+                        <div class="price-tag-mini-title">${safeName}</div>
+                        <div class="price-tag-mini-price">${safePriceLine}</div>
+                        ${vendorNumberHTML}
+                    </div>
+                    <div class="price-tag-mini-footer">
+                        ${qrImg}
+                        <span class="price-tag-social">${social}</span>
+                    </div>
+                </div>`;
+    }
+
+    if (layout.key === 'slimBookmark') {
+        return `
+                <div class="price-tag price-tag-slim-bookmark price-tag-slim-one">
+                    <div class="price-tag-hang-hole" aria-hidden="true" title="Punch hole"></div>
+                    <div class="price-tag-bookmark-ornament" aria-hidden="true"></div>
+                    <div class="price-tag-slim-logos">
+                        ${vendorLogoHTML ? `<div class="price-tag-slim-vendor-logo">${vendorLogoHTML}</div>` : ''}
+                        ${myLogoHTML ? `<div class="price-tag-slim-my-logo">${myLogoHTML}</div>` : ''}
+                    </div>
+                    <div class="price-tag-slim-body">
+                        <div class="price-tag-slim-title">${safeName}</div>
+                        <div class="price-tag-slim-price">${safePriceLine}</div>
+                        ${vendorNumberHTML}
+                    </div>
+                    <div class="price-tag-slim-footer">
+                        ${qrImg}
+                        <span class="price-tag-social">${social}</span>
+                    </div>
+                </div>`;
+    }
+
+    if (layout.salesSign) {
+        return `
+                <div class="price-tag price-tag-sales-sign">
+                    <div class="${headerClass} price-tag-sales-sign-header">
+                        ${vendorLogoHTML}
+                        ${myLogoHTML}
+                    </div>
+                    <div class="price-tag-sales-sign-hero">
+                        <div class="price-tag-sales-sign-title">${safeName}</div>
+                        <div class="price-tag-sales-sign-price">${safePriceLine}</div>
+                        ${vendorNumberHTML}
+                    </div>
+                    <div class="price-tag-sales-sign-foot">
+                        <span class="price-tag-social">${SecurityManager.escapeHtml(PRICE_TAG_SOCIAL_HANDLE)}</span>
+                        <img src="${LOGO_TAG_QR_PATH}" alt="Facebook QR" class="price-tag-qr">
+                    </div>
+                </div>`;
+    }
+
+    const tagClass = layout.jewelryCard ? 'price-tag price-tag-jewelry-card' : 'price-tag';
+    const pinZoneHTML = layout.jewelryCard
+        ? '<div class="price-tag-pin-zone" aria-hidden="true"></div>'
+        : '';
+
+    return `
+                <div class="${tagClass}">
+                    <div class="${headerClass}">
+                        ${vendorLogoHTML}
+                        ${myLogoHTML}
+                    </div>
+                    ${pinZoneHTML}
+                    <div class="price-tag-body">
+                        <div class="price-tag-item-name">${safeName}</div>
+                        <div class="price-tag-price">${safePriceLine}</div>
+                        ${vendorNumberHTML}
+                    </div>
+                    <div class="price-tag-footer">
+                        ${qrFooterHTML}
+                    </div>
+                </div>`;
 }
 
 function brandLogoImgTag(className, altText) {
@@ -11192,10 +11426,11 @@ function collectLogoHangTagFragments(count, logoPath, qrPath) {
 }
 
 /** Chunk tag HTML fragments into US Letter sheets for the given layout. */
-function chunkTagFragmentsIntoPages(tagFragments, layout = TAG_LAYOUTS.standard) {
+function chunkTagFragmentsIntoPages(tagFragments, layout = TAG_LAYOUTS.standard, options = {}) {
     const perPage = layout.tagsPerSheet || TAGS_PER_LETTER_SHEET;
     const pageClass = layout.pageClass || TAG_LAYOUTS.standard.pageClass;
-    const pages = [];
+    const sectionLabel = options.sectionLabel;
+    let pages = [];
     for (let i = 0; i < tagFragments.length; i += perPage) {
         const pageTags = tagFragments.slice(i, i + perPage).join('');
         pages.push(`
@@ -11204,6 +11439,16 @@ function chunkTagFragmentsIntoPages(tagFragments, layout = TAG_LAYOUTS.standard)
                     ${pageTags}
                 </div>
             </div>`);
+    }
+    if (!pages.length && sectionLabel) {
+        return '';
+    }
+  if (sectionLabel && pages.length) {
+        const header = `
+            <div class="price-tag-sheet-section no-print" role="note">
+                <h3>${SecurityManager.escapeHtml(sectionLabel)}</h3>
+            </div>`;
+        return header + pages.join('');
     }
     return pages.join('');
 }
@@ -11279,30 +11524,171 @@ async function previewLogoTags(alsoPrint) {
     }
 }
 
-async function openPriceTagModal() {
-    // Get selected completed items
-    const selectedItems = getSelectedCompletedItems();
-    
-    if (selectedItems.length === 0) {
-        showNotification('Please select at least one completed item first', 'warning');
+function setPriceTagSourceMode(source) {
+    const selectedRadio = document.getElementById('priceTagSourceSelected');
+    const customRadio = document.getElementById('priceTagSourceCustom');
+    if (source === 'custom' && customRadio) {
+        customRadio.checked = true;
+    } else if (selectedRadio) {
+        selectedRadio.checked = true;
+    }
+    syncPriceTagSourceUI();
+}
+
+function getPriceTagSourceFromForm() {
+    return document.getElementById('priceTagSourceCustom')?.checked ? 'custom' : 'selected';
+}
+
+function createCustomSignRowElement() {
+    const row = document.createElement('div');
+    row.className = 'custom-sign-row';
+    row.innerHTML = `
+        <div class="custom-sign-fields">
+            <div class="form-group custom-sign-field-sign">
+                <label>Sign text</label>
+                <input type="text" class="custom-sign-label" maxlength="120" placeholder="e.g., All Bookmarks" autocomplete="off">
+            </div>
+            <div class="form-group custom-sign-field-price">
+                <label>Price line</label>
+                <input type="text" class="custom-sign-price" maxlength="60" placeholder="$5 or 3 for $15" autocomplete="off">
+            </div>
+            <div class="form-group custom-sign-field-copies">
+                <label>Copies</label>
+                <input type="number" class="custom-sign-copies" min="1" max="120" value="1" title="How many of this exact sign">
+            </div>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm custom-sign-remove" title="Remove this sign" aria-label="Remove sign row">&times;</button>
+    `;
+    const removeBtn = row.querySelector('.custom-sign-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            const list = document.getElementById('priceTagCustomSignList');
+            const rows = list?.querySelectorAll('.custom-sign-row') || [];
+            if (rows.length <= 1) {
+                showNotification('Keep at least one sign row', 'warning');
+                return;
+            }
+            row.remove();
+        });
+    }
+    return row;
+}
+
+function resetCustomSignList() {
+    const list = document.getElementById('priceTagCustomSignList');
+    if (!list) return;
+    list.innerHTML = '';
+    list.appendChild(createCustomSignRowElement());
+}
+
+function ensureCustomSignList(minRows = 1) {
+    const list = document.getElementById('priceTagCustomSignList');
+    if (!list) return;
+    const existing = list.querySelectorAll('.custom-sign-row').length;
+    for (let i = existing; i < minRows; i++) {
+        list.appendChild(createCustomSignRowElement());
+    }
+}
+
+function addCustomSignRow() {
+    const list = document.getElementById('priceTagCustomSignList');
+    if (!list) return;
+    const maxRows = 40;
+    if (list.querySelectorAll('.custom-sign-row').length >= maxRows) {
+        showNotification(`Maximum ${maxRows} different signs per run`, 'warning');
         return;
     }
+    list.appendChild(createCustomSignRowElement());
+    list.lastElementChild?.querySelector('.custom-sign-label')?.focus();
+}
 
-    await updateVendorFromSelectedItems();
+function buildCustomSignItemsFromForm(shopCustomer) {
+    const rows = document.querySelectorAll('#priceTagCustomSignList .custom-sign-row');
+    const items = [];
+    rows.forEach(row => {
+        const label = row.querySelector('.custom-sign-label')?.value?.trim();
+        const priceText = row.querySelector('.custom-sign-price')?.value?.trim();
+        const copyRaw = parseInt(row.querySelector('.custom-sign-copies')?.value, 10);
+        const copies = Math.min(120, Math.max(1, Number.isNaN(copyRaw) ? 1 : copyRaw));
+        if (!label || !priceText) {
+            return;
+        }
+        for (let i = 0; i < copies; i++) {
+            items.push({
+                description: label,
+                name: label,
+                priceDisplay: priceText,
+                price: 0,
+                quantity: 1,
+                customer: shopCustomer
+            });
+        }
+    });
+    return items;
+}
+
+function syncPriceTagSourceUI() {
+    const custom = document.getElementById('priceTagSourceCustom')?.checked;
+    const selectedGroup = document.getElementById('priceTagSelectedItemsGroup');
+    const customGroup = document.getElementById('priceTagCustomSignGroup');
+    if (selectedGroup) {
+        selectedGroup.style.display = custom ? 'none' : '';
+    }
+    if (customGroup) {
+        customGroup.style.display = custom ? '' : 'none';
+    }
+    if (custom) {
+        ensureCustomSignList(1);
+    }
+}
+
+function openCustomSignModal() {
+    openPriceTagModal({ customSign: true });
+}
+
+async function openPriceTagModal(options = {}) {
+    const selectedItems = getSelectedCompletedItems();
+    const useCustom = options.customSign === true || selectedItems.length === 0;
+
+  if (!useCustom && selectedItems.length > 0) {
+        await updateVendorFromSelectedItems();
+    }
     
     // Populate selected items list
     const itemsList = document.getElementById('priceTagSelectedItems');
     if (itemsList) {
         itemsList.innerHTML = '';
-        selectedItems.forEach(item => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'price-tag-item-entry';
-            itemDiv.innerHTML = `
+        if (selectedItems.length === 0) {
+            itemsList.innerHTML = '<p class="text-muted">No items checked. Use custom sign, or select items on the Completed tab.</p>';
+        } else {
+            selectedItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'price-tag-item-entry';
+                itemDiv.innerHTML = `
                 <strong>${SecurityManager.escapeHtml(item.description || item.name || 'Untitled')}</strong>
                 <span>Qty: ${item.quantity || 1} × $${(item.price || 0).toFixed(2)} = $${((item.quantity || 1) * (item.price || 0)).toFixed(2)}</span>
             `;
-            itemsList.appendChild(itemDiv);
-        });
+                itemsList.appendChild(itemDiv);
+            });
+        }
+    }
+
+    setPriceTagSourceMode(useCustom ? 'custom' : 'selected');
+
+    const addSignBtn = document.getElementById('btnAddCustomSignRow');
+    if (addSignBtn && !addSignBtn.dataset.listenerAdded) {
+        addSignBtn.addEventListener('click', addCustomSignRow);
+        addSignBtn.dataset.listenerAdded = 'true';
+    }
+
+    if (options.customSign) {
+        resetCustomSignList();
+        const layoutSelect = document.getElementById('priceTagLayout');
+        if (layoutSelect) {
+            layoutSelect.value = 'salesSign';
+        }
+    } else if (useCustom) {
+        ensureCustomSignList(1);
     }
     
     // Auto-load logos based on vendor name
@@ -11332,10 +11718,22 @@ async function openPriceTagModal() {
     
     const layoutSelect = document.getElementById('priceTagLayout');
     if (layoutSelect && !layoutSelect.dataset.listenerAdded) {
-        layoutSelect.addEventListener('change', syncPriceTagLogoHangHelp);
+        layoutSelect.addEventListener('change', syncPriceTagLayoutHelp);
         layoutSelect.dataset.listenerAdded = 'true';
     }
-    syncPriceTagLogoHangHelp();
+    syncPriceTagLayoutHelp();
+
+    const sourceSelected = document.getElementById('priceTagSourceSelected');
+    const sourceCustom = document.getElementById('priceTagSourceCustom');
+    if (sourceSelected && !sourceSelected.dataset.listenerAdded) {
+        sourceSelected.addEventListener('change', syncPriceTagSourceUI);
+        sourceSelected.dataset.listenerAdded = 'true';
+    }
+    if (sourceCustom && !sourceCustom.dataset.listenerAdded) {
+        sourceCustom.addEventListener('change', syncPriceTagSourceUI);
+        sourceCustom.dataset.listenerAdded = 'true';
+    }
+    syncPriceTagSourceUI();
 
     // Show modal
     const modal = document.getElementById('priceTagModal');
@@ -11610,11 +12008,26 @@ async function generatePriceTags(previewOnly = false) {
         }
     }
     
-    // Get selected items first
-    const selectedItemsForTags = getSelectedCompletedItems();
-    if (selectedItemsForTags.length === 0) {
-        showNotification('Please select at least one completed item', 'error');
-        return;
+    const tagSource = getPriceTagSourceFromForm();
+    let selectedItemsForTags = [];
+
+    if (tagSource === 'custom') {
+        const shopCustomer = (formData.get('vendorName') || '').trim() || 'No Customer';
+        selectedItemsForTags = buildCustomSignItemsFromForm(shopCustomer);
+        if (selectedItemsForTags.length === 0) {
+            showNotification('Add at least one sign with text and a price line', 'warning');
+            return;
+        }
+        if (selectedItemsForTags.length > 120) {
+            showNotification('Trimmed to 120 tags maximum per print run', 'warning');
+            selectedItemsForTags = selectedItemsForTags.slice(0, 120);
+        }
+    } else {
+        selectedItemsForTags = getSelectedCompletedItems();
+        if (selectedItemsForTags.length === 0) {
+            showNotification('Select completed items, or switch to custom sign', 'warning');
+            return;
+        }
     }
     
     // Show loading spinner while checking logos
@@ -11790,10 +12203,6 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
     console.log('🎨 Generating price tags HTML with logos:', { vendorLogo, myLogo, vendorLogoMap, extras });
 
     const layout = extras.layout || TAG_LAYOUTS.standard;
-    const tagClass = layout.jewelryCard ? 'price-tag price-tag-jewelry-card' : 'price-tag';
-    const pinZoneHTML = layout.jewelryCard
-        ? '<div class="price-tag-pin-zone" aria-hidden="true"></div>'
-        : '';
     
     // Helper function to get vendor logo for an item
     const getVendorLogoForItem = (item) => {
@@ -11829,15 +12238,16 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
         const logoUrl = logoPath.startsWith('/') ? logoPath : '/' + logoPath;
         const logoUrlWithCache = logoUrl + '?t=' + Date.now();
         console.log(`🖼️ Creating vendor logo img tag with src: ${logoUrlWithCache} for vendor: ${vendorNameForLogo}`);
-        return `<img src="${logoUrlWithCache}" alt="${vendorNameForLogo || 'Vendor'} Logo" class="price-tag-vendor-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.display='none';" onload="console.log('✅ Vendor logo loaded successfully:', this.src);">`;
+        return `<img src="${logoUrlWithCache}" alt="${vendorNameForLogo || 'Vendor'} Logo" class="price-tag-vendor-logo" style="display: block !important; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="console.error('❌ Failed to load vendor logo:', this.src); this.style.display='none';" onload="console.log('✅ Vendor logo loaded successfully:', this.src);">`;
     };
     
-    // Build a flat array of individual tag HTML strings (one per quantity)
     const tagFragments = [];
+    const frontFragments = [];
+    const backFragments = [];
     
     items.forEach(item => {
         const itemName = item.description || item.name || 'Untitled';
-        const price = (item.price || 0).toFixed(2);
+        const priceLine = formatPriceTagPriceLine(item);
         const quantity = item.quantity || 1;
         
         // Get vendor name for this specific item (use item's customer if no global vendor)
@@ -11857,7 +12267,7 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
             if (myLogo) {
                 const logoUrl = myLogo.startsWith('/') ? myLogo : '/' + myLogo;
                 const logoUrlWithCache = logoUrl + '?t=' + Date.now();
-                myLogoHTML = `<img src="${logoUrlWithCache}" alt="My Logo" class="price-tag-my-logo" style="display: block !important; max-width: 100%; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="this.style.display='none';" onload="this.style.border='none';">`;
+                myLogoHTML = `<img src="${logoUrlWithCache}" alt="My Logo" class="price-tag-my-logo" style="display: block !important; height: auto; visibility: visible !important; opacity: 1 !important;" onerror="this.style.display='none';" onload="this.style.border='none';">`;
             }
             
             const headerClass = !itemVendorLogo ? 'price-tag-header no-vendor-logo' : 'price-tag-header';
@@ -11870,25 +12280,21 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
                 ? `<div class="price-tag-vendor-number">Vendor #${SecurityManager.escapeHtml(itemVendorNumber)}</div>`
                 : '';
 
-            // Push each individual tag as its own fragment so page-chunking counts correctly
-            tagFragments.push(`
-                <div class="${tagClass}">
-                    <div class="${headerClass}">
-                        ${vendorLogoHTML}
-                        ${myLogoHTML}
-                    </div>
-                    ${pinZoneHTML}
-                    <div class="price-tag-body">
-                        <div class="price-tag-item-name">${SecurityManager.escapeHtml(itemName)}</div>
-                        <div class="price-tag-price">$${price}</div>
-                        ${vendorNumberHTML}
-                    </div>
-                    <div class="price-tag-footer">
-                        <img src="${LOGO_TAG_QR_PATH}" alt="Facebook QR" class="price-tag-qr">
-                        <span class="price-tag-social">${SecurityManager.escapeHtml(PRICE_TAG_SOCIAL_HANDLE)}</span>
-                    </div>
-                </div>
-            `);
+            const partBag = {
+                headerClass,
+                vendorLogoHTML,
+                myLogoHTML,
+                itemName,
+                priceLine,
+                vendorNumberHTML
+            };
+
+            if (layout.twoSided) {
+                frontFragments.push(buildPriceTagCellHTML(layout, { ...partBag, side: 'front' }));
+                backFragments.push(buildPriceTagCellHTML(layout, { ...partBag, side: 'back' }));
+            } else {
+                tagFragments.push(buildPriceTagCellHTML(layout, partBag));
+            }
         }
     });
 
@@ -11902,20 +12308,32 @@ function generatePriceTagsHTML(items, vendorName, vendorNumber, vendorLogo, myLo
         );
     }
 
-    const priceCount = tagFragments.length;
-    let pagesHTML = chunkTagFragmentsIntoPages(tagFragments, layout);
+    const priceCount = layout.twoSided ? frontFragments.length : tagFragments.length;
+    let pagesHTML = '';
+    if (layout.twoSided) {
+        pagesHTML += chunkTagFragmentsIntoPages(frontFragments, layout, {
+            sectionLabel: 'Sheet 1 — print fronts'
+        });
+        pagesHTML += chunkTagFragmentsIntoPages(backFragments, layout, {
+            sectionLabel: 'Flip paper — print backs'
+        });
+    } else {
+        pagesHTML = chunkTagFragmentsIntoPages(tagFragments, layout);
+    }
     if (hangFragments.length > 0) {
         pagesHTML += chunkTagFragmentsIntoPages(hangFragments, TAG_LAYOUTS.standard);
     }
 
-    const priceSheets = Math.ceil(priceCount / layout.tagsPerSheet) || 0;
+    const facesPerSheet = layout.tagsPerSheet || TAGS_PER_LETTER_SHEET;
+    const priceFaceSheets = Math.ceil(priceCount / facesPerSheet) || 0;
+    const priceSheets = layout.twoSided ? priceFaceSheets * 2 : priceFaceSheets;
     const hangSheets = hangFragments.length ? Math.ceil(hangFragments.length / TAGS_PER_LETTER_SHEET) : 0;
     const sheetCount = Math.max(1, priceSheets + hangSheets);
     
     // Determine header title - use vendor name if provided, otherwise show "Multiple Vendors"
     let headerTitle = vendorName || (items.length > 0 && items[0].customer ? `${items.length} Items - Multiple Vendors` : 'Price Tags');
     if (logoHangCount > 0) {
-        const hangNote = layout.jewelryCard ? ' (logo hang tags on standard sheets)' : '';
+        const hangNote = layout.separateLogoHangSheets ? ' (logo hang tags on standard sheets)' : '';
         headerTitle = `${priceCount} price + ${logoHangCount} logo hang · ${sheetCount} sheet${sheetCount === 1 ? '' : 's'}${hangNote}`;
     }
     
@@ -13236,6 +13654,7 @@ function getInventoryItemDisplayName(item, fallback = 'Inventory Item') {
 }
 
 /** Default shop commission rate on Monthly Shop Statement (applied to month total, not per line). */
+/** Keep in sync with lib/shop-commission.js (Node / Keera email). */
 const SHOP_VENDOR_AUTO_COMMISSION_PERCENT = 10;
 /** Vendor-to-vendor discount when a vendor buys your item in the shop (per sale line). */
 const V2V_VENDOR_DISCOUNT_PERCENT = 10;
